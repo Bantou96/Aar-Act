@@ -1,5 +1,7 @@
 # Aar-Act 🇸🇳💻
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **Aar-Act** (from CyberAar) is a volunteer-driven, open collaboration to gather and share **best practices** for securing Senegal's critical infrastructure against cyber threats.
 
 Inspired by recent attacks (e.g., DAF breach in 2026), we unite Senegalese talents (home & diaspora) + global allies to build a living guide in French & English.
