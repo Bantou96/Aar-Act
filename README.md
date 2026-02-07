@@ -35,5 +35,9 @@ No long commitments—add one tip when you have 10 minutes!
 
 Join the discussion: [LinkedIn CyberAar post]([https://www.linkedin.com/posts/cyberaar_cyberaar-aaract-cybersecurity-activity-7425531917397110784-9fkS?utm_source=share&utm_medium=member_desktop&rcm=ACoAACpHH5IBVWmpKXQ_9kDAoaRYA1MJvT1bhKE])
 
-Merci & Jërejëf! Let's protect Senegal together.  
+## Contributors ✨
+Thanks to these legends:
+- [@Bantou96](https://github.com/Bantou96) - Founder
+<!-- Update as PRs merge! Use GitHub's all-contributors if you want emojis. -->
+ 
 #Cybersecurity #Senegal #AarAct #CyberAar
