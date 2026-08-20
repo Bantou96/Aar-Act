@@ -10,13 +10,13 @@
 [![EE Image](https://img.shields.io/badge/ghcr.io-cyberaar%2Fee--hardening-blue?logo=docker)](https://github.com/cyberaar/cyberaar-toolkit/pkgs/container/ee-hardening)
 
 **cyberaar-toolkit** is a volunteer-driven, open collaboration to gather and share
-**best practices** for securing Senegal's critical infrastructure against cyber threats.
+**best practices** for securing critical infrastructure against cyber threats.
 
-Inspired by recent attacks on Senegalese public systems, we unite Senegalese talents
-(home & diaspora) + global allies to build a **living, production-ready toolkit**
-available in French & English.
+Born out of the response to attacks on public-sector systems, the project brings
+together practitioners at home, across the diaspora and anywhere else, to build a
+**living, production-ready toolkit** available in French & English.
 
-> *Sécurisons ensemble l'infrastructure numérique du Sénégal.* — 🇸🇳
+> *Sécurisons ensemble les infrastructures numériques critiques.*
 
 ---
 
@@ -676,7 +676,7 @@ Open `before/` and `after/` HTML reports side by side to visualise the security 
 
 Community-maintained security guides and templates have moved to their own repository:
 
-**[cyberaar/Aar-Act](https://github.com/cyberaar/Aar-Act)** — practices (English), translations (French), and Senegal-specific examples.
+**[cyberaar/Aar-Act](https://github.com/cyberaar/Aar-Act)** — practices (English), translations (French), and worked examples.
 
 ---
 
@@ -735,4 +735,4 @@ See the [LICENSE](LICENSE) file for the full text.
 
 ---
 
-*#Cybersecurity #Senegal #AarAct #CyberAar*
+*#Cybersecurity #Hardening #AarAct #CyberAar*
