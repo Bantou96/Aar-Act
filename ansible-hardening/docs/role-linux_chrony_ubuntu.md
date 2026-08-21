@@ -37,11 +37,12 @@ Installs and configures Chrony as the NTP time synchronisation daemon on Ubuntu/
 ```yaml
 # group_vars/ubuntu_servers.yml
 
-# Use Senegalese or regional NTP servers for government infrastructure
+# Prefer a national or regional NTP source, then a pool as fallback.
+# Replace the zone with the one closest to your estate.
 linux_chrony_servers:
-  - "ntp.arc.sn"
-  - "0.africa.pool.ntp.org"
-  - "1.africa.pool.ntp.org"
+  - "ntp.example.org"
+  - "0.pool.ntp.org"
+  - "1.pool.ntp.org"
 
 # If this host is an internal NTP server for your LAN
 linux_chrony_allow_networks:

@@ -5,7 +5,7 @@ CIS-aligned hardening playbooks and roles for:
 - **Ubuntu/Debian**: Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 **Goal**
-Provide a practical, maintainable, and idempotent set of Ansible roles to significantly improve the security posture of Linux servers — especially critical infrastructure systems in Senegal (government, DAF, ministries, etc.).
+Provide a practical, maintainable, and idempotent set of Ansible roles to significantly improve the security posture of Linux servers — with a focus on critical infrastructure (government, DAF, ministries, etc.).
 
 **Current focus**  
 RHEL 9 family – CIS Red Hat Enterprise Linux 9 Benchmark v2.0.0 (Level 1 & selected Level 2)

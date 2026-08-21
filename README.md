@@ -613,7 +613,7 @@ ubuntu_servers
 Each host's `ansible_host` IP is derived from the `index` variable combined with a network prefix defined in `group_vars/rhel_servers.yml` or `group_vars/ubuntu_servers.yml`.
 
 The naming convention for hosts follows: `<role>.<site>-<env>-<os>-<idx>.corp.example.com`
-- `site`: geographic code (e.g. `dk` = Dakar, `th` = Thiès)
+- `site`: short code identifying the site or data centre (e.g. `dc1`, `par`, `fra`)
 - `env`: `pr` = prod, `st` = staging, `dv` = dev
 - `os`: `rh` = RHEL, `ku` = Ubuntu
 

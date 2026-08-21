@@ -1,13 +1,14 @@
 ---
 
-# NTP servers (use regional/government servers for Senegal infra)
+# NTP servers. Prefer a national or regional source close to your estate,
+# with the public pool as fallback.
 linux_chrony_servers:
   - "0.pool.ntp.org"
   - "1.pool.ntp.org"
   - "2.pool.ntp.org"
   - "3.pool.ntp.org"
-# For Senegalese government networks, consider:
-# - "ntp.arc.sn"  (if available)
+# On a network with its own time source, put it first:
+# - "ntp.internal.example.org"
 
 # NTP server options (iburst = fast initial sync)
 linux_chrony_server_options: "iburst"

@@ -19,12 +19,21 @@ Options = ServerPreference,PrioritizeChaCha
 {% endif %}
 
 [req]
+# Key size and digest are hardening settings and always apply.
 default_bits       = 4096
 default_md         = sha256
+{% if linux_crypto_cert_country or linux_crypto_cert_state or linux_crypto_cert_org %}
 distinguished_name = req_distinguished_name
 prompt             = no
 
 [req_distinguished_name]
-C  = SN
-ST = Dakar
-O  = CyberAar
+{% if linux_crypto_cert_country %}
+C  = {{ linux_crypto_cert_country }}
+{% endif %}
+{% if linux_crypto_cert_state %}
+ST = {{ linux_crypto_cert_state }}
+{% endif %}
+{% if linux_crypto_cert_org %}
+O  = {{ linux_crypto_cert_org }}
+{% endif %}
+{% endif %}

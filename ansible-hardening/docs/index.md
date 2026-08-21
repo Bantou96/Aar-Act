@@ -5,7 +5,7 @@ Ansible-based hardening suite for **RHEL 9 family** (RHEL 9, AlmaLinux 9, Rocky 
 - **CIS Ubuntu Linux 22.04 LTS Benchmark v1.0.0** (Ubuntu roles)
 
 **Goal**
-Help secure critical infrastructure in Senegal (government servers, DAF, ministries, etc.) against common threats — with focus on practicality, idempotence, and auditability.
+Help secure critical infrastructure — government, utilities, finance, telecom, healthcare — against common threats, with a focus on practicality, idempotence, and auditability.
 
 ## Quick Links
 
@@ -46,4 +46,4 @@ OS detection is automatic — the correct role set is applied per host based on 
 
 GPL-3.0 — open for reuse and contribution.
 
-**CyberAar Team** — Pour un Sénégal numérique plus sécurisé
+**CyberAar Team** — Hardening you can read, run and verify
