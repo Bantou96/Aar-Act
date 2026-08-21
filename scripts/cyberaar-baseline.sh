@@ -143,6 +143,11 @@ declare -A ANSIBLE_MAP=(
   ["SYS-08"]="secureboot|linux_secure_boot_rhel9|linux_secure_boot_ubuntu|Secure Boot verification"
   ["SYS-09"]="filesystem,mounts|linux_tmp_mounts_rhel9|linux_tmp_mounts_ubuntu|/dev/shm mount hardening"
   ["SYS-10"]="system|linux_ctrl_alt_del_rhel9|linux_ctrl_alt_del_ubuntu|Ctrl-Alt-Delete disabled"
+  # SYS-11: no role can fix this one. The remediation is a reboot, and on a quorum
+  # cluster a reboot is an orchestration problem, not a configuration one. The roles
+  # named here only decide who owns the reboot from now on (their *_reboot variable);
+  # they do not activate the kernel already sitting in /boot.
+  ["SYS-11"]="updates,patching|linux_dnf_automatic_rhel9|linux_unattended_upgrades_ubuntu|Reboot policy (does NOT activate the installed kernel)"
   ["AUTH-01"]="auth,users|linux_user_management_rhel9|linux_user_management_ubuntu|User management hardening"
   ["AUTH-02"]="auth,users|linux_user_management_rhel9|linux_user_management_ubuntu|User management hardening"
   # AUTH-03: PASS_MAX_DAYS in /etc/login.defs is set by user_management, not authselect
@@ -504,6 +509,40 @@ elif cmd_exists apt-get; then
     add_result "System" "FAIL" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
       "Appliquez: 'apt-get upgrade -y'"
   fi
+fi
+
+# SYS-11 Running kernel is the newest one installed
+#
+# Placed here rather than at the end of the section because it completes the
+# patching story SYS-03 starts; the ID is out of sequence so existing report
+# comparisons keep working.
+#
+# A kernel fix only takes effect once the machine boots into it. unattended-upgrades
+# installs the package and, with Automatic-Reboot "false" (the default), never
+# activates it. The host then reads as fully patched on disk while still executing
+# the vulnerable image, and SYS-03 cannot see it: there is nothing left pending to
+# count. Found on a 13-node estate where every host had a newer kernel in /boot and
+# seven had been running the old one for 108 days.
+KRUN=$(uname -r)
+KNEW=$(ls -1 /boot/vmlinuz-* 2>/dev/null | sed 's|.*/vmlinuz-||' | grep -vE '\.(sig|efi|signed|old)$' | sort -V | tail -1)
+KUP=$(awk '{printf "%d", $1/86400}' /proc/uptime 2>/dev/null || echo "?")
+if [[ -z "$KNEW" ]]; then
+  add_result "System" "WARN" "SYS-11" "Cannot determine installed kernels" "Noyaux installés indéterminés" \
+    "no /boot/vmlinuz-* found" \
+    "Comparez manuellement 'uname -r' au noyau installé le plus récent."
+elif [[ "$KNEW" == "$KRUN" ]]; then
+  add_result "System" "PASS" "SYS-11" "Running the newest installed kernel" "Noyau le plus récent actif" \
+    "$KRUN (uptime ${KUP}j)" ""
+elif [[ "$(printf '%s\n%s\n' "$KRUN" "$KNEW" | sort -V | tail -1)" == "$KRUN" ]]; then
+  # Running kernel outranks everything in /boot. Not a missing reboot: usually a
+  # custom or vendor kernel whose image lives outside /boot.
+  add_result "System" "WARN" "SYS-11" "Running kernel not found in /boot" "Noyau actif absent de /boot" \
+    "running $KRUN, newest in /boot $KNEW" \
+    "Noyau hors dépôt ou image hors /boot. Vérifiez que sa source livre bien les correctifs de sécurité."
+else
+  add_result "System" "FAIL" "SYS-11" "Newer kernel installed but not running" "Noyau plus récent installé mais inactif" \
+    "running $KRUN, installed $KNEW, uptime ${KUP}j" \
+    "Le correctif est installé mais inactif. Redémarrez pour activer $KNEW. Sur un cluster à quorum (OpenSearch, Kafka, etcd), un nœud à la fois en vérifiant la santé entre chaque."
 fi
 
 # SYS-04 SELinux / AppArmor

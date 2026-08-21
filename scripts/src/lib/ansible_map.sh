@@ -15,6 +15,11 @@ declare -A ANSIBLE_MAP=(
   ["SYS-08"]="secureboot|linux_secure_boot_rhel9|linux_secure_boot_ubuntu|Secure Boot verification"
   ["SYS-09"]="filesystem,mounts|linux_tmp_mounts_rhel9|linux_tmp_mounts_ubuntu|/dev/shm mount hardening"
   ["SYS-10"]="system|linux_ctrl_alt_del_rhel9|linux_ctrl_alt_del_ubuntu|Ctrl-Alt-Delete disabled"
+  # SYS-11: no role can fix this one. The remediation is a reboot, and on a quorum
+  # cluster a reboot is an orchestration problem, not a configuration one. The roles
+  # named here only decide who owns the reboot from now on (their *_reboot variable);
+  # they do not activate the kernel already sitting in /boot.
+  ["SYS-11"]="updates,patching|linux_dnf_automatic_rhel9|linux_unattended_upgrades_ubuntu|Reboot policy (does NOT activate the installed kernel)"
   ["AUTH-01"]="auth,users|linux_user_management_rhel9|linux_user_management_ubuntu|User management hardening"
   ["AUTH-02"]="auth,users|linux_user_management_rhel9|linux_user_management_ubuntu|User management hardening"
   # AUTH-03: PASS_MAX_DAYS in /etc/login.defs is set by user_management, not authselect

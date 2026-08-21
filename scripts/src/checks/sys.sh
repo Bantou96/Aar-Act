@@ -37,6 +37,40 @@ elif cmd_exists apt-get; then
   fi
 fi
 
+# SYS-11 Running kernel is the newest one installed
+#
+# Placed here rather than at the end of the section because it completes the
+# patching story SYS-03 starts; the ID is out of sequence so existing report
+# comparisons keep working.
+#
+# A kernel fix only takes effect once the machine boots into it. unattended-upgrades
+# installs the package and, with Automatic-Reboot "false" (the default), never
+# activates it. The host then reads as fully patched on disk while still executing
+# the vulnerable image, and SYS-03 cannot see it: there is nothing left pending to
+# count. Found on a 13-node estate where every host had a newer kernel in /boot and
+# seven had been running the old one for 108 days.
+KRUN=$(uname -r)
+KNEW=$(ls -1 /boot/vmlinuz-* 2>/dev/null | sed 's|.*/vmlinuz-||' | grep -vE '\.(sig|efi|signed|old)$' | sort -V | tail -1)
+KUP=$(awk '{printf "%d", $1/86400}' /proc/uptime 2>/dev/null || echo "?")
+if [[ -z "$KNEW" ]]; then
+  add_result "System" "WARN" "SYS-11" "Cannot determine installed kernels" "Noyaux installés indéterminés" \
+    "no /boot/vmlinuz-* found" \
+    "Comparez manuellement 'uname -r' au noyau installé le plus récent."
+elif [[ "$KNEW" == "$KRUN" ]]; then
+  add_result "System" "PASS" "SYS-11" "Running the newest installed kernel" "Noyau le plus récent actif" \
+    "$KRUN (uptime ${KUP}j)" ""
+elif [[ "$(printf '%s\n%s\n' "$KRUN" "$KNEW" | sort -V | tail -1)" == "$KRUN" ]]; then
+  # Running kernel outranks everything in /boot. Not a missing reboot: usually a
+  # custom or vendor kernel whose image lives outside /boot.
+  add_result "System" "WARN" "SYS-11" "Running kernel not found in /boot" "Noyau actif absent de /boot" \
+    "running $KRUN, newest in /boot $KNEW" \
+    "Noyau hors dépôt ou image hors /boot. Vérifiez que sa source livre bien les correctifs de sécurité."
+else
+  add_result "System" "FAIL" "SYS-11" "Newer kernel installed but not running" "Noyau plus récent installé mais inactif" \
+    "running $KRUN, installed $KNEW, uptime ${KUP}j" \
+    "Le correctif est installé mais inactif. Redémarrez pour activer $KNEW. Sur un cluster à quorum (OpenSearch, Kafka, etcd), un nœud à la fois en vérifiant la santé entre chaque."
+fi
+
 # SYS-04 SELinux / AppArmor
 if cmd_exists getenforce; then
   SEMODE=$(getenforce 2>/dev/null || echo "Unknown")
