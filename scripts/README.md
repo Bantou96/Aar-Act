@@ -237,6 +237,15 @@ Checks marked **(manual review)** cannot be automatically remediated, the script
 | SYS-08 | Secure Boot enabled | WARN | `secureboot` | Uses `mokutil --sb-state`; WARN only (firmware-level) |
 | SYS-09 | `/dev/shm` mount options | WARN | `filesystem,mounts` | Requires `noexec,nosuid,nodev` |
 | SYS-10 | Ctrl-Alt-Delete masked | FAIL | `system` | `ctrl-alt-del.target` must be masked |
+| SYS-11 | Running kernel is the newest installed | FAIL | `updates,patching` | Compares `uname -r` against the newest `/boot/vmlinuz-*`. Reported next to SYS-03 despite the ID order, because it completes the same story |
+
+> **Why SYS-11 exists.** SYS-03 counts packages waiting to be installed. Once
+> `unattended-upgrades` installs a kernel, that count returns to zero while the
+> machine keeps executing the old image, because `Automatic-Reboot` defaults to
+> `"false"` and nothing activates the new one. The host then passes the patching
+> checks and remains exploitable. SYS-11 is the check that catches it, and its
+> remediation is a reboot, which no hardening role can perform safely on a
+> quorum cluster.
 
 ---
 
