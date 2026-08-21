@@ -19,7 +19,8 @@ RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## Security – Password Handling
 - **Never hardcode** the password in defaults or git
-- Use environment variable: `export LINUX_BOOTLOADER_PASSWORD="..."` before running playbook
+- Read the password into the environment rather than typing it on the command line,
+  where shell history would keep it: `read -sr LINUX_BOOTLOADER_PASSWORD ; export LINUX_BOOTLOADER_PASSWORD`
 - Or use **Ansible Vault** (preferred for teams/CI)
 - All password-related tasks use `no_log: true` by default (controlled by `linux_bootloader_disable_nolog`)
 - If you must debug: set `linux_bootloader_disable_nolog: true` temporarily (logs will show hash)

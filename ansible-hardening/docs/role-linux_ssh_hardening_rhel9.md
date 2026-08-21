@@ -45,19 +45,19 @@ Hardens the OpenSSH server configuration on RHEL 9 family systems:
 |---|---|---|
 | `linux_ssh_hardening_enabled` | `true` | Apply SSH hardening |
 | `linux_ssh_permit_root_login` | `no` | `PermitRootLogin` (`no` / `prohibit-password` / `yes`) |
-| `linux_ssh_password_auth` | `no` | `PasswordAuthentication` — force key-based auth |
+| `linux_ssh_password_auth` | `no` | `PasswordAuthentication`: force key-based auth |
 | `linux_ssh_permit_empty_passwords` | `no` | `PermitEmptyPasswords` |
 | `linux_ssh_x11_forwarding` | `no` | `X11Forwarding` |
 | `linux_ssh_ciphers` | `chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,...` | Allowed ciphers |
 | `linux_ssh_macs` | `hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,...` | Allowed MACs |
 | `linux_ssh_kexalgorithms` | `curve25519-sha256,curve448-sha512,...` | Allowed key exchange algorithms |
 | `linux_ssh_banner` | `/etc/issue.net` | Legal banner file path |
-| `linux_ssh_max_auth_tries` | `4` | `MaxAuthTries` — anti-brute-force |
+| `linux_ssh_max_auth_tries` | `4` | `MaxAuthTries`: anti-brute-force |
 | `linux_ssh_max_sessions` | `4` | `MaxSessions` per connection |
-| `linux_ssh_max_startups` | `10:30:60` | `MaxStartups` — connection throttle |
+| `linux_ssh_max_startups` | `10:30:60` | `MaxStartups`: connection throttle |
 | `linux_ssh_login_grace_time` | `60` | `LoginGraceTime` in seconds |
 | `linux_ssh_client_alive_interval` | `300` | `ClientAliveInterval` in seconds (5 min) |
-| `linux_ssh_client_alive_count_max` | `3` | `ClientAliveCountMax` — probes before drop |
+| `linux_ssh_client_alive_count_max` | `3` | `ClientAliveCountMax`: probes before drop |
 | `linux_ssh_subsystem` | `sftp internal-sftp` | Subsystem configuration |
 | `linux_ssh_hardening_disabled` | `false` | Set `true` to skip this role entirely |
 
@@ -77,7 +77,7 @@ linux_ssh_client_alive_count_max: 3
 
 ## Important Notes
 
-`ClientAliveCountMax` must not be set to `0` — this drops the session on the first missed probe and will terminate Ansible connections during long-running tasks (AIDE init, package installs). The default of `3` means 15 minutes of idle time before disconnect.
+`ClientAliveCountMax` must not be set to `0`: this drops the session on the first missed probe and will terminate Ansible connections during long-running tasks (AIDE init, package installs). The default of `3` means 15 minutes of idle time before disconnect.
 
 ## Differences from Ubuntu Counterpart
 

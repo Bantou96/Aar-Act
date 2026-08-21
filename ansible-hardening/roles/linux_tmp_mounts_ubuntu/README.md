@@ -4,10 +4,10 @@
 Configures /tmp and /dev/shm with noexec, nodev, and nosuid mount options to prevent execution of malicious payloads from temporary filesystems.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 1.1.2 — Configure /tmp
+CIS Section 1.1.2, Configure /tmp
 
 ## Key Variables
 ```yaml

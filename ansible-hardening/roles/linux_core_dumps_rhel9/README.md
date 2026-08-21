@@ -7,7 +7,7 @@ Restricts core dump creation via PAM limits and sysctl settings to prevent sensi
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.5.1 — Ensure core dumps are restricted
+CIS Section 1.5.1, Ensure core dumps are restricted
 
 ## Key Variables
 ```yaml

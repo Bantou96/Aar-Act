@@ -25,10 +25,10 @@ Installs and configures Chrony as the NTP time synchronisation daemon on Ubuntu/
 
 | Variable | Default | Description |
 |---|---|---|
-| `linux_chrony_servers` | `[0–3.pool.ntp.org]` | NTP server list — replace with government/regional servers for production |
+| `linux_chrony_servers` | `[0–3.pool.ntp.org]` | NTP server list: replace with government/regional servers for production |
 | `linux_chrony_server_options` | `iburst` | Options appended to each NTP server line (`iburst` = fast initial sync) |
 | `linux_chrony_allow_networks` | `[]` | Networks allowed to use this host as an NTP server (empty = client only) |
-| `linux_chrony_makestep` | `1.0 3` | Step threshold — allow step adjustments of up to 1s during the first 3 updates |
+| `linux_chrony_makestep` | `1.0 3` | Step threshold: allow step adjustments of up to 1s during the first 3 updates |
 | `linux_chrony_hwtimestamp` | `false` | Enable hardware timestamping if NIC supports it |
 | `linux_chrony_disabled` | `false` | Set `true` to skip this role entirely |
 
@@ -37,11 +37,12 @@ Installs and configures Chrony as the NTP time synchronisation daemon on Ubuntu/
 ```yaml
 # group_vars/ubuntu_servers.yml
 
-# Use Senegalese or regional NTP servers for government infrastructure
+# Prefer a national or regional NTP source, then a pool as fallback.
+# Replace the zone with the one closest to your estate.
 linux_chrony_servers:
-  - "ntp.arc.sn"
-  - "0.africa.pool.ntp.org"
-  - "1.africa.pool.ntp.org"
+  - "ntp.example.org"
+  - "0.pool.ntp.org"
+  - "1.pool.ntp.org"
 
 # If this host is an internal NTP server for your LAN
 linux_chrony_allow_networks:

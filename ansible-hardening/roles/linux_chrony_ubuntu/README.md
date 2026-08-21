@@ -4,10 +4,10 @@
 Installs and configures Chrony as a secure NTP client with restricted server access and authentication to ensure accurate and tamper-resistant system time synchronization.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 2.1.1 — Ensure time synchronization is in use
+CIS Section 2.1.1, Ensure time synchronization is in use
 
 ## Key Variables
 ```yaml

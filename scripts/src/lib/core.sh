@@ -25,13 +25,33 @@ section() {
 }
 
 # Encode special HTML characters to prevent XSS in report output
-html_escape() {
+json_escape() {
+  # Backslash first, then the quote, then control characters that would make the
+  # document invalid. No & involved, so patsub_replacement does not apply here,
+  # but this lives next to html_escape so both are found and reviewed together.
   local s="$1"
-  s="${s//&/&amp;}"
-  s="${s//</&lt;}"
-  s="${s//>/&gt;}"
-  s="${s//\"/&quot;}"
-  s="${s//\'/&#39;}"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/ }"
+  s="${s//$'\r'/ }"
+  s="${s//$'\t'/ }"
+  printf '%s' "$s"
+}
+
+html_escape() {
+  # The backslashes before & are required, not stylistic. Bash 5.2 added the
+  # patsub_replacement option, on by default, which makes an unescaped & in the
+  # replacement expand to the matched text exactly as sed does. Without them
+  # "${s//</&lt;}" yields "<lt;" and the function silently stops escaping:
+  # every value taken from the audited machine then lands raw in the report.
+  # \& is literal in every bash version, so this stays correct on both sides of
+  # 5.2. Covered by tests/test_html_escape.sh.
+  local s="$1"
+  s="${s//&/\&amp;}"
+  s="${s//</\&lt;}"
+  s="${s//>/\&gt;}"
+  s="${s//\"/\&quot;}"
+  s="${s//\'/\&#39;}"
   printf '%s' "$s"
 }
 

@@ -7,7 +7,7 @@ Installs and configures AIDE (Advanced Intrusion Detection Environment) to perfo
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.4 — Filesystem Integrity Checking
+CIS Section 1.4, Filesystem Integrity Checking
 
 ## Key Variables
 ```yaml

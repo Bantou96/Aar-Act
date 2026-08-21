@@ -43,7 +43,7 @@ Hardens temporary filesystem mount points on RHEL 9 family systems to prevent pr
 ```yaml
 # group_vars/rhel_servers.yml
 
-# Defaults are CIS-compliant — no changes needed
+# Defaults are CIS-compliant: no changes needed
 linux_tmp_mount_options:
   - defaults
   - noexec

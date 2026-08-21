@@ -7,7 +7,7 @@ Configures systemd-journald with persistent log storage, compression, and rate l
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 4.2.1.x — Configure journald
+CIS Section 4.2.1.x, Configure journald
 
 ## Key Variables
 ```yaml

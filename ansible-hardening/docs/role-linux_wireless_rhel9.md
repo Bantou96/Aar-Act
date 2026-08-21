@@ -5,8 +5,8 @@
 Disables all wireless network interfaces and blacklists wireless kernel modules on RHEL9 servers to meet CIS benchmark requirements. This ensures servers cannot communicate over wireless networks, reducing the attack surface on infrastructure that should only use wired interfaces.
 
 Two complementary approaches are applied:
-1. **nmcli** — disables all wireless radios at the NetworkManager level (if nmcli is available)
-2. **Kernel module blacklisting** — prevents wireless modules from loading at the kernel level (defense-in-depth)
+1. **nmcli**: disables all wireless radios at the NetworkManager level (if nmcli is available)
+2. **Kernel module blacklisting**: prevents wireless modules from loading at the kernel level (defense-in-depth)
 
 ## CIS Coverage
 
@@ -22,12 +22,12 @@ Two complementary approaches are applied:
 
 ### Blacklisted modules (when `linux_wireless_blacklist_modules: true`)
 
-- `iwlwifi` — Intel wireless
-- `cfg80211` — Linux wireless configuration API
-- `mac80211` — Linux 802.11 MAC framework
-- `rtl8xxxu` — Realtek USB wireless
-- `rtw88` — Realtek PCIe wireless
-- `brcmfmac` — Broadcom FMAC wireless
+- `iwlwifi`: Intel wireless
+- `cfg80211`: Linux wireless configuration API
+- `mac80211`: Linux 802.11 MAC framework
+- `rtl8xxxu`: Realtek USB wireless
+- `rtw88`: Realtek PCIe wireless
+- `brcmfmac`: Broadcom FMAC wireless
 
 Written to `/etc/modprobe.d/99-cis-wireless.conf`.
 

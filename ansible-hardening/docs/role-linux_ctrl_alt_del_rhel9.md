@@ -30,7 +30,7 @@ Prevents accidental or malicious system reboot via the Ctrl+Alt+Del key combinat
 ```yaml
 # group_vars/rhel_servers.yml
 
-# Default settings are sufficient — no changes needed
+# Default settings are sufficient: no changes needed
 linux_ctrl_alt_del_enabled: true
 ```
 

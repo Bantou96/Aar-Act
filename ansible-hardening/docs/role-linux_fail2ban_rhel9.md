@@ -17,7 +17,7 @@ Installs and configures `fail2ban` to dynamically ban IP addresses after repeate
 
 ## CIS Coverage
 
-- 4.3.1 Ensure fail2ban is installed (supplemental — not directly in CIS benchmark)
+- 4.3.1 Ensure fail2ban is installed (supplemental, not directly in CIS benchmark)
 - Directly mitigates brute-force attacks against SSH (supports CIS 5.1.x SSH hardening controls)
 
 ## Variables
@@ -29,7 +29,7 @@ Installs and configures `fail2ban` to dynamically ban IP addresses after repeate
 | `linux_fail2ban_bantime` | `3600` | Default ban duration in seconds (1 hour) |
 | `linux_fail2ban_findtime` | `600` | Counting window in seconds (10 minutes) |
 | `linux_fail2ban_maxretry` | `5` | Failures before ban (global default) |
-| `linux_fail2ban_ignoreip` | `[127.0.0.1/8, ::1]` | IPs/CIDRs never banned — add management subnets here |
+| `linux_fail2ban_ignoreip` | `[127.0.0.1/8, ::1]` | IPs/CIDRs never banned: add management subnets here |
 | `linux_fail2ban_jail_sshd_enabled` | `true` | Enable the sshd jail |
 | `linux_fail2ban_jail_sshd_port` | `22` | SSH port monitored by the jail |
 | `linux_fail2ban_jail_sshd_maxretry` | `4` | SSH-specific retry limit (stricter than global) |
@@ -50,7 +50,7 @@ Installs and configures `fail2ban` to dynamically ban IP addresses after repeate
 linux_fail2ban_ignoreip:
   - "127.0.0.1/8"
   - "::1"
-  - "192.168.10.0/24"   # Management VLAN — never ban
+  - "192.168.10.0/24"   # Management VLAN, never ban
 
 linux_fail2ban_jail_sshd_maxretry: "3"
 linux_fail2ban_jail_sshd_bantime: "86400"

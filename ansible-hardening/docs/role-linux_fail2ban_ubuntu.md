@@ -18,7 +18,7 @@ Installs and configures Fail2ban on Ubuntu/Debian systems to provide dynamic bru
 
 ## CIS Coverage
 
-Not directly mapped to a CIS section — provides defence-in-depth against SSH brute-force attacks that complement CIS controls 5.1.x (SSH hardening) and 3.5.x (firewall).
+Not directly mapped to a CIS section, provides defence-in-depth against SSH brute-force attacks that complement CIS controls 5.1.x (SSH hardening) and 3.5.x (firewall).
 
 ## Variables
 

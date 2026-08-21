@@ -47,9 +47,9 @@ Hardens the Linux kernel via sysctl parameters and kernel module blacklisting on
 | `linux_kernel_apply_coredump` | `true` | Set `fs.suid_dumpable = 0` via sysctl |
 | `linux_kernel_blacklist_filesystems` | `true` | Blacklist unused filesystems (cramfs, hfs, squashfs, udf, vfat on servers) |
 | `linux_kernel_blacklist_usb_storage` | `true` | Blacklist `usb-storage` module to prevent rogue USB devices |
-| `linux_kernel_blacklist_firewire` | `false` | Blacklist FireWire modules (opt-in — rare on servers) |
+| `linux_kernel_blacklist_firewire` | `false` | Blacklist FireWire modules (opt-in: rare on servers) |
 | `linux_kernel_blacklist_thunderbolt` | `false` | Blacklist Thunderbolt modules (opt-in) |
-| `linux_kernel_blacklist_atm` | `false` | Blacklist ATM modules (opt-in — very rare) |
+| `linux_kernel_blacklist_atm` | `false` | Blacklist ATM modules (opt-in: very rare) |
 | `linux_kernel_modprobe_file` | `/etc/modprobe.d/99-cis-modprobe-blacklist.conf` | Path to modprobe blacklist file |
 | `linux_kernel_unload_blacklisted` | `false` | Attempt to `rmmod` already-loaded blacklisted modules |
 | `linux_kernel_hardening_disabled` | `false` | Set `true` to skip this role entirely |

@@ -4,7 +4,7 @@
 
 Deploys legally compliant pre-login and post-login banners on Ubuntu/Debian systems:
 - Deploys `/etc/issue` (local console pre-login banner)
-- Deploys `/etc/issue.net` (SSH pre-login banner — referenced by `sshd_config Banner`)
+- Deploys `/etc/issue.net` (SSH pre-login banner, referenced by `sshd_config Banner`)
 - Deploys `/etc/motd` (post-login message of the day)
 - Optionally disables Ubuntu's dynamic MOTD scripts (ESM notices, ads, livepatch status) which can expose system information
 
@@ -37,14 +37,14 @@ Deploys legally compliant pre-login and post-login banners on Ubuntu/Debian syst
 
 ```yaml
 # group_vars/ubuntu_servers.yml
-linux_login_banner_org: "Ministère des Finances du Sénégal"
+linux_login_banner_org: "Example Organisation"
 
 # Custom banner overriding the template
 linux_login_banner_text: |
   ******************************************************************************
   *  SYSTEME INFORMATIQUE AUTORISE UNIQUEMENT                                  *
   *  Tout accès non autorisé est interdit et punissable par la loi.            *
-  *  Ministère des Finances — Dakar, Sénégal                                  *
+  *  Example Organisation, IT Operations                                     *
   ******************************************************************************
 ```
 

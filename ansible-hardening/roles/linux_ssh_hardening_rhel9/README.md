@@ -7,7 +7,7 @@ Applies deep SSH server hardening by enforcing strong ciphers, MACs, key exchang
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 5.1 — Configure SSH Server
+CIS Section 5.1, Configure SSH Server
 
 ## Key Variables
 ```yaml

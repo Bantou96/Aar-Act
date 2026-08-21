@@ -49,5 +49,5 @@ tail -1 /var/log/sudo.log
 ## Notes
 
 - All sudoers modifications are validated with `visudo -cf` before applying to prevent syntax errors
-- The logfile is append-only — it captures user, command, working directory, and TTY for every sudo invocation
+- The logfile is append-only, it captures user, command, working directory, and TTY for every sudo invocation
 - The `use_pty` directive prevents attackers from using sudo in background scripts that inherit a controlling terminal from a compromised process

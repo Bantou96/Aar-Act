@@ -4,10 +4,10 @@
 Enforces secure permissions on critical system files, scans for world-writable files, and verifies NFS mount security options to reduce unauthorized access risks.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 6.1 — System File Permissions
+CIS Section 6.1, System File Permissions
 
 ## Key Variables
 ```yaml

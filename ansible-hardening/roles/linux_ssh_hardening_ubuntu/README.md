@@ -4,10 +4,10 @@
 Applies deep SSH server hardening by enforcing strong ciphers, MACs, key exchange algorithms, authentication restrictions, and login banners to minimize SSH attack exposure.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 5.1 — Configure SSH Server
+CIS Section 5.1, Configure SSH Server
 
 ## Key Variables
 ```yaml

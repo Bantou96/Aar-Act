@@ -1,12 +1,12 @@
 # CyberAar Execution Environment
 
-A self-contained container image with everything needed to run CyberAar hardening — no local Ansible install required.
+A self-contained container image with everything needed to run CyberAar hardening, no local Ansible install required.
 
 **Image:** `ghcr.io/cyberaar/ee-hardening` (GitHub Container Registry)
 
 **Includes:**
 - `ansible-core` (via base image)
-- `cyberaar.hardening` collection — 51 CIS-aligned hardening roles
+- `cyberaar.hardening` collection, 51 CIS-aligned hardening roles
 - `ansible.posix` + `community.general` dependencies
 - CyberAar playbooks at `/usr/share/cyberaar/playbooks/`
 - `cyberaar-baseline` audit script at `/usr/local/bin/cyberaar-baseline`
@@ -31,7 +31,7 @@ docker run --rm \
   --html-out /tmp/report.html --json-out /tmp/report.json
 ```
 
-### 2. Dry-run hardening (check mode — no changes)
+### 2. Dry-run hardening (check mode: no changes)
 
 Create a minimal inventory file:
 

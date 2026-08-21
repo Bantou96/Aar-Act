@@ -7,7 +7,7 @@ Disables IP forwarding, ICMP redirects, and source routing via sysctl settings t
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 3.1 — Network Parameters (Host Only), CIS Section 3.2 — Network Parameters (Host and Router)
+CIS Section 3.1, Network Parameters (Host Only), CIS Section 3.2, Network Parameters (Host and Router)
 
 ## Key Variables
 ```yaml

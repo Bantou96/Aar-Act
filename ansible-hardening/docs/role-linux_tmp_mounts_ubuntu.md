@@ -29,7 +29,7 @@ Hardens temporary filesystem mount points on Ubuntu/Debian systems to prevent pr
 | Variable | Default | Description |
 |---|---|---|
 | `linux_tmp_mounts_options` | `defaults,noexec,nosuid,nodev` | Mount options applied to `/tmp` and `/dev/shm` |
-| `linux_tmp_mounts_size` | `""` | Optional size limit for tmpfs (e.g. `2G` — empty = no limit) |
+| `linux_tmp_mounts_size` | `""` | Optional size limit for tmpfs (e.g. `2G`: empty = no limit) |
 | `linux_tmp_mounts_disabled` | `false` | Set `true` to skip this role entirely |
 
 ## Usage Example

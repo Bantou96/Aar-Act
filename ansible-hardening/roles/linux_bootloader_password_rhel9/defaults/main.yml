@@ -6,8 +6,10 @@ linux_bootloader_password_enabled: true
 # GRUB superuser name (default root – can be changed for obfuscation)
 linux_bootloader_superuser: "root"
 
-# Password source: prefer environment variable: fail if not set
-# Usage: export LINUX_BOOTLOADER_PASSWORD="MyVeryStrongPass2026!"
+# Password source: environment variable, and the role fails if it is unset.
+# Read it rather than typing it on the command line, where it would be written
+# to shell history in clear:
+#   read -sr LINUX_BOOTLOADER_PASSWORD ; export LINUX_BOOTLOADER_PASSWORD
 linux_bootloader_password: "{{ lookup('env', 'LINUX_BOOTLOADER_PASSWORD') | default(Undefined) }}"
 
 # Set to true only in very controlled/test environments where you accept password in logs

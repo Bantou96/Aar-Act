@@ -18,5 +18,18 @@ linux_crypto_configure_gnutls: true
 # Disable SSLv2/SSLv3/TLSv1.0/TLSv1.1
 linux_crypto_disable_legacy_tls: true
 
+# Subject fields pre-filled for `openssl req` on this host.
+#
+# Empty by default, and deliberately so: a hardening role has no business
+# deciding your certificate subject. The template previously hardcoded
+# C = SN / ST = Dakar / O = CyberAar, so every user of the role generated
+# certificates carrying someone else's identity.
+#
+# Set any of them to emit a [req_distinguished_name] section. With prompt = no
+# these become the actual subject when `openssl req` is run without -subj.
+linux_crypto_cert_country: ""
+linux_crypto_cert_state: ""
+linux_crypto_cert_org: ""
+
 # Role disable var
 linux_crypto_disabled: false

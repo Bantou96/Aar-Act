@@ -4,10 +4,10 @@
 Enforces user account security by locking the root account, securing system accounts, locking inactive accounts, and applying a strong password aging policy.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 5.4 — User Accounts and Environment, CIS Section 5.5 — User Accounts and Environment
+CIS Section 5.4, User Accounts and Environment, CIS Section 5.5, User Accounts and Environment
 
 ## Key Variables
 ```yaml

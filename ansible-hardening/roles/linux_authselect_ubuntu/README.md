@@ -4,10 +4,10 @@
 Configures PAM with pwquality password complexity requirements and pam_faillock account lockout to enforce strong authentication policies.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 5.3 — Configure PAM, CIS Section 5.4 — User Accounts and Environment
+CIS Section 5.3, Configure PAM, CIS Section 5.4, User Accounts and Environment
 
 ## Key Variables
 ```yaml

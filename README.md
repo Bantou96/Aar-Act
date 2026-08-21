@@ -25,14 +25,14 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 - [What's Inside](#whats-inside)
 - [Repository Structure](#repository-structure)
 - [Prerequisites](#prerequisites)
-- [Deliverable 0 — Docker Execution Environment](#deliverable-0--docker-execution-environment-no-install)
-- [Deliverable 0b — Security Dashboard](#deliverable-0b--security-dashboard)
-- [Deliverable 1 — Baseline Audit Script](#deliverable-1--baseline-audit-script-cyberaar-baselinesh)
-- [Deliverable 2 — Ansible Hardening Collection](#deliverable-2--ansible-hardening-collection)
+- [Deliverable 0: Docker Execution Environment](#deliverable-0-docker-execution-environment-no-install)
+- [Deliverable 0b: Security Dashboard](#deliverable-0b-security-dashboard)
+- [Deliverable 1: Baseline Audit Script](#deliverable-1-baseline-audit-script-cyberaar-baselinesh)
+- [Deliverable 2: Ansible Hardening Collection](#deliverable-2-ansible-hardening-collection)
   - [The Three-Step Pipeline](#the-three-step-pipeline)
-  - [Step 1 — Pre-Hardening Baseline](#step-1--pre-hardening-baseline)
-  - [Step 2 — System Hardening](#step-2--system-hardening)
-  - [Step 3 — Post-Hardening Baseline](#step-3--post-hardening-baseline)
+  - [Step 1: Pre-Hardening Baseline](#step-1-pre-hardening-baseline)
+  - [Step 2: System Hardening](#step-2-system-hardening)
+  - [Step 3: Post-Hardening Baseline](#step-3-post-hardening-baseline)
 - [Running the Pipeline](#running-the-pipeline)
 - [Hardening Roles Reference](#hardening-roles-reference)
 - [Tag Reference](#tag-reference)
@@ -51,10 +51,10 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 
 | Deliverable | Description | Version |
 |-------------|-------------|---------|
-| `scripts/cyberaar-baseline.sh` | Standalone bash script — audits a Linux server across 96 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
-| `ansible-hardening/` | Ansible collection (`cyberaar.hardening`) — 51 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
-| `execution-environment/` | Docker image — self-contained EE with Ansible + collection + playbooks, no local install required | `ghcr.io/cyberaar/ee-hardening` |
-| `dashboard/index.html` | Single-file web dashboard — visualise baseline JSON reports across multiple hosts, before/after comparison, PDF export | zero dependencies |
+| `scripts/cyberaar-baseline.sh` | Standalone bash script: audits a Linux server across 96 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
+| `ansible-hardening/` | Ansible collection (`cyberaar.hardening`): 51 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
+| `execution-environment/` | Docker image: self-contained EE with Ansible + collection + playbooks, no local install required | `ghcr.io/cyberaar/ee-hardening` |
+| `dashboard/index.html` | Single-file web dashboard: visualise baseline JSON reports across multiple hosts, before/after comparison, PDF export | zero dependencies |
 
 All three are independent: run the baseline script standalone, use the Ansible collection directly, or pull the Docker image for a zero-install experience.
 
@@ -70,7 +70,7 @@ cyberaar-toolkit/
 │   ├── Containerfile                 # Docker image definition (build from repo root)
 │   └── README.md                     # EE usage guide
 ├── scripts/
-│   ├── cyberaar-baseline.sh          # Standalone audit script (v4.2.0) — generated bundle
+│   ├── cyberaar-baseline.sh          # Standalone audit script (v4.2.0), generated bundle
 │   ├── build.sh                      # Rebuilds cyberaar-baseline.sh from src/
 │   ├── run-hardening.sh              # Pipeline runner (wraps ansible-playbook)
 │   ├── README.md                     # Baseline checker full reference
@@ -78,7 +78,7 @@ cyberaar-toolkit/
 │       ├── main.sh                   # Shebang, CLI args, install/uninstall
 │       ├── run.sh                    # Execution entry point
 │       ├── lib/                      # core.sh, ansible_map.sh, remote.sh
-│       ├── checks/                   # 8 files — one per check section
+│       ├── checks/                   # 8 files, one per check section
 │       └── renderers/                # terminal.sh, json.sh, html.sh
 ├── ansible-hardening/
 │   ├── galaxy.yml                    # Collection metadata (cyberaar.hardening v2.0.0)
@@ -118,14 +118,14 @@ ansible-galaxy collection install -r ansible-hardening/requirements.yml
 ### Managed nodes (the servers being hardened)
 
 - **RHEL 9 family**: RHEL 9, AlmaLinux 9, Rocky Linux 9
-- **Ubuntu/Debian**: Ubuntu 20.04, 22.04, 24.04 — Debian 11, 12
+- **Ubuntu/Debian**: Ubuntu 20.04, 22.04, 24.04, Debian 11, 12
 - Python 3 installed
 - SSH access with a sudo-capable admin user
-- No agent required — push-based via SSH
+- No agent required, push-based via SSH
 
 ---
 
-## Deliverable 0 — Docker Execution Environment (no install)
+## Deliverable 0: Docker Execution Environment (no install)
 
 If you don't want to install Ansible locally, pull the pre-built Docker image:
 
@@ -166,7 +166,7 @@ docker run --rm -it \
 
 ---
 
-## Deliverable 0b — Security Dashboard
+## Deliverable 0b: Security Dashboard
 
 `dashboard/index.html` is a single-file, zero-dependency web dashboard for visualising baseline reports across your entire fleet. No install, no server, no internet connection required.
 
@@ -175,16 +175,16 @@ docker run --rm -it \
 | Feature | Description |
 |---|---|
 | Fleet overview | Score ring per host (green ≥ 80%, amber ≥ 60%, red < 60%), PASS / WARN / FAIL counts, sorted worst-first |
-| Before/After delta | Load a pre- and post-hardening report for the same host — score delta pill appears automatically |
-| Host detail panel | Click any host card — slide-in panel with full check table |
+| Before/After delta | Load a pre- and post-hardening report for the same host: score delta pill appears automatically |
+| Host detail panel | Click any host card: slide-in panel with full check table |
 | Status filter | Filter checks by FAIL / WARN / PASS inside the detail panel |
 | Ansible remediation | Copy-ready `ansible-playbook` command pre-filled with hostname and inventory path |
 | PDF export | Browser print → PDF (header and panel hidden automatically) |
-| Fully offline | No CDN, no npm, no build step — works in air-gapped environments |
+| Fully offline | No CDN, no npm, no build step: works in air-gapped environments |
 
 ---
 
-### Step 1 — Generate JSON reports
+### Step 1: Generate JSON reports
 
 ```bash
 # Run directly on the local machine
@@ -201,7 +201,7 @@ ansible-playbook \
 
 ---
 
-### Step 2 — Open the dashboard
+### Step 2: Open the dashboard
 
 **Linux / macOS:**
 ```bash
@@ -211,16 +211,16 @@ open dashboard/index.html             # macOS
 
 **WSL2 (Windows Subsystem for Linux):**
 ```bash
-# Option A — open via Windows Explorer
+# Option A: open via Windows Explorer
 explorer.exe dashboard/index.html
 
-# Option B — get the Windows path and paste into browser
+# Option B: get the Windows path and paste into browser
 wslpath -w $(pwd)/dashboard/index.html
 # Output: \\wsl$\Ubuntu\...\dashboard\index.html
 # Paste that path into Chrome / Edge address bar
 ```
 
-**Any platform — serve locally:**
+**Any platform, serve locally:**
 ```bash
 python3 -m http.server 8080 --directory dashboard/
 # Then open http://localhost:8080 in your browser
@@ -228,11 +228,11 @@ python3 -m http.server 8080 --directory dashboard/
 
 ---
 
-### Step 3 — Load reports
+### Step 3: Load reports
 
 1. Click **Load Reports** (top right) or drag & drop `.json` files onto the drop zone
-2. The dashboard groups reports by `host` field — load reports from multiple hosts at once
-3. For before/after comparison: load two reports for the same host — the dashboard detects them automatically by date and shows the score delta
+2. The dashboard groups reports by `host` field, load reports from multiple hosts at once
+3. For before/after comparison: load two reports for the same host, the dashboard detects them automatically by date and shows the score delta
 
 **Where to find reports after an Ansible pipeline run:**
 ```
@@ -242,28 +242,28 @@ ansible-hardening/reports/after/<hostname>/report.json    ← post-hardening
 
 ---
 
-### Step 4 — Explore
+### Step 4: Explore
 
-- **Fleet view** — all hosts on one screen, worst score first
-- **Click a host card** — opens the detail panel with all 96 checks
+- **Fleet view**: all hosts on one screen, worst score first
+- **Click a host card**: opens the detail panel with all 96 checks
 - **Filter** by FAIL / WARN / PASS to focus on what matters
 - **Ansible remediation** block shows the exact command to remediate FAIL/WARN items
-- **Export PDF** — click the button top right, then use your browser's print dialog
+- **Export PDF**: click the button top right, then use your browser's print dialog
 
 > Full reference: [`dashboard/README.md`](dashboard/README.md)
 
 ---
 
-## Deliverable 1 — Baseline Audit Script (`cyberaar-baseline.sh`)
+## Deliverable 1: Baseline Audit Script (`cyberaar-baseline.sh`)
 
 The standalone audit script runs **96 security checks** across 8 sections and produces:
 
-- **Terminal output** — colour-coded PASS / WARN / FAIL with a security score
-- **HTML report** — self-contained file for sharing with management or auditors
-- **JSON report** — machine-readable, suitable for SIEM or CI pipeline ingestion
-- **Ansible remediation plan** — targeted `ansible-playbook` commands for every failing check, mapped to the correct role and tag
+- **Terminal output**: colour-coded PASS / WARN / FAIL with a security score
+- **HTML report**: self-contained file for sharing with management or auditors
+- **JSON report**: machine-readable, suitable for SIEM or CI pipeline ingestion
+- **Ansible remediation plan**: targeted `ansible-playbook` commands for every failing check, mapped to the correct role and tag
 
-No Ansible required — pure bash, no dependencies beyond standard Linux tools.
+No Ansible required, pure bash, no dependencies beyond standard Linux tools.
 
 ### Install to PATH (optional)
 
@@ -293,7 +293,7 @@ cyberaar-baseline --inventory ansible-hardening/inventory/hosts \
 
 ### What it checks
 
-96 checks across 8 sections — each mapped to a CIS benchmark control:
+96 checks across 8 sections, each mapped to a CIS benchmark control:
 
 | Section | Checks | Coverage highlights |
 |---|---|---|
@@ -306,29 +306,29 @@ cyberaar-baseline --inventory ansible-hardening/inventory/hosts \
 | 7. Integrity | 8 | AIDE, rootkit scanner, suspicious cron, open ports, package GPG check, fail2ban, AIDE DB, cron dir perms |
 | 8. Compliance | 12 | Legal banner, /tmp partition, /home+/var partitions, umask, ASLR, kptr_restrict, dmesg_restrict, ptrace, USB blacklist, cron service, cron.allow/at.allow |
 
-Checks that require human judgment are flagged `(manual review required)` in the output — the script highlights them, the operator decides.
+Checks that require human judgment are flagged `(manual review required)` in the output, the script highlights them, the operator decides.
 
 > Full reference: [`scripts/README.md`](scripts/README.md)
 
 ---
 
-## Deliverable 2 — Ansible Hardening Collection
+## Deliverable 2: Ansible Hardening Collection
 
-The Ansible collection (`cyberaar.hardening`) contains **51 hardening roles** organised in parallel pairs — each control area has a `_rhel9` variant and an `_ubuntu` variant (plus some Ubuntu-only roles like `fail2ban`). OS detection is automatic: the playbook applies the correct role set based on `ansible_os_family`.
+The Ansible collection (`cyberaar.hardening`) contains **51 hardening roles** organised in parallel pairs, each control area has a `_rhel9` variant and an `_ubuntu` variant (plus some Ubuntu-only roles like `fail2ban`). OS detection is automatic: the playbook applies the correct role set based on `ansible_os_family`.
 
 ### The Three-Step Pipeline
 
 ```
 playbooks/0_execute_full_pipeline.yml
 │
-├── Step 1 — 1_execute_baseline_before.yml    [tags: baseline, before]
+├── Step 1, 1_execute_baseline_before.yml    [tags: baseline, before]
 │     ├── Copies cyberaar-baseline.sh to each remote host
 │     ├── Runs the audit script
 │     ├── Fetches HTML + JSON reports back to the control node
 │     └── Reports saved to:
 │           ansible-hardening/reports/before/<hostname>/
 │
-├── Step 2 — 2_configure_hardening.yml        [tags: hardening]
+├── Step 2, 2_configure_hardening.yml        [tags: hardening]
 │     ├── Verifies OS is supported (RedHat or Debian family)
 │     ├── Detects OS family and applies the matching role set
 │     ├── 51 roles applied in CIS dependency order:
@@ -340,7 +340,7 @@ playbooks/0_execute_full_pipeline.yml
 │     │     cron → fail2ban
 │     └── Each role is independently skippable via <role>_disabled=true
 │
-└── Step 3 — 3_execute_baseline_after.yml     [tags: baseline, after]
+└── Step 3, 3_execute_baseline_after.yml     [tags: baseline, after]
       ├── Re-runs the audit script on each remote host
       ├── Fetches updated HTML + JSON reports
       ├── Reports saved to:
@@ -352,7 +352,7 @@ playbooks/0_execute_full_pipeline.yml
 
 ---
 
-### Step 1 — Pre-Hardening Baseline
+### Step 1: Pre-Hardening Baseline
 
 Captures the security posture of each host **before** any changes are made. This is your baseline measurement.
 
@@ -373,12 +373,12 @@ Reports are saved locally to `ansible-hardening/reports/before/<hostname>/`.
 
 ---
 
-### Step 2 — System Hardening
+### Step 2: System Hardening
 
-Applies all applicable CIS-aligned hardening roles to each host. OS detection is automatic — you do not need separate runs for RHEL and Ubuntu hosts.
+Applies all applicable CIS-aligned hardening roles to each host. OS detection is automatic, you do not need separate runs for RHEL and Ubuntu hosts.
 
 ```bash
-# Dry-run (check mode — no changes applied, always start here)
+# Dry-run (check mode: no changes applied, always start here)
 bash scripts/run-hardening.sh -u <admin_user> -t <host_or_group> -s 2 -c
 
 # Apply full hardening
@@ -394,7 +394,7 @@ bash scripts/run-hardening.sh -u <admin_user> -t <host_or_group> \
 
 ---
 
-### Step 3 — Post-Hardening Baseline
+### Step 3: Post-Hardening Baseline
 
 Re-runs the audit on each host to measure the impact of the hardening. The JSON output can also be ingested into a SIEM or dashboard.
 
@@ -419,7 +419,7 @@ Reports are saved to `ansible-hardening/reports/after/<hostname>/`.
 
 ### The `run-hardening.sh` wrapper (recommended)
 
-The script auto-discovers `ansible-hardening/` by walking up the directory tree — run it from anywhere in the repo.
+The script auto-discovers `ansible-hardening/` by walking up the directory tree, run it from anywhere in the repo.
 
 ```
 Usage: bash scripts/run-hardening.sh [options]
@@ -491,7 +491,7 @@ ansible-playbook --diff \
 
 ## Hardening Roles Reference
 
-Each control area has **two parallel roles** — one for RHEL 9 family and one for Ubuntu/Debian. Both are applied in a single play; the correct one activates automatically via `ansible_os_family`.
+Each control area has **two parallel roles**: one for RHEL 9 family and one for Ubuntu/Debian. Both are applied in a single play; the correct one activates automatically via `ansible_os_family`.
 
 | Control Area | RHEL 9 Role | Ubuntu/Debian Role | CIS Section |
 |---|---|---|---|
@@ -515,7 +515,7 @@ Each control area has **two parallel roles** — one for RHEL 9 family and one f
 | /tmp & /dev/shm mounts | `linux_tmp_mounts_rhel9` | `linux_tmp_mounts_ubuntu` | 1.1.x |
 | Secure Boot | `linux_secure_boot_rhel9` | `linux_secure_boot_ubuntu` | 1.5.1 |
 | File permissions | `linux_file_permissions_rhel9` | `linux_file_permissions_ubuntu` | 6.1 |
-| Fail2ban | `linux_fail2ban_rhel9` | `linux_fail2ban_ubuntu` | — |
+| Fail2ban | `linux_fail2ban_rhel9` | `linux_fail2ban_ubuntu` |: |
 | Wireless interfaces | `linux_wireless_rhel9` | `linux_wireless_ubuntu` | 3.1.2 |
 | Sudo hardening | `linux_sudo_hardening_rhel9` | `linux_sudo_hardening_ubuntu` | 1.3.2–1.3.3 |
 | Cron hardening | `linux_cron_hardening_rhel9` | `linux_cron_hardening_ubuntu` | 5.1 |
@@ -592,7 +592,7 @@ Use tags to run only a subset of the pipeline. All tags work with both `--tags` 
 
 ## Inventory & Variable Configuration
 
-### Inventory file — `inventory/hosts` (INI format)
+### Inventory file: `inventory/hosts` (INI format)
 
 ```ini
 [rhel_servers]
@@ -607,13 +607,13 @@ ubuntu-vm-01   index="132"
 [linux_servers:children]
 rhel_servers
 ubuntu_servers
-# dmz_servers intentionally excluded — managed separately
+# dmz_servers intentionally excluded: managed separately
 ```
 
 Each host's `ansible_host` IP is derived from the `index` variable combined with a network prefix defined in `group_vars/rhel_servers.yml` or `group_vars/ubuntu_servers.yml`.
 
 The naming convention for hosts follows: `<role>.<site>-<env>-<os>-<idx>.corp.example.com`
-- `site`: geographic code (e.g. `dk` = Dakar, `th` = Thiès)
+- `site`: short code identifying the site or data centre (e.g. `dc1`, `par`, `fra`)
 - `env`: `pr` = prod, `st` = staging, `dv` = dev
 - `os`: `rh` = RHEL, `ku` = Ubuntu
 
@@ -676,7 +676,7 @@ Open `before/` and `after/` HTML reports side by side to visualise the security 
 
 Community-maintained security guides and templates have moved to their own repository:
 
-**[cyberaar/Aar-Act](https://github.com/cyberaar/Aar-Act)** — practices (English), translations (French), and worked examples.
+**[cyberaar/Aar-Act](https://github.com/cyberaar/Aar-Act)**: practices (English), translations (French), and worked examples.
 
 ---
 
@@ -694,17 +694,17 @@ Build a **free, community-maintained security toolkit** that provides practical,
 
 ## How to Contribute
 
-No long commitments required — add one improvement when you have 10 minutes.
+No long commitments required, add one improvement when you have 10 minutes.
 
 1. **Browse** existing sections or suggest new ones via [Issues](https://github.com/cyberaar/cyberaar-toolkit/issues)
 2. **Fork** this repo or create a branch
-3. **Add or edit** — hardening roles in `ansible-hardening/roles/`, or guides in [cyberaar/Aar-Act](https://github.com/cyberaar/Aar-Act)
-4. **Submit** a Pull Request — reference the CIS benchmark section when adding hardening controls
+3. **Add or edit**: hardening roles in `ansible-hardening/roles/`, or guides in [cyberaar/Aar-Act](https://github.com/cyberaar/Aar-Act)
+4. **Submit** a Pull Request, reference the CIS benchmark section when adding hardening controls
 5. Get **credit** in the Contributors list
 
 New hardening roles should follow the `linux_<category>_<rhel9|ubuntu>` naming convention and include parallel RHEL9 and Ubuntu implementations.
 
-**Contributing to the baseline script:** `cyberaar-baseline.sh` is a generated bundle — do not edit it directly. Edit the source files under `scripts/src/`, then rebuild:
+**Contributing to the baseline script:** `cyberaar-baseline.sh` is a generated bundle, do not edit it directly. Edit the source files under `scripts/src/`, then rebuild:
 
 ```bash
 bash scripts/build.sh
@@ -729,9 +729,9 @@ See the [LICENSE](LICENSE) file for the full text.
 
 ## Contributors
 
-- [@Bantou96](https://github.com/Bantou96) — Founder
-- [@moustaphisene](https://github.com/moustaphisene) — Contributor (CIS gap coverage: sudo, cron, wireless hardening roles)
-- [Claude](https://claude.ai) (Anthropic) — AI pair programmer
+- [@Bantou96](https://github.com/Bantou96), Founder
+- [@moustaphisene](https://github.com/moustaphisene), Contributor (CIS gap coverage: sudo, cron, wireless hardening roles)
+- [Claude](https://claude.ai) (Anthropic), AI pair programmer
 
 ---
 

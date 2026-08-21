@@ -4,7 +4,7 @@
 
 Configures `firewalld` to minimise the attack surface on RHEL 9 family systems:
 - Installs and enables `firewalld`
-- Sets the default zone (default: `drop` — blocks all unsolicited inbound traffic)
+- Sets the default zone (default: `drop`: blocks all unsolicited inbound traffic)
 - Allows only explicitly defined services and ports
 - Restricts SSH to trusted source CIDRs via rich rules (highly recommended)
 - Applies SSH connection rate limiting
@@ -32,7 +32,7 @@ Configures `firewalld` to minimise the attack surface on RHEL 9 family systems:
 | `linux_firewalld_default_zone` | `drop` | Default zone: `drop` / `public` / `internal` |
 | `linux_firewalld_allowed_services` | `[ssh]` | Services permanently allowed in the default zone |
 | `linux_firewalld_allowed_ports` | `[]` | Additional ports to allow (e.g. `443/tcp`) |
-| `linux_firewalld_ssh_sources` | `[]` | Restrict SSH to these source CIDRs — empty = allow from anywhere |
+| `linux_firewalld_ssh_sources` | `[]` | Restrict SSH to these source CIDRs: empty = allow from anywhere |
 | `linux_firewalld_ssh_rate_limit` | `3/m` | SSH rate limit via firewalld rich rule |
 | `linux_firewalld_log_denied` | `all` | Log dropped packets: `all` / `unicast` / `off` |
 | `linux_firewalld_disabled` | `false` | Set `true` to skip this role entirely |

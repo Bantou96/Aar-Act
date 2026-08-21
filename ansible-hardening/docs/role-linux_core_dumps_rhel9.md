@@ -24,8 +24,8 @@ Restricts core dump behaviour to prevent sensitive process memory from being wri
 | Variable | Default | Description |
 |---|---|---|
 | `linux_core_dumps_limit` | `0` | Hard/soft core file size limit (`0` = disabled) |
-| `linux_core_suid_dumpable` | `0` | `fs.suid_dumpable` — disable setuid core dumps |
-| `linux_core_pattern` | `/dev/null` | `kernel.core_pattern` — destination for core files |
+| `linux_core_suid_dumpable` | `0` | `fs.suid_dumpable`: disable setuid core dumps |
+| `linux_core_pattern` | `/dev/null` | `kernel.core_pattern`: destination for core files |
 | `linux_core_dumps_disabled` | `false` | Set `true` to skip this role entirely |
 
 ## Usage Example
@@ -33,7 +33,7 @@ Restricts core dump behaviour to prevent sensitive process memory from being wri
 ```yaml
 # group_vars/rhel_servers.yml
 
-# Defaults are sufficient for CIS compliance — no changes needed
+# Defaults are sufficient for CIS compliance: no changes needed
 linux_core_dumps_limit: "0"
 linux_core_suid_dumpable: "0"
 linux_core_pattern: "/dev/null"

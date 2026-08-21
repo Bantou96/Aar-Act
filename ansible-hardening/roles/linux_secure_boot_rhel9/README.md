@@ -7,7 +7,7 @@ Verifies that Secure Boot is enabled and enforces restrictive permissions on the
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.5.1 — Ensure Secure Boot is enabled
+CIS Section 1.5.1, Ensure Secure Boot is enabled
 
 ## Key Variables
 ```yaml

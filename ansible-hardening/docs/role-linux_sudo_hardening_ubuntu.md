@@ -63,8 +63,8 @@ tail -1 /var/log/sudo.log
 
 ## Notes
 
-- All sudoers modifications are written to `/etc/sudoers.d/99-cis-hardening` and validated with `visudo -cf` before applying — the vendor-managed `/etc/sudoers` file is never modified
-- The logfile is append-only — it captures user, command, working directory, and TTY for every sudo invocation
+- All sudoers modifications are written to `/etc/sudoers.d/99-cis-hardening` and validated with `visudo -cf` before applying, the vendor-managed `/etc/sudoers` file is never modified
+- The logfile is append-only, it captures user, command, working directory, and TTY for every sudo invocation
 - The `use_pty` directive prevents attackers from using sudo in background scripts that inherit a controlling terminal from a compromised process
 
 ## Differences from RHEL9 Counterpart

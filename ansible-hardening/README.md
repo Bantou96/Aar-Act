@@ -1,11 +1,11 @@
-# CyberAar Hardening — Ansible Collection
+# CyberAar Hardening: Ansible Collection
 
 CIS-aligned hardening playbooks and roles for:
 - **RHEL 9 family**: Red Hat Enterprise Linux 9, AlmaLinux 9, Rocky Linux 9
 - **Ubuntu/Debian**: Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 **Goal**
-Provide a practical, maintainable, and idempotent set of Ansible roles to significantly improve the security posture of Linux servers — especially critical infrastructure systems in Senegal (government, DAF, ministries, etc.).
+Provide a practical, maintainable, and idempotent set of Ansible roles to significantly improve the security posture of Linux servers, with a focus on critical infrastructure (government, DAF, ministries, etc.).
 
 **Current focus**  
 RHEL 9 family – CIS Red Hat Enterprise Linux 9 Benchmark v2.0.0 (Level 1 & selected Level 2)
@@ -14,7 +14,7 @@ RHEL 9 family – CIS Red Hat Enterprise Linux 9 Benchmark v2.0.0 (Level 1 & sel
 **Total roles**: 51
 **License**: [GPL-3.0](../../LICENSE)
 
-OS detection is **automatic**: one playbook, one run — the correct role set is applied per host based on `ansible_os_family`.
+OS detection is **automatic**: one playbook, one run, the correct role set is applied per host based on `ansible_os_family`.
 
 ---
 
@@ -44,14 +44,14 @@ OS detection is **automatic**: one playbook, one run — the correct role set is
 | `linux_tmp_mounts_rhel9` | noexec/nodev/nosuid on /tmp, /dev/shm | 1.1.2 | mounts |
 | `linux_secure_boot_rhel9` | Secure Boot + /boot permissions | 1.5.1 | secureboot |
 | `linux_file_permissions_rhel9` | Critical file perms + world-writable scan | 6.1 | permissions |
-| `linux_fail2ban_rhel9` | Dynamic IP banning (sshd + firewalld) | — | fail2ban |
+| `linux_fail2ban_rhel9` | Dynamic IP banning (sshd + firewalld) |: | fail2ban |
 | `linux_wireless_rhel9` | Disable wireless via nmcli + module blacklist | 3.1.2 | wireless |
 | `linux_sudo_hardening_rhel9` | sudo use_pty, logfile, visudo validation | 1.3.2–1.3.3 | sudo |
 | `linux_cron_hardening_rhel9` | cron/at dir permissions + allow-list model | 5.1 | cron |
 | `linux_ipv6_rhel9` | Disable IPv6 via sysctl + modprobe | 3.3.1 | network, ipv6 |
 | `linux_journald_rhel9` | systemd-journald persistent logging + limits | 4.2.1.x | audit, logging, journald |
 
-### Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+### Ubuntu 20.04 / 22.04 / 24.04: Debian 11 / 12
 
 | Role | Purpose | CIS Section(s) | Tags |
 |---|---|---|---|
@@ -75,14 +75,14 @@ OS detection is **automatic**: one playbook, one run — the correct role set is
 | `linux_tmp_mounts_ubuntu` | noexec/nodev/nosuid on /tmp, /dev/shm | 1.1.2 | mounts |
 | `linux_secure_boot_ubuntu` | Secure Boot + /boot permissions | 1.5.1 | secureboot |
 | `linux_file_permissions_ubuntu` | Critical file perms + world-writable scan | 6.1 | permissions |
-| `linux_fail2ban_ubuntu` | Brute-force protection via Fail2ban | — | fail2ban |
+| `linux_fail2ban_ubuntu` | Brute-force protection via Fail2ban |: | fail2ban |
 | `linux_wireless_ubuntu` | rfkill + nmcli + module blacklist + initramfs | 3.1.2 | wireless |
 | `linux_sudo_hardening_ubuntu` | sudo use_pty, logfile, visudo validation | 1.3.2–1.3.3 | sudo |
 | `linux_cron_hardening_ubuntu` | cron/at dir permissions + allow-list model | 5.1 | cron |
 | `linux_ipv6_ubuntu` | Disable IPv6 via sysctl + modprobe + initramfs | 3.3.1 | network, ipv6 |
 | `linux_journald_ubuntu` | systemd-journald persistent logging + limits | 4.2.1.x | audit, logging, journald |
 
-Full per-role documentation is in [`docs/`](docs/) — see [`docs/roles-overview.md`](docs/roles-overview.md).
+Full per-role documentation is in [`docs/`](docs/), see [`docs/roles-overview.md`](docs/roles-overview.md).
 
 ---
 

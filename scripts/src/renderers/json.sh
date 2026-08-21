@@ -20,12 +20,19 @@ _render_json() {
   done
   JSON_ARR+="]"
 
+  # Values that come from the audited machine or from the command line. A quote
+  # in any of them breaks the document or injects a key.
+  local _j_host _j_os _j_inv
+  _j_host=$(json_escape "$HOSTNAME_VAL")
+  _j_os=$(json_escape "$OS_VAL")
+  _j_inv=$(json_escape "${ANSIBLE_INVENTORY:-inventory/hosts.yml}")
+
   cat > "$JSON_OUT" <<EOF
 {
   "cyberaar_baseline": {
     "version": "4.0.0",
-    "host": "${HOSTNAME_VAL}",
-    "os": "${OS_VAL}",
+    "host": "${_j_host}",
+    "os": "${_j_os}",
     "date": "${DATE_VAL}",
     "score": ${SCORE},
     "summary": {
@@ -39,7 +46,7 @@ _render_json() {
       "fail_ids": [$(printf '"%s",' "${FAIL_IDS[@]}" | sed 's/,$//')],
       "warn_ids": [$(printf '"%s",' "${WARN_IDS[@]}" | sed 's/,$//')],
       "playbook": "playbooks/2_configure_hardening.yml",
-      "inventory": "${ANSIBLE_INVENTORY:-inventory/hosts.yml}"
+      "inventory": "${_j_inv}"
     }
   }
 }

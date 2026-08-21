@@ -5,9 +5,9 @@
 Disables all wireless network interfaces and blacklists wireless kernel modules on Ubuntu/Debian servers to meet CIS benchmark requirements. This ensures servers cannot communicate over wireless networks, reducing the attack surface on infrastructure that should only use wired interfaces.
 
 Three complementary approaches are applied:
-1. **rfkill** — blocks wireless radios at the OS level (preferred on Ubuntu — available without NetworkManager)
-2. **nmcli** — disables wireless via NetworkManager if present (fallback / defense-in-depth)
-3. **Kernel module blacklisting** — prevents wireless modules from loading at the kernel level, with `update-initramfs` for full persistence
+1. **rfkill**: blocks wireless radios at the OS level (preferred on Ubuntu: available without NetworkManager)
+2. **nmcli**: disables wireless via NetworkManager if present (fallback / defense-in-depth)
+3. **Kernel module blacklisting**: prevents wireless modules from loading at the kernel level, with `update-initramfs` for full persistence
 
 ## Supported Platforms
 
@@ -33,11 +33,11 @@ Three complementary approaches are applied:
 
 Written to `/etc/modprobe.d/99-cis-wireless.conf`:
 
-- `iwlwifi` — Intel wireless
-- `cfg80211` — Linux wireless configuration API
-- `mac80211` — Linux 802.11 MAC framework
-- `rtl8xxxu` — Realtek USB wireless
-- `ath9k` — Atheros wireless
+- `iwlwifi`: Intel wireless
+- `cfg80211`: Linux wireless configuration API
+- `mac80211`: Linux 802.11 MAC framework
+- `rtl8xxxu`: Realtek USB wireless
+- `ath9k`: Atheros wireless
 
 ## Usage Example
 
@@ -72,7 +72,7 @@ lsmod | grep -E 'iwlwifi|cfg80211|mac80211'
 
 ## Notes
 
-- `rfkill` is the primary mechanism on Ubuntu servers — it does not require NetworkManager. The role installs `rfkill` via apt if not present.
+- `rfkill` is the primary mechanism on Ubuntu servers, it does not require NetworkManager. The role installs `rfkill` via apt if not present.
 - The nmcli task runs only if `nmcli` is found in `$PATH`, and is skipped gracefully on minimal installs.
 - A `reboot` is required for the module blacklist to take full effect if modules are currently loaded. The role calls `update-initramfs -u -k all` automatically when the blacklist file changes.
 - This role is intended for server systems. Do not apply to workstations, laptops, or systems that legitimately require wireless connectivity.

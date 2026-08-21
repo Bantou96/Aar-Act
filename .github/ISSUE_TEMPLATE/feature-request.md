@@ -11,7 +11,7 @@ assignees: ''
 A clear description of the feature (e.g., new hardening role, new baseline check, new OS support).
 
 **CIS / security benchmark reference**
-If applicable, reference the benchmark section (e.g., CIS RHEL 9 Benchmark v2.0 — Section 5.2.3).
+If applicable, reference the benchmark section (e.g., CIS RHEL 9 Benchmark v2.0, Section 5.2.3).
 
 **Which component does this affect?**
 - [ ] Ansible role (existing or new)
