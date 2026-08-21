@@ -4,11 +4,27 @@
 #
 # Dependabot rewrites the pin and the trailing version comment together, so the
 # pin stays readable while still being an immutable reference.
+#
+# Major versions are deliberately NOT excluded. For GitHub Actions a major bump
+# is almost always the Node runtime moving forward (v4/v5/v6 of checkout, v4 of
+# login-action, v6 of setup-python are all Node 16 -> 20 -> 24), and GitHub
+# eventually stops running the older runtime. Ignoring majors would not freeze
+# behaviour, it would strand the workflows on a runtime that no longer receives
+# fixes: actions/checkout v7.0.0 is a security release that blocks checking out
+# a fork PR under pull_request_target and workflow_run, and a major-version
+# filter would have skipped it silently.
+#
+# The risk worth managing is review fatigue, not the bumps themselves. One
+# grouped PR a month gets read; five separate ones a week get rubber-stamped.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     commit-message:
       prefix: "chore(ci)"
