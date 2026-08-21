@@ -4,9 +4,9 @@
   ansible.builtin.fail:
     msg: >
       GRUB bootloader password is not defined.
-      Set it via environment variable:
-        export LINUX_BOOTLOADER_PASSWORD="YourVeryStrongPasswordHere"
-      Then re-run the playbook.
+      Set it before running, without putting it on the command line where
+      shell history would keep it in clear:
+        read -sr LINUX_BOOTLOADER_PASSWORD ; export LINUX_BOOTLOADER_PASSWORD
   no_log: "{{ linux_bootloader_disable_nolog | default(false) | ternary(false, true) }}"
 
 - name: "Ensure grub2-tools are installed (needed for mkpasswd-pbkdf2)"
