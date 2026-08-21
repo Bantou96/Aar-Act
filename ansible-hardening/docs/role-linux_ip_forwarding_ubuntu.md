@@ -7,6 +7,10 @@ Ensures IP forwarding is disabled on Ubuntu/Debian servers that are not routers 
 - Applies configuration persistently via `/etc/sysctl.d/`
 - Complements the kernel hardening role which also controls some network sysctl parameters
 
+> **Container hosts.** Docker's bridge networking requires IP forwarding. Applying
+> this control on a container host breaks container networking, and the failure is
+> deferred to the next reboot. See [Running on a Container Host](container-hosts.md).
+
 ## Supported Platforms
 
 - Ubuntu 20.04 LTS (Focal)
@@ -31,11 +35,11 @@ Ensures IP forwarding is disabled on Ubuntu/Debian servers that are not routers 
 ## Usage Example
 
 ```yaml
-# Standard server (not a router) — defaults are sufficient
+# Standard server (not a router): defaults are sufficient
 linux_ip_forwarding_enable_ipv4: false
 linux_ip_forwarding_enable_ipv6: false
 
-# VPN gateway or router — enable forwarding
+# VPN gateway or router: enable forwarding
 linux_ip_forwarding_enable_ipv4: true
 
 # Skip the role entirely on a known router

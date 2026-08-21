@@ -8,6 +8,9 @@ Enables and enforces AppArmor Mandatory Access Control on Ubuntu/Debian systems:
 - Supports local profile overrides for custom application policies
 - Ubuntu/Debian equivalent of SELinux enforcement on RHEL9
 
+> **Container hosts.** The container runtime ships and manages its own AppArmor
+> profiles. See [Running on a Container Host](container-hosts.md).
+
 ## Supported Platforms
 
 - Ubuntu 20.04 LTS (Focal)

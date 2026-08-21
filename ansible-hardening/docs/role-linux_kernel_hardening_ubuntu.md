@@ -9,6 +9,11 @@ Hardens the Linux kernel on Ubuntu/Debian systems via sysctl parameters and kern
 - Restricts core dump exposure via sysctl
 - Blacklists unused and risky kernel modules (cramfs, hfs, udf, USB storage, FireWire, etc.)
 
+> **Container hosts.** This role also sets the IP forwarding sysctl. On a host
+> running containers set `linux_kernel_disable_ip_forward: false`, otherwise it
+> undoes the exception made in the dedicated role. See
+> [Running on a Container Host](container-hosts.md).
+
 ## Supported Platforms
 
 - Ubuntu 20.04 LTS (Focal)
