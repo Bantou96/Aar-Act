@@ -52,12 +52,12 @@ Deploys and hardens `auditd` for comprehensive system event logging on RHEL 9 fa
 | `linux_audit_rules_perm_mod` | `true` | Watch `chmod`, `chown`, `fchmod*`, `fchown*`, etc. |
 | `linux_audit_rules_mounts` | `true` | Watch `mount`, `umount2` syscalls |
 | `linux_audit_rules_actions` | `true` | Watch sudoers, cron, at, systemd timers |
-| `linux_audit_rules_delete` | `false` | Watch `unlink`, `rename`, `rmdir` (high volume — opt-in) |
+| `linux_audit_rules_delete` | `false` | Watch `unlink`, `rename`, `rmdir` (high volume: opt-in) |
 | `linux_audit_rules_selinux` | `true` | Watch `chcon`, `setenforce`, `semanage`, `restorecon` |
-| `linux_audit_rules_network` | `false` | Watch socket calls, bind, connect (very noisy — opt-in) |
-| `linux_audit_rules_exec` | `false` | Watch all `execve` calls (broad — opt-in) |
+| `linux_audit_rules_network` | `false` | Watch socket calls, bind, connect (very noisy: opt-in) |
+| `linux_audit_rules_exec` | `false` | Watch all `execve` calls (broad: opt-in) |
 | `linux_audit_rules_time` | `true` | Watch `adjtimex`, `settimeofday`, `clock_settime` |
-| `linux_audit_rules_file_integrity_high` | `false` | Watch `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin` (many events — opt-in) |
+| `linux_audit_rules_file_integrity_high` | `false` | Watch `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin` (many events: opt-in) |
 | `linux_audit_rules_kernel_modules` | `false` | Watch `init_module`, `finit_module`, `delete_module` (opt-in) |
 | `linux_audit_rules_ptrace` | `false` | Watch `ptrace` syscalls (opt-in) |
 | `linux_auditd_forward_to_syslog` | `true` | Enable auditd → rsyslog plugin |

@@ -35,10 +35,10 @@ Reduces the attack surface on RHEL 9 family systems by stopping, disabling, and 
 
 | Variable | Default | Description |
 |---|---|---|
-| `linux_services_to_mask` | `[avahi-daemon, cups, cups-browsed, bluetooth, ModemManager, nfs-server, rpcbind, postfix]` | Services to mask (strongest suppression — cannot be started by any user) |
+| `linux_services_to_mask` | `[avahi-daemon, cups, cups-browsed, bluetooth, ModemManager, nfs-server, rpcbind, postfix]` | Services to mask (strongest suppression: cannot be started by any user) |
 | `linux_services_to_disable` | `[NetworkManager-wait-online, atd, lpd]` | Services to stop and disable but not mask |
 | `linux_services_exceptions` | `[chronyd, sshd]` | Services never touched regardless of the lists above |
-| `linux_packages_to_remove.enabled` | `false` | Set `true` to also remove the packages (irreversible — use with care) |
+| `linux_packages_to_remove.enabled` | `false` | Set `true` to also remove the packages (irreversible: use with care) |
 | `linux_packages_to_remove.list` | `[avahi, cups, cups-client, cups-libs, ModemManager, bluetooth]` | Packages to purge when removal is enabled |
 | `linux_unnecessary_services_disabled` | `false` | Set `true` to skip this role entirely |
 

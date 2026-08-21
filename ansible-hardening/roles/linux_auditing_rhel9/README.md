@@ -25,7 +25,7 @@ RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 - Add more rules by extending the template
 
 ## Notes
-- Logs to `/var/log/audit/audit.log` — consider forwarding to SIEM  
+- Logs to `/var/log/audit/audit.log`: consider forwarding to SIEM  
 - Immutable rules (`-e 2`) require reboot to change  
 - Test: `ausearch -k identity` or `aureport -a` after apply
 

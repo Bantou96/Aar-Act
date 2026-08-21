@@ -7,7 +7,7 @@ Hardens sudo configuration by enabling use_pty, configuring a dedicated sudo log
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.3.2–1.3.3 — Configure sudo
+CIS Section 1.3.2–1.3.3, Configure sudo
 
 ## Key Variables
 ```yaml

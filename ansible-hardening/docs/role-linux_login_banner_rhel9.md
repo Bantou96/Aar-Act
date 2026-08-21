@@ -4,7 +4,7 @@
 
 Deploys legally compliant pre-login and post-login banners on RHEL 9 family systems:
 - Deploys `/etc/issue` (local console pre-login banner)
-- Deploys `/etc/issue.net` (SSH pre-login banner — referenced by `sshd_config Banner`)
+- Deploys `/etc/issue.net` (SSH pre-login banner, referenced by `sshd_config Banner`)
 - Deploys `/etc/motd` (post-login message of the day)
 - Sets strict permissions (`0644 root:root`) on all banner files
 
@@ -38,7 +38,7 @@ Deploys legally compliant pre-login and post-login banners on RHEL 9 family syst
 ```yaml
 # group_vars/rhel_servers.yml
 
-# Defaults deploy all three banners — no changes needed
+# Defaults deploy all three banners: no changes needed
 linux_login_banner_prelogin: true
 linux_login_banner_postlogin: true
 linux_login_banner_issue: true

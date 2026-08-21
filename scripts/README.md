@@ -8,10 +8,10 @@
 
 `cyberaar-baseline.sh` is a standalone bash script that performs a local security audit of a Linux server and produces:
 
-- **Terminal output** — colour-coded PASS / WARN / FAIL results with a security score
-- **HTML report** — self-contained file suitable for sharing with management or auditors
-- **JSON report** — machine-readable output for SIEM integration or CI pipelines
-- **Ansible remediation plan** — targeted `ansible-playbook` commands for every failing check
+- **Terminal output**: colour-coded PASS / WARN / FAIL results with a security score
+- **HTML report**: self-contained file suitable for sharing with management or auditors
+- **JSON report**: machine-readable output for SIEM integration or CI pipelines
+- **Ansible remediation plan**: targeted `ansible-playbook` commands for every failing check
 
 The script requires no external dependencies beyond standard Linux utilities (`bash`, `ss`, `sysctl`, `stat`, `find`, `awk`) and runs in a single pass in under two minutes on a typical server.
 
@@ -24,8 +24,8 @@ It covers the same control areas as the CyberAar Ansible hardening roles, so the
 | Requirement | Notes |
 |---|---|
 | Bash 4.2+ | Available on all supported distros |
-| Root / sudo | Required — reads `/etc/shadow`, runs `sysctl`, `auditctl`, etc. |
-| Supported OS | RHEL 9 / AlmaLinux 9 / Rocky Linux 9 — Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12 |
+| Root / sudo | Required: reads `/etc/shadow`, runs `sysctl`, `auditctl`, etc. |
+| Supported OS | RHEL 9 / AlmaLinux 9 / Rocky Linux 9: Ubuntu 20.04 / 22.04 / 24.04: Debian 11 / 12 |
 | Optional tools | `mokutil` (Secure Boot check), `auditctl` (audit rules check), `ss` (port check) |
 
 ---
@@ -215,20 +215,20 @@ A self-contained single-file HTML report with:
 Checks are grouped into 8 sections. Each check has a stable ID, severity level, and (where applicable) a mapping to an Ansible role and tags.
 
 **Severity levels:**
-- `FAIL` — non-compliant, direct security risk, must fix
-- `WARN` — degraded posture or informational, should fix
-- `PASS` — compliant
+- `FAIL`: non-compliant, direct security risk, must fix
+- `WARN`: degraded posture or informational, should fix
+- `PASS`: compliant
 
-Checks marked **(manual review)** cannot be automatically remediated — the script detects a condition but human judgment is required to determine whether it is acceptable.
+Checks marked **(manual review)** cannot be automatically remediated, the script detects a condition but human judgment is required to determine whether it is acceptable.
 
 ---
 
-### Section 1 — System & OS
+### Section 1: System & OS
 
 | ID | Check | Severity | Ansible Tag | Notes |
 |---|---|---|---|---|
-| SYS-01 | Supported OS (RHEL/Ubuntu/Debian) | WARN if unknown | — | Informational |
-| SYS-02 | Kernel version | WARN | `updates,patching` | Always WARN — triggers version review |
+| SYS-01 | Supported OS (RHEL/Ubuntu/Debian) | WARN if unknown |: | Informational |
+| SYS-02 | Kernel version | WARN | `updates,patching` | Always WARN: triggers version review |
 | SYS-03 | Pending security updates | FAIL | `updates,patching` | `dnf check-update --security` or `apt-get -s upgrade` |
 | SYS-04 | SELinux enforcing / AppArmor present | FAIL/WARN | `mac` | Permissive = WARN, Disabled = FAIL |
 | SYS-05 | Core dumps restricted | WARN | `kernel,coredump` | Checks `limits.conf` and `fs.suid_dumpable` |
@@ -240,7 +240,7 @@ Checks marked **(manual review)** cannot be automatically remediated — the scr
 
 ---
 
-### Section 2 — Authentication & Access
+### Section 2: Authentication & Access
 
 | ID | Check | Severity | Ansible Tag | Notes |
 |---|---|---|---|---|
@@ -255,23 +255,23 @@ Checks marked **(manual review)** cannot be automatically remediated — the scr
 | AUTH-09 | Account lockout configured | FAIL | `auth,pam` | Checks `faillock.conf` (`deny ≤ 5`) or `pam_tally2` |
 | AUTH-10 | Shell timeout `TMOUT` set | WARN | `auth,users` | Scans `/etc/profile`, `/etc/profile.d/`, `bashrc` |
 | AUTH-11 | No extra UID 0 accounts | FAIL | `auth,users` | Only `root` should have UID 0 |
-| AUTH-12 | `/etc/group` permissions 644 | FAIL | `filesystem,permissions` | — |
-| AUTH-13 | `/etc/gshadow` permissions 640 or stricter | FAIL | `filesystem,permissions` | — |
+| AUTH-12 | `/etc/group` permissions 644 | FAIL | `filesystem,permissions` |: |
+| AUTH-13 | `/etc/gshadow` permissions 640 or stricter | FAIL | `filesystem,permissions` |: |
 | AUTH-14 | Password complexity configured | WARN | `auth,pam` | Checks `minlen ≥ 12` in `pwquality.conf` |
-| AUTH-15 | sudo `use_pty` enforced | WARN | `sudo` | CIS 1.3.2 — checks `Defaults use_pty` in sudoers |
-| AUTH-16 | sudo logfile configured | WARN | `sudo` | CIS 1.3.3 — checks `Defaults logfile=` in sudoers |
+| AUTH-15 | sudo `use_pty` enforced | WARN | `sudo` | CIS 1.3.2: checks `Defaults use_pty` in sudoers |
+| AUTH-16 | sudo logfile configured | WARN | `sudo` | CIS 1.3.3: checks `Defaults logfile=` in sudoers |
 
 ---
 
-### Section 3 — SSH Hardening
+### Section 3: SSH Hardening
 
 | ID | Check | Severity | Ansible Tag | Notes |
 |---|---|---|---|---|
-| SSH-01 | `PermitRootLogin no` or `prohibit-password` | FAIL | `ssh` | — |
+| SSH-01 | `PermitRootLogin no` or `prohibit-password` | FAIL | `ssh` |: |
 | SSH-02 | `PasswordAuthentication no` | WARN | `ssh` | Key-based auth recommended |
 | SSH-03 | `MaxAuthTries` ≤ 4 | WARN | `ssh` | Default is 6 |
 | SSH-04 | `AllowTcpForwarding no` | WARN | `ssh` | Disable if not required |
-| SSH-05 | `X11Forwarding no` | WARN | `ssh` | — |
+| SSH-05 | `X11Forwarding no` | WARN | `ssh` |: |
 | SSH-06 | `LoginGraceTime` ≤ 60s | WARN | `ssh` | Default is 120s |
 | SSH-07 | `PermitEmptyPasswords no` | FAIL | `ssh` | Off by default but explicitly verify |
 | SSH-08 | `IgnoreRhosts yes` | FAIL | `ssh` | On by default; verify no override |
@@ -280,98 +280,98 @@ Checks marked **(manual review)** cannot be automatically remediated — the scr
 | SSH-11 | `ClientAliveInterval` ≤ 300s | WARN | `ssh` | Session idle timeout |
 | SSH-12 | `UsePAM yes` | WARN | `ssh` | Required for faillock and password policy |
 | SSH-13 | No weak ciphers | FAIL | `ssh,crypto` | Flags `arcfour`, `3des`, `des`, `blowfish`, `cast128` |
-| SSH-14 | `sshd_config` permissions 600–644 | WARN | `ssh,filesystem` | — |
+| SSH-14 | `sshd_config` permissions 600–644 | WARN | `ssh,filesystem` |: |
 | SSH-15 | `MaxSessions` ≤ 4 | WARN | `ssh` | Default is 10 |
 
 ---
 
-### Section 4 — Filesystem & Permissions
+### Section 4: Filesystem & Permissions
 
 | ID | Check | Severity | Ansible Tag | Notes |
 |---|---|---|---|---|
-| FS-01 | `/etc/passwd` permissions 644 | FAIL | `filesystem,permissions` | — |
+| FS-01 | `/etc/passwd` permissions 644 | FAIL | `filesystem,permissions` |: |
 | FS-02 | `/etc/shadow` permissions 640 or stricter | FAIL | `filesystem,permissions` | 640/600/400/000 all accepted |
-| FS-03 | `/etc/sudoers` permissions 440 or 400 | WARN | `filesystem,permissions` | — |
-| FS-04 | No world-writable files in `/etc /usr /bin /sbin` | FAIL | `filesystem,permissions` | — |
+| FS-03 | `/etc/sudoers` permissions 440 or 400 | WARN | `filesystem,permissions` |: |
+| FS-04 | No world-writable files in `/etc /usr /bin /sbin` | FAIL | `filesystem,permissions` |: |
 | FS-05 | SUID binary count ≤ 20 | WARN | `filesystem,permissions` | **(manual review)** List with `find / -xdev -perm -4000 -ls` |
-| FS-06 | `/tmp` mounted with `noexec` | WARN | `filesystem,mounts` | — |
-| FS-07 | Sticky bit on all world-writable directories | FAIL | `filesystem,permissions` | — |
-| FS-08 | `/etc/crontab` permissions 600 or 400 | WARN | `filesystem,permissions` | — |
-| FS-09 | `/var/tmp` mounted with `noexec` | WARN | `filesystem,mounts` | — |
+| FS-06 | `/tmp` mounted with `noexec` | WARN | `filesystem,mounts` |: |
+| FS-07 | Sticky bit on all world-writable directories | FAIL | `filesystem,permissions` |: |
+| FS-08 | `/etc/crontab` permissions 600 or 400 | WARN | `filesystem,permissions` |: |
+| FS-09 | `/var/tmp` mounted with `noexec` | WARN | `filesystem,mounts` |: |
 | FS-10 | No unowned files | WARN | `filesystem,permissions` | **(manual review)** Scans all filesystems with `-xdev` |
 | FS-11 | `/var/log` not world-readable | WARN | `filesystem,permissions` | Last permission octet must be 0 or 1 |
 | FS-12 | SSH host private keys at 600 | FAIL | `ssh` | All `/etc/ssh/ssh_host_*_key` files |
 
 ---
 
-### Section 5 — Network
+### Section 5: Network
 
 | ID | Check | Severity | Ansible Tag | Notes |
 |---|---|---|---|---|
 | NET-01 | Firewall active | FAIL | `firewall` | Detects `firewalld`, `ufw`, or `iptables` rules |
-| NET-02 | `net.ipv4.ip_forward = 0` | WARN | `network,sysctl` | — |
-| NET-03 | `net.ipv4.conf.all.accept_redirects = 0` | FAIL | `network,sysctl` | — |
-| NET-04 | `net.ipv4.tcp_syncookies = 1` | FAIL | `network,sysctl` | — |
+| NET-02 | `net.ipv4.ip_forward = 0` | WARN | `network,sysctl` |: |
+| NET-03 | `net.ipv4.conf.all.accept_redirects = 0` | FAIL | `network,sysctl` |: |
+| NET-04 | `net.ipv4.tcp_syncookies = 1` | FAIL | `network,sysctl` |: |
 | NET-05 | No dangerous services active | FAIL | `services` | telnet, rsh, rlogin, ftp, tftp, nis, talk |
-| NET-06 | `net.ipv4.conf.all.accept_source_route = 0` | FAIL | `network,sysctl` | — |
-| NET-07 | `net.ipv4.conf.all.send_redirects = 0` | FAIL | `network,sysctl` | — |
-| NET-08 | `net.ipv4.conf.all.log_martians = 1` | WARN | `network,sysctl` | — |
-| NET-09 | `net.ipv4.conf.all.rp_filter = 1` or `2` | FAIL | `network,sysctl` | — |
-| NET-10 | `net.ipv6.conf.all.accept_ra = 0` | WARN | `network,sysctl` | WARN only — may be needed in IPv6 networks |
-| NET-11 | `net.ipv4.icmp_echo_ignore_broadcasts = 1` | WARN | `network,sysctl` | — |
-| NET-12 | Wireless interfaces disabled | WARN | `wireless` | CIS 3.1.2 — rfkill + nmcli + modprobe blacklist |
-| NET-13 | IPv6 fully disabled | WARN | `network,ipv6` | CIS 3.3.1 — checks `net.ipv6.conf.all.disable_ipv6=1` + `default` |
+| NET-06 | `net.ipv4.conf.all.accept_source_route = 0` | FAIL | `network,sysctl` |: |
+| NET-07 | `net.ipv4.conf.all.send_redirects = 0` | FAIL | `network,sysctl` |: |
+| NET-08 | `net.ipv4.conf.all.log_martians = 1` | WARN | `network,sysctl` |: |
+| NET-09 | `net.ipv4.conf.all.rp_filter = 1` or `2` | FAIL | `network,sysctl` |: |
+| NET-10 | `net.ipv6.conf.all.accept_ra = 0` | WARN | `network,sysctl` | WARN only: may be needed in IPv6 networks |
+| NET-11 | `net.ipv4.icmp_echo_ignore_broadcasts = 1` | WARN | `network,sysctl` |: |
+| NET-12 | Wireless interfaces disabled | WARN | `wireless` | CIS 3.1.2: rfkill + nmcli + modprobe blacklist |
+| NET-13 | IPv6 fully disabled | WARN | `network,ipv6` | CIS 3.3.1: checks `net.ipv6.conf.all.disable_ipv6=1` + `default` |
 
 ---
 
-### Section 6 — Logging & Audit
+### Section 6: Logging & Audit
 
 | ID | Check | Severity | Ansible Tag | Notes |
 |---|---|---|---|---|
-| LOG-01 | `auditd` running | FAIL | `audit,logging` | — |
+| LOG-01 | `auditd` running | FAIL | `audit,logging` |: |
 | LOG-02 | System logging active | FAIL | `audit,logging` | `rsyslog`, `syslog`, or `systemd-journald` |
-| LOG-03 | `logrotate` configured | WARN | — | No Ansible role manages logrotate directly |
+| LOG-03 | `logrotate` configured | WARN |: | No Ansible role manages logrotate directly |
 | LOG-04 | Audit rules present | WARN | `audit,logging` | Checks for `execve`, `chmod`, `chown`, `delete`, `login`, `sudo` rules |
-| LOG-05 | `max_log_file ≥ 8` MB in `auditd.conf` | WARN | `audit,logging` | — |
+| LOG-05 | `max_log_file ≥ 8` MB in `auditd.conf` | WARN | `audit,logging` |: |
 | LOG-06 | `audit=1` in kernel cmdline | WARN | `audit,logging` | Checks `/proc/cmdline` |
 | LOG-07 | journald persistent storage | WARN | `audit,logging,journald` | Checks for `/var/log/journal` directory |
-| LOG-08 | Remote syslog configured | WARN | — | **(manual review)** Checks rsyslog for `@@` forwarding — no Ansible role covers remote syslog |
-| LOG-09 | journald Storage=persistent configured | WARN | `audit,logging,journald` | CIS 4.2.1.1 — checks drop-in config in `/etc/systemd/journald.conf.d/` |
-| LOG-10 | journald rate limiting configured | WARN | `audit,logging,journald` | CIS 4.2.1.3 — checks `RateLimitBurst` in journald config |
+| LOG-08 | Remote syslog configured | WARN |: | **(manual review)** Checks rsyslog for `@@` forwarding: no Ansible role covers remote syslog |
+| LOG-09 | journald Storage=persistent configured | WARN | `audit,logging,journald` | CIS 4.2.1.1: checks drop-in config in `/etc/systemd/journald.conf.d/` |
+| LOG-10 | journald rate limiting configured | WARN | `audit,logging,journald` | CIS 4.2.1.3: checks `RateLimitBurst` in journald config |
 
 ---
 
-### Section 7 — Integrity & Malware
+### Section 7: Integrity & Malware
 
 | ID | Check | Severity | Ansible Tag | Notes |
 |---|---|---|---|---|
-| INT-01 | AIDE installed | WARN | `integrity,aide` | — |
-| INT-02 | Rootkit scanner present | WARN | — | **(manual review)** `rkhunter`/`chkrootkit` not installed by any role — run manually |
-| INT-03 | No suspicious cron entries | FAIL | — | **(manual review)** Pattern: `wget`/`curl`/`bash`/`nc` → `http` or `/tmp` |
-| INT-04 | Open listening ports | WARN | — | **(manual review)** Always WARN — operator must verify each port |
+| INT-01 | AIDE installed | WARN | `integrity,aide` |: |
+| INT-02 | Rootkit scanner present | WARN |: | **(manual review)** `rkhunter`/`chkrootkit` not installed by any role: run manually |
+| INT-03 | No suspicious cron entries | FAIL |: | **(manual review)** Pattern: `wget`/`curl`/`bash`/`nc` → `http` or `/tmp` |
+| INT-04 | Open listening ports | WARN |: | **(manual review)** Always WARN: operator must verify each port |
 | INT-05 | Package GPG check enabled | FAIL | `updates,patching` | `gpgcheck=0` in any `.repo` file or `AllowUnauthenticated` in apt |
-| INT-06 | fail2ban running | WARN | `fail2ban` | — |
+| INT-06 | fail2ban running | WARN | `fail2ban` |: |
 | INT-07 | AIDE database initialized | FAIL/WARN | `integrity,aide` | FAIL if AIDE installed but no `aide.db.gz`; WARN if AIDE not installed |
 | INT-08 | Cron directories not world-writable | FAIL | `filesystem,permissions` | Checks `/etc/cron.d`, `cron.daily`, `cron.weekly`, `cron.monthly`, `cron.hourly` |
 
 ---
 
-### Section 8 — Compliance & Policy
+### Section 8: Compliance & Policy
 
 | ID | Check | Severity | Ansible Tag | Notes |
 |---|---|---|---|---|
 | COMP-01 | Legal banner in `/etc/issue.net` | WARN | `banner` | Must be ≥ 2 lines |
 | COMP-02 | `/tmp` on dedicated partition or tmpfs | WARN | `filesystem,mounts` | Checks `/etc/fstab` and `/proc/mounts` |
-| COMP-03 | `/home` on separate partition | WARN | — | **(manual review)** Cannot be changed post-install via Ansible |
-| COMP-04 | `/var` on separate partition | WARN | — | **(manual review)** Cannot be changed post-install via Ansible |
+| COMP-03 | `/home` on separate partition | WARN |: | **(manual review)** Cannot be changed post-install via Ansible |
+| COMP-04 | `/var` on separate partition | WARN |: | **(manual review)** Cannot be changed post-install via Ansible |
 | COMP-05 | Default umask 027 or stricter | WARN | `auth,users` | Scans `/etc/profile`, `/etc/profile.d/`, `login.defs` |
 | COMP-06 | `kernel.randomize_va_space = 2` (ASLR) | FAIL/WARN | `kernel,sysctl` | Level 1 = WARN, disabled = FAIL |
 | COMP-07 | `kernel.kptr_restrict = 2` | FAIL/WARN | `kernel,sysctl` | Level 1 = WARN, 0 = FAIL |
-| COMP-08 | `kernel.dmesg_restrict = 1` | WARN | `kernel,sysctl` | — |
-| COMP-09 | `kernel.yama.ptrace_scope ≥ 1` | WARN | `kernel,sysctl` | — |
+| COMP-08 | `kernel.dmesg_restrict = 1` | WARN | `kernel,sysctl` |: |
+| COMP-09 | `kernel.yama.ptrace_scope ≥ 1` | WARN | `kernel,sysctl` |: |
 | COMP-10 | USB storage module blacklisted | WARN | `kernel,sysctl` | Checks `/etc/modprobe.d/` for `blacklist usb-storage` |
 | COMP-11 | cron service enabled and running | WARN | `cron` | CIS 5.1.1 |
-| COMP-12 | `cron.allow` and `at.allow` allow-list enforced | WARN | `cron` | CIS 5.1.8–5.1.9 — both files must exist and be non-empty |
+| COMP-12 | `cron.allow` and `at.allow` allow-list enforced | WARN | `cron` | CIS 5.1.8–5.1.9: both files must exist and be non-empty |
 
 ---
 
@@ -435,18 +435,18 @@ SSH options used: `StrictHostKeyChecking=accept-new`, `ConnectTimeout=10`, `Batc
 
 ## Checks That Require Manual Review
 
-Some checks detect a condition that automated tooling cannot resolve — the operator must inspect the output and decide. These are clearly marked `(manual review required)` in the detail field:
+Some checks detect a condition that automated tooling cannot resolve, the operator must inspect the output and decide. These are clearly marked `(manual review required)` in the detail field:
 
 | ID | What to do |
 |---|---|
-| FS-05 | Review SUID binaries: `find / -xdev -perm -4000 -ls` — remove the SUID bit on anything not required |
-| FS-10 | Review unowned files: `find / -xdev \( -nouser -o -nogroup \) -type f -ls` — assign ownership or delete |
+| FS-05 | Review SUID binaries: `find / -xdev -perm -4000 -ls`: remove the SUID bit on anything not required |
+| FS-10 | Review unowned files: `find / -xdev \( -nouser -o -nogroup \) -type f -ls`: assign ownership or delete |
 | INT-02 | Run `rkhunter --check` or `chkrootkit` manually and review the output |
 | INT-03 | Inspect the cron entries flagged and confirm they are legitimate |
-| INT-04 | Review `ss -tlnp` output — close or firewall any port that is not justified |
+| INT-04 | Review `ss -tlnp` output: close or firewall any port that is not justified |
 | LOG-08 | Decide on a remote syslog server and configure rsyslog forwarding manually |
-| COMP-03 | `/home` partition layout — plan for next OS reinstall |
-| COMP-04 | `/var` partition layout — plan for next OS reinstall |
+| COMP-03 | `/home` partition layout: plan for next OS reinstall |
+| COMP-04 | `/var` partition layout: plan for next OS reinstall |
 
 ---
 
@@ -488,7 +488,7 @@ Checks without a mapping have no automated fix in this collection.
 
 ## Contributing to the Script
 
-`cyberaar-baseline.sh` is a **generated bundle** — do not edit it directly. The source lives in `src/` and is assembled by `build.sh`.
+`cyberaar-baseline.sh` is a **generated bundle**: do not edit it directly. The source lives in `src/` and is assembled by `build.sh`.
 
 ### Source layout
 
@@ -514,17 +514,17 @@ scripts/
     │   └── compliance.sh       ← _checks_compliance() COMP-01..10
     └── renderers/
         ├── terminal.sh         ← _render_summary(), _ansible_terminal_plan()
-        ├── json.sh             ← _render_json() — iterates RESULT_*[] arrays
-        └── html.sh             ← _render_html() — builds HTML_ROWS from RESULT_*[]
+        ├── json.sh             ← _render_json(), iterates RESULT_*[] arrays
+        └── html.sh             ← _render_html(), builds HTML_ROWS from RESULT_*[]
 ```
 
 ### How add_result() works
 
 `add_result()` (in `src/lib/core.sh`) does two things:
-1. **Prints live to terminal** — check result streams as checks run
-2. **Appends to parallel arrays** — `RESULT_CATEGORY[]`, `RESULT_STATUS[]`, `RESULT_ID[]`, `RESULT_NAME_EN[]`, `RESULT_NAME_FR[]`, `RESULT_DETAIL[]`, `RESULT_REMEDIATION[]`
+1. **Prints live to terminal**: check result streams as checks run
+2. **Appends to parallel arrays**: `RESULT_CATEGORY[]`, `RESULT_STATUS[]`, `RESULT_ID[]`, `RESULT_NAME_EN[]`, `RESULT_NAME_FR[]`, `RESULT_DETAIL[]`, `RESULT_REMEDIATION[]`
 
-The renderers (`_render_json`, `_render_html`) iterate those arrays at the end of the run. To change JSON or HTML output, edit only the relevant renderer — no need to touch `add_result()`.
+The renderers (`_render_json`, `_render_html`) iterate those arrays at the end of the run. To change JSON or HTML output, edit only the relevant renderer, no need to touch `add_result()`.
 
 ### Edit → rebuild workflow
 
@@ -561,15 +561,15 @@ No. Several checks require root: reading `/etc/shadow`, running `auditctl -l`, c
 
 **SYS-02 (kernel version) is always WARN. Is that a bug?**
 
-No — it is intentional. The check cannot know whether the running kernel is the latest available without performing a package query (which is slow and OS-specific). The WARN is a prompt to check manually. SYS-03 covers actual pending updates.
+No, it is intentional. The check cannot know whether the running kernel is the latest available without performing a package query (which is slow and OS-specific). The WARN is a prompt to check manually. SYS-03 covers actual pending updates.
 
 **My `/home` and `/var` are on the root partition. COMP-03 and COMP-04 are always WARN.**
 
-Correct. Separate partitions cannot be created on a running system by Ansible. These checks are informational — note them for the next build / reinstall cycle and use an OS kickstart or preseed that includes a proper partition scheme.
+Correct. Separate partitions cannot be created on a running system by Ansible. These checks are informational, note them for the next build / reinstall cycle and use an OS kickstart or preseed that includes a proper partition scheme.
 
 **LOG-08 (remote syslog) is always WARN. Why is there no Ansible remediation?**
 
-Remote syslog forwarding requires knowing the address and protocol of your SIEM or syslog server — a site-specific configuration that is not part of the generic hardening collection. You can configure rsyslog forwarding manually or by adding a custom role.
+Remote syslog forwarding requires knowing the address and protocol of your SIEM or syslog server, a site-specific configuration that is not part of the generic hardening collection. You can configure rsyslog forwarding manually or by adding a custom role.
 
 **How do I suppress a check I know is a false positive?**
 

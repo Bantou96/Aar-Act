@@ -15,7 +15,7 @@ Prevents accidental or malicious system reboot via the Ctrl+Alt+Del key combinat
 
 ## CIS Coverage
 
-- 1.6.1 Ensure system-wide crypto policy is not over-ridden (indirect — system integrity)
+- 1.6.1 Ensure system-wide crypto policy is not over-ridden (indirect, system integrity)
 - Aligns with ANSSI hardening recommendations for interactive console hardening
 
 ## Variables
@@ -24,7 +24,7 @@ Prevents accidental or malicious system reboot via the Ctrl+Alt+Del key combinat
 |---|---|---|
 | `linux_ctrl_alt_del_disabled` | `false` | Set `true` to skip this role entirely |
 
-This role has no configurable behaviour beyond the enable/disable toggle — the action (masking `ctrl-alt-del.target`) is always the same.
+This role has no configurable behaviour beyond the enable/disable toggle, the action (masking `ctrl-alt-del.target`) is always the same.
 
 ## Usage Example
 

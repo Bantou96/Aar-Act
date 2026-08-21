@@ -4,10 +4,10 @@
 Installs and configures auditd with CIS-aligned audit rules and configures rsyslog for centralized log forwarding to enforce comprehensive system auditing.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 4.1 — Configure System Accounting (auditd), CIS Section 4.2 — Configure Logging
+CIS Section 4.1, Configure System Accounting (auditd), CIS Section 4.2, Configure Logging
 
 ## Key Variables
 ```yaml

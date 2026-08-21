@@ -6,7 +6,7 @@ Hardens the cron and at scheduling subsystems on Ubuntu/Debian to meet CIS bench
 - Ensures the `cron` service is enabled and running
 - Applies strict permissions (root-only) on all cron directories and files
 - Removes `cron.deny` and `at.deny` (deny-list model is insecure by default)
-- Creates `cron.allow` and `at.allow` (allow-list model — only root by default)
+- Creates `cron.allow` and `at.allow` (allow-list model, only root by default)
 
 ## Supported Platforms
 
@@ -81,7 +81,7 @@ ls /etc/cron.deny /etc/at.deny 2>&1  # should report: No such file or directory
 
 - Removing `cron.deny` is intentional and recommended by CIS. An empty deny file still allows access for non-listed users; an allow file restricts access to listed users only.
 - `cron.allow` and `at.allow` are created empty (root-only access); add additional users as needed for your environment.
-- The role is idempotent — running it multiple times produces the same result.
+- The role is idempotent, running it multiple times produces the same result.
 
 ## Differences from RHEL9 Counterpart
 

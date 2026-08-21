@@ -7,7 +7,7 @@ Installs and configures dnf-automatic to automatically apply security updates on
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.9 — Ensure updates, patches, and additional security software are installed
+CIS Section 1.9, Ensure updates, patches, and additional security software are installed
 
 ## Key Variables
 ```yaml

@@ -24,9 +24,9 @@ Protects the GRUB2 bootloader with a password on Ubuntu/Debian systems:
 | Variable | Default | Description |
 |---|---|---|
 | `linux_bootloader_superuser` | `root` | GRUB superuser username |
-| `linux_bootloader_password` | `lookup('env', 'LINUX_BOOTLOADER_PASSWORD')` | GRUB password — **read from environment variable, never hardcode** |
+| `linux_bootloader_password` | `lookup('env', 'LINUX_BOOTLOADER_PASSWORD')` | GRUB password: **read from environment variable, never hardcode** |
 | `linux_bootloader_disable_nolog` | `false` | Set `true` in test environments to allow password in logs |
-| `linux_bootloader_grub_cfg_path` | `/boot/grub/grub.cfg` | Path to GRUB config (BIOS default — override for EFI) |
+| `linux_bootloader_grub_cfg_path` | `/boot/grub/grub.cfg` | Path to GRUB config (BIOS default: override for EFI) |
 | `linux_bootloader_password_disabled` | `false` | Set `true` to skip this role entirely |
 
 ## Sensitive Variable Handling

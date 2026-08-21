@@ -34,7 +34,7 @@ Hardens the OpenSSH server configuration on Ubuntu/Debian systems:
 | Variable | Default | Description |
 |---|---|---|
 | `linux_ssh_permit_root_login` | `no` | `PermitRootLogin` directive |
-| `linux_ssh_password_auth` | `no` | `PasswordAuthentication` — force key-based auth |
+| `linux_ssh_password_auth` | `no` | `PasswordAuthentication`: force key-based auth |
 | `linux_ssh_permit_empty_passwords` | `no` | Disallow empty password login |
 | `linux_ssh_x11_forwarding` | `no` | Disable X11 forwarding |
 | `linux_ssh_allow_tcp_forwarding` | `no` | Disable TCP port forwarding |

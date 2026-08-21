@@ -7,7 +7,7 @@ Disables the Ctrl+Alt+Del keyboard shortcut to prevent accidental or malicious s
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.6.1 — Ensure system-wide crypto policy is not legacy
+CIS Section 1.6.1, Ensure system-wide crypto policy is not legacy
 
 ## Key Variables
 ```yaml

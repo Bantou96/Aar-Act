@@ -7,7 +7,7 @@ Disables IPv6 networking via sysctl parameters and modprobe blacklisting to elim
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 3.3.1 — Ensure IPv6 is disabled if not in use
+CIS Section 3.3.1, Ensure IPv6 is disabled if not in use
 
 ## Key Variables
 ```yaml

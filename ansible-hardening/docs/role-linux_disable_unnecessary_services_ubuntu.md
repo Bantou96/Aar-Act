@@ -37,7 +37,7 @@ Stops, disables, and optionally masks unnecessary or high-risk network services 
 
 | Variable | Default | Description |
 |---|---|---|
-| `linux_disable_services_list` | See below | List of `{name, condition}` dicts — services to stop and disable |
+| `linux_disable_services_list` | See below | List of `{name, condition}` dicts: services to stop and disable |
 | `linux_disable_services_mask` | `true` | Also mask the services in `linux_disable_services_masked` |
 | `linux_disable_services_masked` | `[telnet.socket, rsh.socket, rlogin.socket, rexec.socket]` | Services to mask permanently via systemd |
 | `linux_disable_services_remove_packages` | `false` | Remove packages of disabled services |
@@ -50,22 +50,22 @@ Stops, disables, and optionally masks unnecessary or high-risk network services 
 |---|---|---|
 | `avahi-daemon` | 2.2.2 | enabled (disabled by role) |
 | `cups` / `cups-browsed` | 2.2.4 | enabled |
-| `isc-dhcp-server` | 2.2.5 | `false` (skip — set true to disable) |
+| `isc-dhcp-server` | 2.2.5 | `false` (skip: set true to disable) |
 | `slapd` | 2.2.6 | enabled |
 | `nfs-server` | 2.2.7 | enabled |
 | `rpcbind` | 2.2.8 | enabled |
-| `bind9` | 2.2.9 | `false` (skip — set true to disable) |
+| `bind9` | 2.2.9 | `false` (skip: set true to disable) |
 | `vsftpd` | 2.2.10 | enabled |
-| `apache2` | 2.2.11 | `false` (skip — set true to disable) |
+| `apache2` | 2.2.11 | `false` (skip: set true to disable) |
 | `dovecot` | 2.2.12 | enabled |
 | `samba` | 2.2.13 | enabled |
 | `squid` | 2.2.14 | enabled |
 | `snmpd` | 2.2.15 | enabled |
-| `rsync` | 2.2.16 | `false` (skip — set true to disable) |
+| `rsync` | 2.2.16 | `false` (skip: set true to disable) |
 | `nis` | 2.2.17 | enabled |
 | `telnet` | 2.2.19 | enabled |
 
-Services with `condition: false` default to skipping — set `condition: true` in your override to disable them.
+Services with `condition: false` default to skipping, set `condition: true` in your override to disable them.
 
 ## Usage Example
 

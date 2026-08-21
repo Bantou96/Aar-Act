@@ -7,7 +7,7 @@ Hardens cron and at scheduling services by setting strict directory permissions 
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 5.1 — Configure cron
+CIS Section 5.1, Configure cron
 
 ## Key Variables
 ```yaml

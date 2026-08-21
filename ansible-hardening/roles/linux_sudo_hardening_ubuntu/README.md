@@ -4,10 +4,10 @@
 Hardens sudo configuration by enabling use_pty, configuring a dedicated sudo logfile, and validating sudoers files with visudo to prevent privilege escalation abuse.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 1.3.2–1.3.3 — Configure sudo
+CIS Section 1.3.2–1.3.3, Configure sudo
 
 ## Key Variables
 ```yaml

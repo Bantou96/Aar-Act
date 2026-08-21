@@ -7,7 +7,7 @@ Configures legal warning banners for SSH and local console login prompts to sati
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.7 — Warning Banners
+CIS Section 1.7, Warning Banners
 
 ## Key Variables
 ```yaml

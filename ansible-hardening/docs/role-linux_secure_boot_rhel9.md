@@ -3,7 +3,7 @@
 ## Purpose
 
 Verifies and documents Secure Boot status on RHEL 9 family systems:
-- Checks whether Secure Boot is enabled (firmware-level — cannot be enforced via software)
+- Checks whether Secure Boot is enabled (firmware-level, cannot be enforced via software)
 - Optionally fails the play if Secure Boot is not active
 - Enforces strict permissions on GRUB configuration files (`/boot/grub2/grub.cfg`)
 - Ensures only root can read or modify boot configuration

@@ -38,12 +38,12 @@ Configures `dnf-automatic` for unattended security updates on RHEL 9 family syst
 ```yaml
 # group_vars/rhel_servers.yml
 
-# Security updates only — safe for production
+# Security updates only: safe for production
 linux_dnf_automatic_apply_updates: "security"
 linux_dnf_automatic_email_notify: true
 linux_dnf_automatic_email_to: "soc@example.sn"
 
-# On non-critical dev servers — apply all updates
+# On non-critical dev servers: apply all updates
 linux_dnf_automatic_apply_updates: "default"
 ```
 

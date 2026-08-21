@@ -7,7 +7,7 @@ Configures /tmp and /dev/shm with noexec, nodev, and nosuid mount options to pre
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.1.2 — Configure /tmp
+CIS Section 1.1.2, Configure /tmp
 
 ## Key Variables
 ```yaml

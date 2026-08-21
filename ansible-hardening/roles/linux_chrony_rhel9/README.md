@@ -7,7 +7,7 @@ Installs and configures Chrony as a secure NTP client with restricted server acc
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 2.1.1 — Ensure time synchronization is in use
+CIS Section 2.1.1, Ensure time synchronization is in use
 
 ## Key Variables
 ```yaml

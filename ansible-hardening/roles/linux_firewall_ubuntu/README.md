@@ -4,10 +4,10 @@
 Configures UFW with a default-deny inbound policy and applies explicit allow and deny rules to enforce a minimal network access control baseline.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 3.5 — Firewall Configuration
+CIS Section 3.5, Firewall Configuration
 
 ## Key Variables
 ```yaml

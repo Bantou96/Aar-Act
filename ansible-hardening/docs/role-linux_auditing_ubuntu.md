@@ -6,7 +6,7 @@ Deploys and hardens auditd on Ubuntu/Debian systems:
 - Installs `auditd` and `audispd-plugins`
 - Deploys a CIS-aligned `auditd.conf` (log size, rotation, space actions)
 - Applies comprehensive CIS audit rules (identity files, privileged commands, mounts, AppArmor, kernel modules, etc.)
-- Makes audit rules immutable (`-e 2`) — requires reboot to change rules
+- Makes audit rules immutable (`-e 2`), requires reboot to change rules
 - Optionally enables boot-time auditing (`audit=1` in GRUB cmdline)
 - Optionally forwards audit events to rsyslog and a remote log server (TCP/TLS)
 

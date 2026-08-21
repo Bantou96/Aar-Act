@@ -4,10 +4,10 @@
 Configures systemd-journald with persistent log storage, compression, and rate limiting to ensure reliable and efficient system log retention.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 4.2.1.x — Configure journald
+CIS Section 4.2.1.x, Configure journald
 
 ## Key Variables
 ```yaml

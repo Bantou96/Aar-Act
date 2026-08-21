@@ -43,7 +43,7 @@ linux_kernel_apply_network_ipv4: true
 - `linux_kernel_blacklist_filesystems: true` (core CIS filesystems)
 - `linux_kernel_blacklist_usb_storage: true` (critical for servers)
 - `linux_kernel_blacklist_firewire: false` (enable if paranoid about legacy ports)
-- `linux_kernel_unload_blacklisted: false` (attempt unload if changed — may fail if in use)
+- `linux_kernel_unload_blacklisted: false` (attempt unload if changed, may fail if in use)
 
 ## Notes/Warnings
 - Do NOT blacklist modules your hardware needs (e.g. storage controllers!)

@@ -38,7 +38,7 @@ Enforces strict permissions and ownership on critical system files on RHEL 9 fam
 | `linux_umask_apply_profile` | `true` | Write umask to `/etc/profile.d/` (affects all login shells) |
 | `linux_critical_files` | See below | List of `{path, mode, owner, group}` for critical files |
 | `linux_restrict_su_to_wheel` | `true` | Restrict `su` to `wheel` group via `pam_wheel` |
-| `linux_remove_world_writable` | `false` | Scan for world-writable files (report only — does not auto-fix) |
+| `linux_remove_world_writable` | `false` | Scan for world-writable files (report only: does not auto-fix) |
 | `linux_file_permissions_disabled` | `false` | Set `true` to skip this role entirely |
 
 ### Default `linux_critical_files`
@@ -66,7 +66,7 @@ linux_critical_files:
   - { path: "/etc/shadow",           mode: "0000", owner: "root", group: "root" }
   - { path: "/etc/myapp/secrets.conf", mode: "0640", owner: "root", group: "myapp" }
 
-# Enable world-writable scan (report only — does not modify files)
+# Enable world-writable scan (report only: does not modify files)
 linux_remove_world_writable: false
 ```
 

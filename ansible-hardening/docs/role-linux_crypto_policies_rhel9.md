@@ -4,7 +4,7 @@
 
 Configures system-wide cryptographic policies on RHEL 9 family systems to enforce strong algorithm selection across all crypto libraries (OpenSSL, GnuTLS, NSS, Kerberos):
 - Installs `crypto-policies` and `crypto-policies-scripts`
-- Sets the system policy (`FUTURE` by default — stronger than `DEFAULT`)
+- Sets the system policy (`FUTURE` by default, stronger than `DEFAULT`)
 - Optionally applies custom sub-policy modules (e.g. `no-sha1`, `no-3des`)
 - Re-applies the policy so all services pick up the change immediately
 
@@ -32,9 +32,9 @@ Configures system-wide cryptographic policies on RHEL 9 family systems to enforc
 
 | Policy | Strength | Use case |
 |---|---|---|
-| `LEGACY` | Weak | Compatibility with very old systems — **not CIS compliant** |
-| `DEFAULT` | Moderate | RHEL default — CIS Level 1 minimum |
-| `FUTURE` | Strong | CIS Level 2 recommendation — disables SHA-1, 3DES, RC4 |
+| `LEGACY` | Weak | Compatibility with very old systems: **not CIS compliant** |
+| `DEFAULT` | Moderate | RHEL default: CIS Level 1 minimum |
+| `FUTURE` | Strong | CIS Level 2 recommendation: disables SHA-1, 3DES, RC4 |
 | `FIPS` | FIPS 140 | Government/regulated environments requiring FIPS validation |
 
 ## Usage Example

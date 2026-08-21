@@ -45,7 +45,7 @@ linux_chrony_servers:
 
 linux_chrony_use_nts: true
 
-# On internal servers without internet access — use internal NTP
+# On internal servers without internet access: use internal NTP
 linux_chrony_servers:
   - "ntp1.internal.example.sn iburst"
   - "ntp2.internal.example.sn iburst"

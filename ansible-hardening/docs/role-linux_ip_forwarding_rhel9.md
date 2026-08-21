@@ -38,7 +38,7 @@ Disables IP forwarding and ICMP redirect acceptance on RHEL 9 family systems to 
 ```yaml
 # group_vars/rhel_servers.yml
 
-# Defaults are CIS-compliant — no changes needed on non-router servers
+# Defaults are CIS-compliant: no changes needed on non-router servers
 linux_ip_forwarding: "0"
 linux_ipv6_forwarding: "0"
 linux_accept_redirects: "0"

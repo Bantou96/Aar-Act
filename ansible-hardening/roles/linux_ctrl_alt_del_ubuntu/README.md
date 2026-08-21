@@ -4,10 +4,10 @@
 Disables the Ctrl+Alt+Del keyboard shortcut to prevent accidental or malicious system reboots from the console.
 
 ## Targeted OS
-Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+Ubuntu 20.04 / 22.04 / 24.04, Debian 11 / 12
 
 ## CIS Alignment
-CIS Section 1.6.1 — Ensure system-wide crypto policy is not legacy
+CIS Section 1.6.1, Ensure system-wide crypto policy is not legacy
 
 ## Key Variables
 ```yaml

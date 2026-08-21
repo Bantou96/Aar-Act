@@ -7,7 +7,7 @@ Configures SELinux in enforcing mode, sets targeted policy booleans, and runs re
 RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
 ## CIS Alignment
-CIS Section 1.6 — Mandatory Access Control
+CIS Section 1.6, Mandatory Access Control
 
 ## Key Variables
 ```yaml

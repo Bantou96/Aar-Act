@@ -7,7 +7,7 @@
 | linux_kernel_hardening_rhel9              | Sysctl hardening + module blacklisting            | 1.5, 3.3              | Stable     | kernel, sysctl           |
 | linux_auditing_rhel9                      | auditd rules + rsyslog forwarding                 | 6.3                   | Stable     | audit, logging           |
 | linux_firewalld_rhel9                     | firewalld default drop + SSH restrictions         | 4.2                   | Stable     | firewall                 |
-| linux_fail2ban_rhel9                      | Brute-force protection (sshd + firewalld synergy) | —                     | Stable     | fail2ban                 |
+| linux_fail2ban_rhel9                      | Brute-force protection (sshd + firewalld synergy) |:                     | Stable     | fail2ban                 |
 | linux_disable_unnecessary_services_rhel9  | Mask/disable legacy services                      | 2.x                   | Stable     | services                 |
 | linux_file_permissions_rhel9              | Strict perms on shadow, ssh keys, umask 027       | 5.4, 6.1              | Stable     | permissions              |
 | linux_selinux_rhel9                       | Enforcing mode + booleans + restorecon            | 1.6                   | Stable     | selinux                  |
@@ -18,18 +18,18 @@
 | linux_wireless_rhel9                      | Disable wireless interfaces + blacklist modules   | 3.1.2                 | Stable     | network, wireless        |
 
 > **Extended in v1.3.0**
-> `linux_bootloader_password_rhel9` — added single user mode auth (CIS 1.5.3)
-> `linux_tmp_mounts_rhel9` — added /home nodev (CIS 1.1.14) + sticky bit (CIS 1.1.21)
-> `linux_disable_unnecessary_services_rhel9` — expanded service/package lists (CIS 2.x)
+> `linux_bootloader_password_rhel9`: added single user mode auth (CIS 1.5.3)
+> `linux_tmp_mounts_rhel9`: added /home nodev (CIS 1.1.14) + sticky bit (CIS 1.1.21)
+> `linux_disable_unnecessary_services_rhel9`: expanded service/package lists (CIS 2.x)
 
 **Legend**  
-- **Stable** — production ready, well tested  
-- **Beta** — functional but needs more testing (none currently)
+- **Stable**: production ready, well tested  
+- **Beta**: functional but needs more testing (none currently)
 
 Each role has its own detailed page:  
 `docs/role-<name>.md`
 Each control area has **two parallel roles**: one for RHEL 9 family and one for Ubuntu/Debian.
-OS detection is automatic in the playbook — you do not need to select which set to apply.
+OS detection is automatic in the playbook, you do not need to select which set to apply.
 
 ## RHEL 9 / AlmaLinux 9 / Rocky Linux 9
 
@@ -55,11 +55,11 @@ OS detection is automatic in the playbook — you do not need to select which se
 | `linux_tmp_mounts_rhel9` | noexec/nodev/nosuid on /tmp, /dev/shm | 1.1.2.x | mounts, filesystem | [→](role-linux_tmp_mounts_rhel9.md) |
 | `linux_secure_boot_rhel9` | Secure Boot verification + /boot permissions | 1.5.1 | boot, secureboot | [→](role-linux_secure_boot_rhel9.md) |
 | `linux_file_permissions_rhel9` | Critical file permissions + world-writable scan | 6.1 | permissions | [→](role-linux_file_permissions_rhel9.md) |
-| `linux_fail2ban_rhel9` | Brute-force protection (sshd + firewalld) | — | fail2ban | [→](role-linux_fail2ban_rhel9.md) |
+| `linux_fail2ban_rhel9` | Brute-force protection (sshd + firewalld) |: | fail2ban | [→](role-linux_fail2ban_rhel9.md) |
 
 ---
 
-## Ubuntu 20.04 / 22.04 / 24.04 — Debian 11 / 12
+## Ubuntu 20.04 / 22.04 / 24.04: Debian 11 / 12
 
 | Role | Main Purpose | CIS Sections | Tags | Doc |
 |---|---|---|---|---|
@@ -83,7 +83,7 @@ OS detection is automatic in the playbook — you do not need to select which se
 | `linux_tmp_mounts_ubuntu` | noexec/nodev/nosuid on /tmp, /dev/shm | 1.1.2.x | mounts, filesystem | [→](role-linux_tmp_mounts_ubuntu.md) |
 | `linux_secure_boot_ubuntu` | Secure Boot verification + /boot permissions | 1.5.1 | boot, secureboot | [→](role-linux_secure_boot_ubuntu.md) |
 | `linux_file_permissions_ubuntu` | Critical file permissions + world-writable scan | 6.1 | permissions | [→](role-linux_file_permissions_ubuntu.md) |
-| `linux_fail2ban_ubuntu` | Brute-force protection via Fail2ban *(Ubuntu only)* | — | fail2ban | [→](role-linux_fail2ban_ubuntu.md) |
+| `linux_fail2ban_ubuntu` | Brute-force protection via Fail2ban *(Ubuntu only)* |: | fail2ban | [→](role-linux_fail2ban_ubuntu.md) |
 
 ---
 
@@ -100,5 +100,5 @@ OS detection is automatic in the playbook — you do not need to select which se
 ---
 
 **Legend**
-- **Stable** — production ready, tested on RHEL9 family and Ubuntu 22.04
+- **Stable**: production ready, tested on RHEL9 family and Ubuntu 22.04
 - All roles support `--check` / `--diff` mode and are idempotent
