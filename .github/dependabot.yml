@@ -1,0 +1,14 @@
+# SHA-pinned actions do not update themselves. Without this file, pinning trades
+# a supply-chain risk for a staleness one: the workflow keeps running a version
+# that stops receiving security fixes, and nobody notices.
+#
+# Dependabot rewrites the pin and the trailing version comment together, so the
+# pin stays readable while still being an immutable reference.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(ci)"

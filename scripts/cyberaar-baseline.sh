@@ -2427,7 +2427,11 @@ _checks_compliance
 # ─── COMPUTE SCORE ───────────────────────────────────────────────────────────
 TOTAL=$((PASS + WARN + FAIL))
 SCORE=0
-[[ "$TOTAL" -gt 0 ]] && SCORE=$(awk "BEGIN {printf \"%.0f\", ($PASS / $TOTAL) * 100}")
+# Values passed with -v rather than interpolated into the awk program text.
+# PASS and TOTAL are internal counters today, so this is hygiene rather than a
+# fix, but a program built by string concatenation is one refactor away from
+# taking a value it did not choose.
+[[ "$TOTAL" -gt 0 ]] && SCORE=$(awk -v p="$PASS" -v t="$TOTAL" 'BEGIN {printf "%.0f", (p / t) * 100}')
 
 # ─── RENDER OUTPUTS ──────────────────────────────────────────────────────────
 _render_summary          # terminal score box + ansible remediation plan
