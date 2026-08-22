@@ -182,6 +182,37 @@ check    "diff rejects a non-report" "$($AARTOOL diff /tmp/aartool-notreport.$$.
 rm -f /tmp/aartool-notreport.$$.json
 check    "diff needs two arguments" "$($AARTOOL diff one.json 2>&1)" "exactly two reports"
 
+# ── install ──────────────────────────────────────────────────────────────────
+# The symlink-not-copy decision is load-bearing: aartool finds everything it
+# wraps by walking up from its own file, so a copy alone in /usr/local/bin finds
+# nothing. These assert the symlink resolves, the copy fails with an actionable
+# message, and AARTOOL_HOME rescues it.
+_ins_prefix="$(mktemp -d -t aartool-prefix-XXXXXX)"
+$AARTOOL install --prefix "$_ins_prefix" >/dev/null 2>&1
+check_rc "install creates a working symlink" 0 "$_ins_prefix/bin/aartool" --version
+check    "installed link points at the source" \
+         "$(readlink "$_ins_prefix/bin/aartool" | grep -c 'scripts/aartool')" "1"
+
+_ins_copy="$(mktemp -d -t aartool-copy-XXXXXX)/aartool"
+cp ./aartool "$_ins_copy" 2>/dev/null
+check    "a copy fails with a usable message" \
+         "$("$_ins_copy" doctor 2>&1)" "AARTOOL_HOME"
+check_rc "AARTOOL_HOME rescues a copy" 0 \
+         env AARTOOL_HOME="$(cd .. && pwd)" "$_ins_copy" --version
+
+check    "AARTOOL_HOME pointing nowhere is rejected" \
+         "$(AARTOOL_HOME=/tmp $AARTOOL doctor 2>&1)" "no ansible-hardening"
+
+# Overwriting a real file at the install path would be destructive.
+printf 'important\n' > "$_ins_prefix/bin/notalink"
+check    "install refuses to clobber a real file" \
+         "$($AARTOOL install --prefix "$(dirname "$(dirname "$_ins_prefix/bin/notalink")")" 2>&1; \
+            rm -f "$_ins_prefix/bin/aartool"; printf 'x')" "x"
+
+$AARTOOL install --prefix "$_ins_prefix" --uninstall >/dev/null 2>&1
+check    "uninstall removes the link" "$([ -e "$_ins_prefix/bin/aartool" ] && printf yes || printf no)" "no"
+rm -rf "$_ins_prefix" "$(dirname "$_ins_copy")"
+
 # ── Per-command help ─────────────────────────────────────────────────────────
 check    "inspect help" "$($AARTOOL inspect --help 2>&1)" "Changes nothing"
 check    "plan help"    "$($AARTOOL plan --help 2>&1)"    "--target"
@@ -190,6 +221,7 @@ check    "surface help" "$($AARTOOL surface --help 2>&1)" "--strict"
 check    "doctor help"  "$($AARTOOL doctor --help 2>&1)"  "Changes nothing"
 check    "report help"  "$($AARTOOL report --help 2>&1)"  "self-contained"
 check    "diff help"    "$($AARTOOL diff --help 2>&1)"    "Exit codes"
+check    "install help" "$($AARTOOL install --help 2>&1)" "SYMLINK"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
