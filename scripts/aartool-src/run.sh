@@ -6,6 +6,8 @@ main() {
     inspect)        shift; cmd_inspect "$@" ;;
     plan)           shift; cmd_harden plan  "$@" ;;
     apply)          shift; cmd_harden apply "$@" ;;
+    surface)        shift; cmd_surface "$@" ;;
+    doctor)         shift; cmd_doctor "$@" ;;
     -h|--help|help) usage ;;
     -V|--version|version) printf 'aartool %s\n' "$AARTOOL_VERSION" ;;
     # Named so the error can be specific rather than "unknown command".

@@ -16,8 +16,11 @@ OUT="${SCRIPT_DIR}/aartool"
 PARTS=(
   aartool-src/main.sh
   aartool-src/lib/paths.sh
+  aartool-src/lib/surface.sh
   aartool-src/cmd/inspect.sh
   aartool-src/cmd/harden.sh
+  aartool-src/cmd/surface.sh
+  aartool-src/cmd/doctor.sh
   aartool-src/run.sh
 )
 

@@ -51,7 +51,7 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 
 | Deliverable | Description | Version |
 |-------------|-------------|---------|
-| `scripts/aartool` | One front door for the toolkit: `inspect` to audit, `plan` to preview hardening, `apply` to run it | v0.1.0 |
+| `scripts/aartool` | One front door: `inspect`, `plan`, `apply`, plus `surface` for kernel attack-surface reduction and `doctor` for preflight | v0.2.0 |
 | `scripts/cyberaar-baseline.sh` | Standalone bash script: audits a Linux server across 96 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
 | `ansible-hardening/` | Ansible collection (`cyberaar.hardening`): 51 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
 | `execution-environment/` | Docker image: self-contained EE with Ansible + collection + playbooks, no local install required | `ghcr.io/cyberaar/ee-hardening` |
@@ -299,7 +299,55 @@ scripts/aartool plan --target ubuntu-vm-01 --user ubuntu --only ssh
 scripts/aartool apply --target ubuntu-vm-01 --user ubuntu
 ```
 
-Two things it does differently from what it wraps, both on purpose:
+### `aartool surface` — the window before the patch
+
+Red Hat and Debian ship the patch. Nothing helps you in the window *before* the
+patch exists, or on the machine you cannot reboot until the change window in
+three weeks. `surface` is for that window.
+
+```bash
+aartool surface              # what would the next kernel LPE still reach here?
+aartool surface --strict     # include mitigations that break real workloads
+aartool surface --fix        # print the sysctl drop-in that closes the gaps
+sudo aartool surface --apply # write it to /etc/sysctl.d and load it
+```
+
+These settings close **classes** of local privilege escalation rather than
+individual CVEs. Unprivileged user namespaces are the doorway a large share of
+published Linux LPEs walk through: they hand an unprivileged process
+`CAP_SYS_ADMIN` inside its own namespace, which is what turns a bug in nftables,
+io_uring or OverlayFS into root. Turning them off fixes none of those bugs. It
+removes the doorway they all use.
+
+Every mitigation states **what it costs**, and there are two tiers:
+
+| tier | meaning |
+|---|---|
+| `safe` | no mainstream workload is known to depend on it |
+| `strict` | will break something real for somebody, and the cost is printed |
+
+Only the safe tier runs by default. A tool that silently breaks your containers
+gets uninstalled, and then it protects nothing.
+
+Nothing here is compiled and nothing is rebooted. Everything applied lands in one
+drop-in file you can delete to revert. The same settings are audited as the
+`KRN-01`..`KRN-12` family in every baseline report, so the assessment and the
+remediation are two views of one thing — and a test asserts they cannot drift
+apart.
+
+### `aartool doctor`
+
+```bash
+aartool doctor                      # everything plan and apply depend on
+aartool doctor --target web-01      # also test SSH and sudo on that host
+```
+
+Exits non-zero if anything is missing, so it works as a CI gate. It exists
+because `ansible-playbook` failing halfway through with "couldn't resolve module
+ansible.posix.sysctl" tells an operator nothing about `ansible-galaxy`, and a
+half-applied hardening run is expensive.
+
+### Two things aartool does differently from what it wraps, both on purpose:
 
 **The dry run is a command, not a flag.** `run-hardening.sh` applies by default
 and takes `-c` to preview, so one missing character separates a report from a
