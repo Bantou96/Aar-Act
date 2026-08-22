@@ -51,7 +51,7 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 
 | Deliverable | Description | Version |
 |-------------|-------------|---------|
-| `scripts/aartool` | One front door: `inspect`, `plan`, `apply`, plus `surface` for kernel attack-surface reduction and `doctor` for preflight | v0.2.0 |
+| `scripts/aartool` | One front door: `inspect`, `plan`, `apply`, `surface` (kernel attack surface), `doctor` (preflight), `report` (dashboard) | v0.3.0 |
 | `scripts/cyberaar-baseline.sh` | Standalone bash script: audits a Linux server across 96 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
 | `ansible-hardening/` | Ansible collection (`cyberaar.hardening`): 51 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
 | `execution-environment/` | Docker image: self-contained EE with Ansible + collection + playbooks, no local install required | `ghcr.io/cyberaar/ee-hardening` |
@@ -334,6 +334,34 @@ drop-in file you can delete to revert. The same settings are audited as the
 `KRN-01`..`KRN-12` family in every baseline report, so the assessment and the
 remediation are two views of one thing — and a test asserts they cannot drift
 apart.
+
+### `aartool report` — the dashboard, one command away
+
+The toolkit already ships a single-file dashboard with no server and no internet
+requirement. The friction was everything around it: run an audit, find the JSON,
+find the dashboard, open a browser, drag files in.
+
+```bash
+aartool report /tmp/audit/*.json --out fleet.html   # self-contained, sendable
+aartool report /tmp/audit/*.json --open             # just look at it
+aartool report --serve 8080                         # headless server
+```
+
+`--out` is the one worth knowing about. It produces **one HTML file with the
+results already inside**, which opens offline on any machine with no other
+files. Attach it to an email; the person receiving it needs nothing installed
+and has never heard of this toolkit.
+
+`--serve` binds to `127.0.0.1` only and says so, because this renders audit
+results for an entire estate and has no authentication. Reach it with
+`ssh -L 8080:127.0.0.1:8080 user@host`.
+
+The dashboard itself is never modified. A copy is made and a small bootstrap
+appended that feeds the dashboard's own data structure, and the injected JSON has
+`<` and `>` escaped to their `\u` form: a hostname is attacker-influenced on a
+machine you were asked to audit, and `</script>` in one would otherwise end the
+block and turn the rest of a file you email to a client into markup. There is a
+test that attempts exactly that.
 
 ### `aartool doctor`
 

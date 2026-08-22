@@ -112,12 +112,42 @@ else
   printf 'FAIL  catalogue entries with no KRN check:%s\n' "$missing"
 fi
 
+# ── report ───────────────────────────────────────────────────────────────────
+_rep_src="../ansible-hardening/reports/before/ubuntu-vm-01/before_ubuntu-vm-01_1772639445.json"
+if [[ -f "$_rep_src" ]]; then
+  _rep_out="$(mktemp -t aartool-test-XXXXXX.html)"
+  $AARTOOL report "$_rep_src" --out "$_rep_out" >/dev/null 2>&1
+  check "report embeds the data"   "$(grep -c 'var PRELOAD' "$_rep_out")" "1"
+  check "report keeps script tags balanced" \
+        "$(printf '%s/%s' "$(grep -o '<script' "$_rep_out" | wc -l)" "$(grep -o '</script>' "$_rep_out" | wc -l)")" \
+        "2/2"
+
+  # A hostname is attacker-influenced on a machine you were asked to audit.
+  # Embedding it in a <script> block without escaping < would end the block and
+  # turn the rest of the file into markup, in a report you then email to a
+  # client. Assert the breakout is closed rather than trusting that it is.
+  _rep_evil="$(mktemp -t aartool-evil-XXXXXX.json)"
+  sed 's|"host": *"[^"]*"|"host": "evil</script><img src=x onerror=alert(1)>"|' "$_rep_src" > "$_rep_evil"
+  _rep_evil_out="$(mktemp -t aartool-evil-XXXXXX.html)"
+  $AARTOOL report "$_rep_evil" --out "$_rep_evil_out" >/dev/null 2>&1
+  check "hostile hostname does not break out" \
+        "$(printf '%s/%s' "$(grep -o '<script' "$_rep_evil_out" | wc -l)" "$(grep -o '</script>' "$_rep_evil_out" | wc -l)")" \
+        "2/2"
+  check "hostile markup is escaped, not embedded raw" \
+        "$(grep -c 'u003c/script' "$_rep_evil_out")" "1"
+  rm -f "$_rep_out" "$_rep_evil" "$_rep_evil_out"
+fi
+
+check    "report rejects a missing file" "$($AARTOOL report /nonexistent.json 2>&1)" "No such report"
+check    "serve refuses a non-numeric port" "$($AARTOOL report --serve abc 2>&1)" "port number"
+
 # ── Per-command help ─────────────────────────────────────────────────────────
 check    "inspect help" "$($AARTOOL inspect --help 2>&1)" "Changes nothing"
 check    "plan help"    "$($AARTOOL plan --help 2>&1)"    "--target"
 check    "apply help"   "$($AARTOOL apply --help 2>&1)"   "--yes"
 check    "surface help" "$($AARTOOL surface --help 2>&1)" "--strict"
 check    "doctor help"  "$($AARTOOL doctor --help 2>&1)"  "Changes nothing"
+check    "report help"  "$($AARTOOL report --help 2>&1)"  "self-contained"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

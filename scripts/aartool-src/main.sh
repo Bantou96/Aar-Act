@@ -30,7 +30,7 @@
 # =============================================================================
 set -euo pipefail
 
-AARTOOL_VERSION="0.2.0"
+AARTOOL_VERSION="0.3.0"
 
 # ── Output ───────────────────────────────────────────────────────────────────
 if [[ -t 1 ]]; then
@@ -59,6 +59,7 @@ Commands:
   surface     Kernel attack surface: what a local privilege escalation
               would still reach on this machine, and how to close it.
   doctor      Check everything plan and apply depend on.
+  report      Visualise audit reports, or bake them into one shareable file.
 
 Global options:
   -h, --help        Show this help, or help for a command

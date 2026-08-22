@@ -21,6 +21,7 @@ PARTS=(
   aartool-src/cmd/harden.sh
   aartool-src/cmd/surface.sh
   aartool-src/cmd/doctor.sh
+  aartool-src/cmd/report.sh
   aartool-src/run.sh
 )
 
