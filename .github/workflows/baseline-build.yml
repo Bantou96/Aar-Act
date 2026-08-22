@@ -51,3 +51,13 @@ jobs:
 
       - name: Verify bash syntax
         run: bash -n scripts/cyberaar-baseline.sh
+
+      # Coverage we cannot get any other way: CI runs on Ubuntu and Molecule
+      # tests Rocky 9 and Ubuntu 22.04, so nothing in the pipeline ever executes
+      # on openSUSE, Alpine, Arch or Amazon Linux. These feed the mapping their
+      # real /etc/os-release and assert the answer.
+      - name: Distribution mapping tests
+        run: bash scripts/tests/test_distro.sh
+
+      - name: Escaping regression tests
+        run: bash scripts/tests/test_escaping.sh

@@ -4,38 +4,94 @@ _checks_system() {
 # =============================================================================
 section "1. SYSTEM & OS / Système et OS"
 
-# SYS-01 Supported OS
-if grep -qiE 'rhel|centos|almalinux|rocky|ubuntu|debian' /etc/os-release 2>/dev/null; then
-  add_result "System" "PASS" "SYS-01" "Supported OS detected" "OS supporté" "$OS_VAL" ""
+# SYS-01 Distribution and what is available for it
+#
+# Two claims, kept apart. The audit reads sysctls, /proc, /etc and systemd, so it
+# runs on anything with a Linux kernel. The Ansible hardening roles are written
+# for two families and CI-tested on two images. The old check conflated them and
+# told anyone outside six names to change distribution, which helps nobody.
+_SYS_FAM="$(distro_family)"
+if distro_roles_available; then
+  add_result "System" "PASS" "SYS-01" "Distribution supported" "Distribution supportée" \
+    "$(distro_pretty) — family: $_SYS_FAM, hardening roles available" ""
+elif [[ "$_SYS_FAM" == "unknown" ]]; then
+  add_result "System" "WARN" "SYS-01" "Distribution not identified" "Distribution non identifiée" \
+    "$(distro_pretty) — audit still valid, hardening roles unavailable" \
+    "L'audit reste valable : il lit /proc, /etc et systemd, indépendants de la distribution. Les rôles de durcissement couvrent les familles RHEL et Debian (testés sur $(distro_roles_tested))."
 else
-  add_result "System" "WARN" "SYS-01" "Supported OS detected" "OS supporté" "Unknown: $OS_VAL" \
-    "Utilisez RHEL, Ubuntu ou Debian pour un support sécurité officiel."
+  add_result "System" "WARN" "SYS-01" "Audit-only distribution" "Distribution en audit seul" \
+    "$(distro_pretty) — family: $_SYS_FAM, audit valid, no hardening roles" \
+    "L'audit et 'aartool surface' fonctionnent normalement. Les rôles Ansible ne couvrent pas encore la famille $_SYS_FAM : les recommandations de chaque contrôle restent applicables à la main."
 fi
 
 # SYS-02 Kernel (informational — always WARN to prompt version review)
 add_result "System" "WARN" "SYS-02" "Kernel version" "Version noyau" "$(uname -r)" \
   "Vérifiez les mises à jour noyau: 'dnf check-update kernel' ou 'apt list --upgradable | grep linux-image'."
 
-# SYS-03 Pending security patches
+# SYS-03 Pending updates
+#
+# Every branch ends in a result. The previous version handled dnf and apt-get
+# and nothing else, so on SUSE, Arch or Alpine the check emitted NOTHING: the
+# report simply had one fewer line and the operator had no way to know an update
+# check had been skipped. A check that disappears silently is worse than one
+# that says it cannot tell.
 PENDING=0
-if cmd_exists dnf; then
-  PENDING=$(dnf check-update --security -q 2>/dev/null | grep -cE '\.' || true)
-  if [[ "$PENDING" -eq 0 ]]; then
-    add_result "System" "PASS" "SYS-03" "No pending security updates" "Système à jour" "0 packages" ""
-  else
-    add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour en attente" "$PENDING package(s)" \
-      "Appliquez: 'dnf update --security -y'"
-  fi
-elif cmd_exists apt-get; then
-  apt-get update -qq 2>/dev/null || true
-  PENDING=$(apt-get -s upgrade 2>/dev/null | grep -c "^Inst" || true)
-  if [[ "$PENDING" -eq 0 ]]; then
-    add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
-  else
-    add_result "System" "FAIL" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
-      "Appliquez: 'apt-get upgrade -y'"
-  fi
-fi
+_SYS_PKG="$(distro_pkg_mgr)"
+case "$_SYS_PKG" in
+  dnf|dnf5|yum)
+    PENDING=$("$_SYS_PKG" check-update --security -q 2>/dev/null | grep -cE '\.' || true)
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending security updates" "Système à jour" "0 packages" ""
+    else
+      add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour en attente" "$PENDING package(s)" \
+        "Appliquez: '$_SYS_PKG update --security -y'"
+    fi ;;
+  apt-get)
+    apt-get update -qq 2>/dev/null || true
+    PENDING=$(apt-get -s upgrade 2>/dev/null | grep -c "^Inst" || true)
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
+    else
+      add_result "System" "FAIL" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
+        "Appliquez: 'apt-get upgrade -y'"
+    fi ;;
+  zypper)
+    # list-patches --category security is the SUSE equivalent of --security.
+    PENDING=$(zypper --non-interactive list-patches --category security 2>/dev/null | grep -cE '^[a-zA-Z]' || true)
+    PENDING=$(( PENDING > 0 ? PENDING - 1 : 0 ))   # drop the header row
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending security patches" "Système à jour" "0 patches" ""
+    else
+      add_result "System" "FAIL" "SYS-03" "Pending security patches" "Correctifs en attente" "$PENDING patch(es)" \
+        "Appliquez: 'zypper patch --category security'"
+    fi ;;
+  pacman)
+    # Rolling release: there is no security-only channel, so this is all updates.
+    PENDING=$(pacman -Qu 2>/dev/null | grep -c . || true)
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
+    else
+      add_result "System" "WARN" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s), rolling release" \
+        "Appliquez: 'pacman -Syu'. Une distribution en publication continue ne distingue pas les correctifs de sécurité."
+    fi ;;
+  apk)
+    PENDING=$(apk version -l '<' 2>/dev/null | grep -c '^[a-zA-Z]' || true)
+    PENDING=$(( PENDING > 0 ? PENDING - 1 : 0 ))
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
+    else
+      add_result "System" "WARN" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
+        "Appliquez: 'apk upgrade'"
+    fi ;;
+  none)
+    add_result "System" "WARN" "SYS-03" "No package manager found" "Aucun gestionnaire de paquets" \
+      "checked: dnf, apt-get, zypper, pacman, apk" \
+      "Image minimale ou distribution immuable. Vérifiez les mises à jour par le mécanisme propre à cette image." ;;
+  *)
+    add_result "System" "WARN" "SYS-03" "Update status not determined" "État des mises à jour indéterminé" \
+      "package manager: $_SYS_PKG (unsupported by this check)" \
+      "Ce gestionnaire de paquets n'est pas encore couvert. Le reste de l'audit reste valable." ;;
+esac
 
 # SYS-11 Running kernel is the newest one installed
 #

@@ -127,6 +127,102 @@ fi
 
 
 # =============================================================================
+#  DISTRIBUTION DETECTION
+#
+#  Two different questions, kept apart on purpose, because answering them as one
+#  is what made the old message useless.
+#
+#    Can this machine be AUDITED?      Almost always yes. The checks read
+#                                      sysctls, /proc, /etc and systemd. None of
+#                                      that is distribution specific.
+#
+#    Are HARDENING ROLES available?    Currently only for the RHEL 9 family and
+#                                      Ubuntu/Debian. That is a real limit and
+#                                      pretending otherwise wastes people's time.
+#
+#  The old check matched six names and told everyone else to "use RHEL, Ubuntu or
+#  Debian for official security support". Someone running openSUSE or Alpine does
+#  not need to be told to change distribution; they need to know the audit will
+#  still work and which part will not.
+#
+#  ID_LIKE is used before ID, so derivatives inherit correctly: Pop!_OS, Mint and
+#  Zorin declare ID_LIKE=ubuntu; Rocky, Alma and Oracle declare ID_LIKE="rhel
+#  centos fedora". A derivative nobody has heard of still lands in the right
+#  family without this file being updated.
+# =============================================================================
+
+# Overridable so the mapping can be tested against every distribution rather
+# than only the one the test happens to run on, and so a mounted image can be
+# identified without booting it.
+OS_RELEASE_PATH="${OS_RELEASE_PATH:-/etc/os-release}"
+
+_DISTRO_ID=""; _DISTRO_LIKE=""; _DISTRO_PRETTY=""; _DISTRO_VERSION=""
+if [[ -r "$OS_RELEASE_PATH" ]]; then
+  _DISTRO_ID="$(       . "$OS_RELEASE_PATH" 2>/dev/null; printf '%s' "${ID:-}" )"
+  _DISTRO_LIKE="$(     . "$OS_RELEASE_PATH" 2>/dev/null; printf '%s' "${ID_LIKE:-}" )"
+  _DISTRO_PRETTY="$(   . "$OS_RELEASE_PATH" 2>/dev/null; printf '%s' "${PRETTY_NAME:-}" )"
+  _DISTRO_VERSION="$(  . "$OS_RELEASE_PATH" 2>/dev/null; printf '%s' "${VERSION_ID:-}" )"
+fi
+
+distro_id()      { printf '%s' "${_DISTRO_ID:-unknown}"; }
+distro_pretty()  { printf '%s' "${_DISTRO_PRETTY:-${_DISTRO_ID:-unknown}} ${_DISTRO_VERSION}"; }
+
+# rhel | debian | suse | arch | alpine | gentoo | unknown
+distro_family() {
+  local id="$_DISTRO_ID" like=" $_DISTRO_LIKE "
+  case "$id" in
+    rhel|centos|almalinux|rocky|fedora|ol|oracle|amzn|scientific|cloudlinux) printf 'rhel'; return ;;
+    ubuntu|debian|linuxmint|pop|raspbian|kali|zorin|elementary|devuan)       printf 'debian'; return ;;
+    opensuse*|sles|sled|suse)                                               printf 'suse'; return ;;
+    arch|manjaro|endeavouros|garuda)                                        printf 'arch'; return ;;
+    alpine)                                                                 printf 'alpine'; return ;;
+    gentoo)                                                                 printf 'gentoo'; return ;;
+    # Azure Linux is RPM-based but uses tdnf and a different layout. Close to
+    # the RHEL family is not the same as tested on it, so it gets its own name
+    # and no role claim.
+    mariner|azurelinux)                                                     printf 'azure'; return ;;
+  esac
+  # Unrecognised name: fall back to what the distribution says it resembles.
+  case "$like" in
+    *" rhel "*|*" centos "*|*" fedora "*) printf 'rhel' ;;
+    *" debian "*|*" ubuntu "*)            printf 'debian' ;;
+    *" suse "*|*" opensuse "*)            printf 'suse' ;;
+    *" arch "*)                           printf 'arch' ;;
+    *" alpine "*)                         printf 'alpine' ;;
+    *)                                    printf 'unknown' ;;
+  esac
+}
+
+# The package manager actually present, which is the thing the update check
+# needs. Asking the binary beats inferring it from the family: Fedora has dnf5,
+# some minimal images have neither.
+distro_pkg_mgr() {
+  local m
+  for m in dnf5 dnf yum apt-get zypper pacman apk xbps-install emerge; do
+    command -v "$m" >/dev/null 2>&1 && { printf '%s' "$m"; return; }
+  done
+  printf 'none'
+}
+
+# Do we ship Ansible hardening roles for this family?
+#
+# rhel and debian only. Everything else can still be audited: the checks read
+# sysctls, /proc, /etc and systemd, none of which is distribution specific.
+# Saying "audit works, hardening does not" is useful. Telling someone on
+# openSUSE to switch to RHEL is not, and that is what the old message did.
+distro_roles_available() {
+  case "$(distro_family)" in
+    rhel|debian) return 0 ;;
+    *)           return 1 ;;
+  esac
+}
+
+# What CI actually proves, as opposed to what the roles are written for. Molecule
+# runs every role against these two images and nothing else, so this is the only
+# claim that is backed by evidence.
+distro_roles_tested() { printf 'Rocky Linux 9, Ubuntu 22.04'; }
+
+# =============================================================================
 #  ANSIBLE REMEDIATION MAP
 #  Maps each check ID → ansible tags + role names for RHEL9 and Ubuntu/Debian
 #  Used to generate targeted remediation commands after the scan.
@@ -478,38 +574,94 @@ _checks_system() {
 # =============================================================================
 section "1. SYSTEM & OS / Système et OS"
 
-# SYS-01 Supported OS
-if grep -qiE 'rhel|centos|almalinux|rocky|ubuntu|debian' /etc/os-release 2>/dev/null; then
-  add_result "System" "PASS" "SYS-01" "Supported OS detected" "OS supporté" "$OS_VAL" ""
+# SYS-01 Distribution and what is available for it
+#
+# Two claims, kept apart. The audit reads sysctls, /proc, /etc and systemd, so it
+# runs on anything with a Linux kernel. The Ansible hardening roles are written
+# for two families and CI-tested on two images. The old check conflated them and
+# told anyone outside six names to change distribution, which helps nobody.
+_SYS_FAM="$(distro_family)"
+if distro_roles_available; then
+  add_result "System" "PASS" "SYS-01" "Distribution supported" "Distribution supportée" \
+    "$(distro_pretty) — family: $_SYS_FAM, hardening roles available" ""
+elif [[ "$_SYS_FAM" == "unknown" ]]; then
+  add_result "System" "WARN" "SYS-01" "Distribution not identified" "Distribution non identifiée" \
+    "$(distro_pretty) — audit still valid, hardening roles unavailable" \
+    "L'audit reste valable : il lit /proc, /etc et systemd, indépendants de la distribution. Les rôles de durcissement couvrent les familles RHEL et Debian (testés sur $(distro_roles_tested))."
 else
-  add_result "System" "WARN" "SYS-01" "Supported OS detected" "OS supporté" "Unknown: $OS_VAL" \
-    "Utilisez RHEL, Ubuntu ou Debian pour un support sécurité officiel."
+  add_result "System" "WARN" "SYS-01" "Audit-only distribution" "Distribution en audit seul" \
+    "$(distro_pretty) — family: $_SYS_FAM, audit valid, no hardening roles" \
+    "L'audit et 'aartool surface' fonctionnent normalement. Les rôles Ansible ne couvrent pas encore la famille $_SYS_FAM : les recommandations de chaque contrôle restent applicables à la main."
 fi
 
 # SYS-02 Kernel (informational — always WARN to prompt version review)
 add_result "System" "WARN" "SYS-02" "Kernel version" "Version noyau" "$(uname -r)" \
   "Vérifiez les mises à jour noyau: 'dnf check-update kernel' ou 'apt list --upgradable | grep linux-image'."
 
-# SYS-03 Pending security patches
+# SYS-03 Pending updates
+#
+# Every branch ends in a result. The previous version handled dnf and apt-get
+# and nothing else, so on SUSE, Arch or Alpine the check emitted NOTHING: the
+# report simply had one fewer line and the operator had no way to know an update
+# check had been skipped. A check that disappears silently is worse than one
+# that says it cannot tell.
 PENDING=0
-if cmd_exists dnf; then
-  PENDING=$(dnf check-update --security -q 2>/dev/null | grep -cE '\.' || true)
-  if [[ "$PENDING" -eq 0 ]]; then
-    add_result "System" "PASS" "SYS-03" "No pending security updates" "Système à jour" "0 packages" ""
-  else
-    add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour en attente" "$PENDING package(s)" \
-      "Appliquez: 'dnf update --security -y'"
-  fi
-elif cmd_exists apt-get; then
-  apt-get update -qq 2>/dev/null || true
-  PENDING=$(apt-get -s upgrade 2>/dev/null | grep -c "^Inst" || true)
-  if [[ "$PENDING" -eq 0 ]]; then
-    add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
-  else
-    add_result "System" "FAIL" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
-      "Appliquez: 'apt-get upgrade -y'"
-  fi
-fi
+_SYS_PKG="$(distro_pkg_mgr)"
+case "$_SYS_PKG" in
+  dnf|dnf5|yum)
+    PENDING=$("$_SYS_PKG" check-update --security -q 2>/dev/null | grep -cE '\.' || true)
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending security updates" "Système à jour" "0 packages" ""
+    else
+      add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour en attente" "$PENDING package(s)" \
+        "Appliquez: '$_SYS_PKG update --security -y'"
+    fi ;;
+  apt-get)
+    apt-get update -qq 2>/dev/null || true
+    PENDING=$(apt-get -s upgrade 2>/dev/null | grep -c "^Inst" || true)
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
+    else
+      add_result "System" "FAIL" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
+        "Appliquez: 'apt-get upgrade -y'"
+    fi ;;
+  zypper)
+    # list-patches --category security is the SUSE equivalent of --security.
+    PENDING=$(zypper --non-interactive list-patches --category security 2>/dev/null | grep -cE '^[a-zA-Z]' || true)
+    PENDING=$(( PENDING > 0 ? PENDING - 1 : 0 ))   # drop the header row
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending security patches" "Système à jour" "0 patches" ""
+    else
+      add_result "System" "FAIL" "SYS-03" "Pending security patches" "Correctifs en attente" "$PENDING patch(es)" \
+        "Appliquez: 'zypper patch --category security'"
+    fi ;;
+  pacman)
+    # Rolling release: there is no security-only channel, so this is all updates.
+    PENDING=$(pacman -Qu 2>/dev/null | grep -c . || true)
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
+    else
+      add_result "System" "WARN" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s), rolling release" \
+        "Appliquez: 'pacman -Syu'. Une distribution en publication continue ne distingue pas les correctifs de sécurité."
+    fi ;;
+  apk)
+    PENDING=$(apk version -l '<' 2>/dev/null | grep -c '^[a-zA-Z]' || true)
+    PENDING=$(( PENDING > 0 ? PENDING - 1 : 0 ))
+    if [[ "$PENDING" -eq 0 ]]; then
+      add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
+    else
+      add_result "System" "WARN" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
+        "Appliquez: 'apk upgrade'"
+    fi ;;
+  none)
+    add_result "System" "WARN" "SYS-03" "No package manager found" "Aucun gestionnaire de paquets" \
+      "checked: dnf, apt-get, zypper, pacman, apk" \
+      "Image minimale ou distribution immuable. Vérifiez les mises à jour par le mécanisme propre à cette image." ;;
+  *)
+    add_result "System" "WARN" "SYS-03" "Update status not determined" "État des mises à jour indéterminé" \
+      "package manager: $_SYS_PKG (unsupported by this check)" \
+      "Ce gestionnaire de paquets n'est pas encore couvert. Le reste de l'audit reste valable." ;;
+esac
 
 # SYS-11 Running kernel is the newest one installed
 #
