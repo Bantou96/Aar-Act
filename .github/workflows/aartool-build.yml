@@ -1,0 +1,53 @@
+---
+name: aartool Build Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/aartool-src/**"
+      - "scripts/build-aartool.sh"
+      - "scripts/aartool"
+      - ".github/workflows/aartool-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/aartool-src/**"
+      - "scripts/build-aartool.sh"
+      - "scripts/aartool"
+      - ".github/workflows/aartool-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: aartool-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Run build-aartool.sh
+        run: bash scripts/build-aartool.sh
+
+      # The committed bundle is what people run. If it drifts from the sources,
+      # editing aartool-src/ stops having any effect and nobody finds out.
+      - name: Verify bundle is in sync with aartool-src/
+        run: |
+          if ! git diff --exit-code scripts/aartool; then
+            echo ""
+            echo "ERROR: scripts/aartool is out of sync with aartool-src/."
+            echo "Run 'bash scripts/build-aartool.sh' locally and commit the result."
+            exit 1
+          fi
+
+      - name: Verify bash syntax
+        run: bash -n scripts/aartool
+
+      - name: Shellcheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning scripts/aartool
+
+      - name: Smoke test
+        run: bash scripts/tests/test_aartool.sh
