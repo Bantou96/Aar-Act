@@ -12,6 +12,12 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 AARTOOL="./aartool"
 
+# Point at the shipped example rather than whatever inventory this machine has.
+# Two reasons: the tests stay hermetic and pass on a fresh clone, where
+# inventory/hosts does not exist because it is gitignored; and every run proves
+# the example we ask new users to copy is actually usable.
+export AARTOOL_INVENTORY="../ansible-hardening/inventory/hosts.example"
+
 PASS=0 FAIL=0
 check() {
   local label="$1" got="$2" want="$3"
@@ -59,6 +65,21 @@ check    "--yes rejected on plan" "$($AARTOOL plan -t x --yes 2>&1)"         "on
 check    "apply without a tty" \
          "$($AARTOOL apply -t ubuntu-vm-01 </dev/null 2>&1)" \
          "needs confirmation"
+
+# ── The example inventory we ship is usable ──────────────────────────────────
+# ubuntu-vm-01 is defined in hosts.example. If someone edits the example and
+# breaks its format, this fails rather than the new user finding out.
+check    "example inventory resolves a host" \
+         "$($AARTOOL plan -t ubuntu-vm-01 --help 2>&1)" \
+         "--target"
+check_rc "known host passes the inventory check" 0 \
+         env AARTOOL_INVENTORY="../ansible-hardening/inventory/hosts.example" \
+         "$AARTOOL" plan -t ubuntu-vm-01 --help
+
+# ── A missing inventory says what to do about it ─────────────────────────────
+check    "missing inventory points at the example" \
+         "$(AARTOOL_INVENTORY=/nonexistent/hosts $AARTOOL plan -t any 2>&1)" \
+         "cp "
 
 # ── Per-command help ─────────────────────────────────────────────────────────
 check    "inspect help" "$($AARTOOL inspect --help 2>&1)" "Changes nothing"

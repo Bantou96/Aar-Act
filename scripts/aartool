@@ -120,15 +120,32 @@ resolve_paths() {
     || die "Cannot find the toolkit. Looked for ansible-hardening/ in $here and six directories above it."
 
   ANSIBLE_BASE="$root/ansible-hardening"
-  INVENTORY="$ANSIBLE_BASE/inventory/hosts"
+  # Overridable so a run can point at another estate's inventory, and so the
+  # tests can work against a fixture instead of whatever is on the machine.
+  INVENTORY="${AARTOOL_INVENTORY:-$ANSIBLE_BASE/inventory/hosts}"
+  INVENTORY_EXAMPLE="$ANSIBLE_BASE/inventory/hosts.example"
   BASELINE="$root/scripts/cyberaar-baseline.sh"
   HARDEN="$root/scripts/run-hardening.sh"
 
-  # Checked here rather than at the point of use, so a missing piece is reported
-  # before anything runs instead of halfway through a playbook.
-  [[ -f "$INVENTORY" ]] || die "Inventory not found: $INVENTORY"
-  [[ -f "$BASELINE"  ]] || die "cyberaar-baseline.sh not found: $BASELINE"
-  [[ -f "$HARDEN"    ]] || die "run-hardening.sh not found: $HARDEN"
+  # The inventory is NOT checked here. inventory/hosts is gitignored, because it
+  # names real machines, so a fresh clone does not have one; and `inspect` on the
+  # local machine has no use for it. Requiring it up front made every command
+  # fail on a clean checkout, including the one command that needs nothing.
+  # plan and apply check it themselves, where it actually matters.
+  [[ -f "$BASELINE" ]] || die "cyberaar-baseline.sh not found: $BASELINE"
+  [[ -f "$HARDEN"   ]] || die "run-hardening.sh not found: $HARDEN"
+}
+
+# Called by plan and apply, which cannot work without an inventory.
+require_inventory() {
+  [[ -f "$INVENTORY" ]] && return 0
+  if [[ -f "$INVENTORY_EXAMPLE" ]]; then
+    die "No inventory at $INVENTORY.
+        It is gitignored, because it names real machines, so a fresh clone has none.
+        Start from the template:
+          cp $INVENTORY_EXAMPLE $INVENTORY"
+  fi
+  die "No inventory at $INVENTORY. Create it, listing your hosts and groups in INI format."
 }
 
 # Confirm a target exists in the inventory before handing it to Ansible.
@@ -270,6 +287,7 @@ cmd_harden() {
   [[ -n "$target" ]] || die "--target is required. Name a host or an inventory group, e.g. 'aartool ${mode} --target web-01'."
 
   resolve_paths
+  require_inventory
 
   if ! target_in_inventory "$target"; then
     die "'$target' is not a host or group in $INVENTORY. Add it there first, or check the spelling."

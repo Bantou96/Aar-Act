@@ -55,6 +55,7 @@ cmd_harden() {
   [[ -n "$target" ]] || die "--target is required. Name a host or an inventory group, e.g. 'aartool ${mode} --target web-01'."
 
   resolve_paths
+  require_inventory
 
   if ! target_in_inventory "$target"; then
     die "'$target' is not a host or group in $INVENTORY. Add it there first, or check the spelling."

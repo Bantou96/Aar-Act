@@ -118,6 +118,22 @@ ansible-galaxy collection install -r ansible-hardening/requirements.yml
 # Installs: ansible.posix >=1.5.4  |  community.general >=8.0.0
 ```
 
+### Your inventory
+
+`ansible-hardening/inventory/hosts` is **gitignored**, because it names real
+machines. A fresh clone does not have one. Start from the template:
+
+```bash
+cp ansible-hardening/inventory/hosts.example ansible-hardening/inventory/hosts
+```
+
+Then edit it: the example lists two placeholder hosts and the group layout. The
+format is INI on purpose, being the easiest thing to read over a colleague's
+shoulder and to correct at three in the morning.
+
+Note that `dmz_servers` is deliberately not part of `linux_servers`, so a
+fleet-wide run does not reach a DMZ host by accident.
+
 ### Managed nodes (the servers being hardened)
 
 - **RHEL 9 family**: RHEL 9, AlmaLinux 9, Rocky Linux 9
