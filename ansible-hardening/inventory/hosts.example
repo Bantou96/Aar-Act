@@ -1,0 +1,52 @@
+# =============================================================================
+#  CyberAar — Ansible Inventory (example)
+#
+#  inventory/hosts is gitignored, because it names real machines. This example
+#  is the template: copy it and edit.
+#
+#    cp ansible-hardening/inventory/hosts.example ansible-hardening/inventory/hosts
+#
+#  Format is INI, deliberately. It is the easiest thing to read over a
+#  colleague's shoulder and the easiest to correct at three in the morning.
+#
+#  Host variables:
+#    index                        unique node index used to build IP addresses
+#    linux_network_interface_name NIC name for hardening roles (default: eth0)
+#
+#  Credentials are passed at runtime, NEVER stored here:
+#    -u <admin_user>   SSH user
+#    -b                sudo become
+#
+#  Sensitive runtime variables, set in your shell and never committed:
+#    read -sr LINUX_BOOTLOADER_PASSWORD ; export LINUX_BOOTLOADER_PASSWORD
+#    (unset LINUX_BOOTLOADER_PASSWORD immediately after the run)
+# =============================================================================
+
+[rhel_servers]
+rocky-vm-01    index="139"
+
+[ubuntu_servers]
+ubuntu-vm-01   index="132"
+
+# Hosts in a DMZ. Deliberately NOT part of linux_servers: a fleet-wide run
+# should not reach them by accident.
+[dmz_servers]
+
+[linux_servers:children]
+rhel_servers
+ubuntu_servers
+
+[rhel_servers:vars]
+ansible_become_method=sudo
+
+[ubuntu_servers:vars]
+ansible_become_method=sudo
+
+[dmz_servers:vars]
+ansible_become_method=sudo
+
+[all:vars]
+cyberaar_mail_enabled=false
+cyberaar_mail_to=soc@example.com
+cyberaar_cron_enabled=true
+cyberaar_cron_weekday=0

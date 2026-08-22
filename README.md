@@ -51,12 +51,15 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 
 | Deliverable | Description | Version |
 |-------------|-------------|---------|
+| `scripts/aartool` | One front door for the toolkit: `inspect` to audit, `plan` to preview hardening, `apply` to run it | v0.1.0 |
 | `scripts/cyberaar-baseline.sh` | Standalone bash script: audits a Linux server across 96 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
 | `ansible-hardening/` | Ansible collection (`cyberaar.hardening`): 51 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
 | `execution-environment/` | Docker image: self-contained EE with Ansible + collection + playbooks, no local install required | `ghcr.io/cyberaar/ee-hardening` |
 | `dashboard/index.html` | Single-file web dashboard: visualise baseline JSON reports across multiple hosts, before/after comparison, PDF export | zero dependencies |
 
-All three are independent: run the baseline script standalone, use the Ansible collection directly, or pull the Docker image for a zero-install experience.
+Each is independent: run the baseline script standalone, use the Ansible collection directly, or pull the Docker
+image for a zero-install experience. `aartool` wraps the first two behind one set of options for people who would
+rather not learn two.
 
 ---
 
@@ -114,6 +117,22 @@ pip install ansible
 ansible-galaxy collection install -r ansible-hardening/requirements.yml
 # Installs: ansible.posix >=1.5.4  |  community.general >=8.0.0
 ```
+
+### Your inventory
+
+`ansible-hardening/inventory/hosts` is **gitignored**, because it names real
+machines. A fresh clone does not have one. Start from the template:
+
+```bash
+cp ansible-hardening/inventory/hosts.example ansible-hardening/inventory/hosts
+```
+
+Then edit it: the example lists two placeholder hosts and the group layout. The
+format is INI on purpose, being the easiest thing to read over a colleague's
+shoulder and to correct at three in the morning.
+
+Note that `dmz_servers` is deliberately not part of `linux_servers`, so a
+fleet-wide run does not reach a DMZ host by accident.
 
 ### Managed nodes (the servers being hardened)
 
@@ -251,6 +270,51 @@ ansible-hardening/reports/after/<hostname>/report.json    ← post-hardening
 - **Export PDF**: click the button top right, then use your browser's print dialog
 
 > Full reference: [`dashboard/README.md`](dashboard/README.md)
+
+---
+
+## Deliverable 0c: `aartool`, one front door
+
+The toolkit grew two entry points with two conventions for one workflow.
+`cyberaar-baseline.sh` takes `--host` and `--user`; `run-hardening.sh` takes `-t`
+and `-u`, and uses `-T` for tags, one shift key away from `-t` for the target, on
+a tool that rewrites `sshd_config`, PAM and firewall rules.
+
+`aartool` wraps both. Neither is replaced, and both stay usable on their own.
+
+```bash
+# Audit the machine you are on
+sudo scripts/aartool inspect
+
+# Audit one remote host
+scripts/aartool inspect --host 10.0.1.10 --user admin
+
+# See what hardening would change. Nothing is changed.
+scripts/aartool plan --target ubuntu-vm-01 --user ubuntu
+
+# One category only, still a preview
+scripts/aartool plan --target ubuntu-vm-01 --user ubuntu --only ssh
+
+# Apply. Asks you to type the target name back.
+scripts/aartool apply --target ubuntu-vm-01 --user ubuntu
+```
+
+Two things it does differently from what it wraps, both on purpose:
+
+**The dry run is a command, not a flag.** `run-hardening.sh` applies by default
+and takes `-c` to preview, so one missing character separates a report from a
+rewritten SSH config. Here `plan` shows and `apply` does.
+
+**`--target` is required.** `run-hardening.sh` defaults to the group
+`linux_servers`, which is every machine in the inventory, so a bare invocation
+hardens the whole estate. `aartool` refuses to guess, checks the target exists in
+the inventory before calling Ansible, and `apply` asks you to type the name back
+rather than press `y`. The dangerous mistake here is not "did I mean to run
+this", it is "did I mean this group or that one host".
+
+Built from `scripts/aartool-src/` by `scripts/build-aartool.sh`, the same way the
+baseline is built from `scripts/src/`. Edit the sources, not the bundle; CI fails
+the build if the two drift.
 
 ---
 
