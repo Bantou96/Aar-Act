@@ -13,6 +13,7 @@ OUT="${SCRIPT_DIR}/cyberaar-baseline.sh"
 # Concatenation order is critical: shebang must come first, run.sh last.
 PARTS=(
   src/main.sh
+  src/lib/distro.sh
   src/lib/ansible_map.sh
   src/lib/remote.sh
   src/lib/core.sh
