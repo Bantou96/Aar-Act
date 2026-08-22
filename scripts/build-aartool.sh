@@ -22,6 +22,7 @@ PARTS=(
   aartool-src/cmd/surface.sh
   aartool-src/cmd/doctor.sh
   aartool-src/cmd/report.sh
+  aartool-src/cmd/diff.sh
   aartool-src/run.sh
 )
 

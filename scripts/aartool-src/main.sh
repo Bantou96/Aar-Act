@@ -30,7 +30,7 @@
 # =============================================================================
 set -euo pipefail
 
-AARTOOL_VERSION="0.3.0"
+AARTOOL_VERSION="0.4.0"
 
 # ── Output ───────────────────────────────────────────────────────────────────
 if [[ -t 1 ]]; then
@@ -60,6 +60,7 @@ Commands:
               would still reach on this machine, and how to close it.
   doctor      Check everything plan and apply depend on.
   report      Visualise audit reports, or bake them into one shareable file.
+  diff        What changed between two audits. Exits non-zero on a regression.
 
 Global options:
   -h, --help        Show this help, or help for a command

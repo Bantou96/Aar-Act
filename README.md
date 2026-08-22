@@ -51,7 +51,7 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 
 | Deliverable | Description | Version |
 |-------------|-------------|---------|
-| `scripts/aartool` | One front door: `inspect`, `plan`, `apply`, `surface` (kernel attack surface), `doctor` (preflight), `report` (dashboard) | v0.3.0 |
+| `scripts/aartool` | One front door: `inspect`, `plan`, `apply`, `surface` (kernel attack surface), `doctor` (preflight), `report` (dashboard), `diff` (drift) | v0.4.0 |
 | `scripts/cyberaar-baseline.sh` | Standalone bash script: audits a Linux server across 96 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
 | `ansible-hardening/` | Ansible collection (`cyberaar.hardening`): 51 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
 | `execution-environment/` | Docker image: self-contained EE with Ansible + collection + playbooks, no local install required | `ghcr.io/cyberaar/ee-hardening` |
@@ -362,6 +362,31 @@ appended that feeds the dashboard's own data structure, and the injected JSON ha
 machine you were asked to audit, and `</script>` in one would otherwise end the
 block and turn the rest of a file you email to a client into markup. There is a
 test that attempts exactly that.
+
+### `aartool diff` — drift, and the exit code that makes it useful
+
+```bash
+aartool diff last-week.json today.json
+aartool diff last.json today.json --quiet || mail -s "drift on $(hostname)" soc@example.com
+```
+
+| exit | meaning |
+|---|---|
+| `0` | nothing regressed |
+| `1` | at least one check regressed |
+| `2` | the reports could not be compared |
+
+The exit code is the whole feature. A weekly audit that mails you 109 results
+teaches you to filter the mail. One that stays silent unless something
+**regressed** is a thing you actually read, and `--quiet` prints nothing at all
+when nothing has changed.
+
+Regressions and improvements are deliberately not symmetric. PASS to FAIL is an
+alert; FAIL to PASS is a note at the bottom. Treating them the same is how a
+report becomes wallpaper.
+
+It refuses to compare two different hosts. A diff between two machines looks
+exactly like drift and is not.
 
 ### `aartool doctor`
 

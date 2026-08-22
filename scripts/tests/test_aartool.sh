@@ -141,6 +141,47 @@ fi
 check    "report rejects a missing file" "$($AARTOOL report /nonexistent.json 2>&1)" "No such report"
 check    "serve refuses a non-numeric port" "$($AARTOOL report --serve abc 2>&1)" "port number"
 
+# ── diff ─────────────────────────────────────────────────────────────────────
+if [[ -f "$_rep_src" ]]; then
+  # A regression and an improvement in the same pair, so the two are not
+  # confused with each other.
+  _d_after="$(mktemp -t aartool-after-XXXXXX.json)"
+  python3 - "$_rep_src" "$_d_after" <<'PYEOF' 2>/dev/null
+import json, sys
+d = json.load(open(sys.argv[1])); b = d["cyberaar_baseline"]
+b["date"] = "2099-01-01 00:00:00"; b["score"] = (b.get("score") or 50) - 7
+for r in b["results"]:
+    if r["id"] == "SSH-02": r["status"] = "FAIL"
+    if r["id"] == "LOG-01": r["status"] = "PASS"
+json.dump(d, open(sys.argv[2], "w"))
+PYEOF
+
+  if [[ -s "$_d_after" ]]; then
+    check    "diff names the regression" "$($AARTOOL diff "$_rep_src" "$_d_after" 2>&1)" "SSH-02"
+    check    "diff separates improvements" "$($AARTOOL diff "$_rep_src" "$_d_after" 2>&1)" "Improved"
+    # The exit code is the whole point in cron: 1 means something regressed.
+    check_rc "diff exits 1 on a regression" 1 "$AARTOOL" diff "$_rep_src" "$_d_after"
+    check_rc "diff exits 0 when nothing changed" 0 "$AARTOOL" diff "$_rep_src" "$_rep_src"
+    # --quiet must be genuinely silent, or cron mails you every week and you
+    # stop reading it.
+    check    "diff --quiet is silent when clean" "$($AARTOOL diff "$_rep_src" "$_rep_src" --quiet 2>&1)" ""
+    check    "diff --quiet still reports a regression" \
+             "$($AARTOOL diff "$_rep_src" "$_d_after" --quiet 2>&1)" "SSH-02"
+  fi
+
+  # Comparing two machines would produce a difference that is not drift.
+  _d_other="$(mktemp -t aartool-other-XXXXXX.json)"
+  sed 's|"host": *"[^"]*"|"host": "a-different-box"|' "$_rep_src" > "$_d_other"
+  check    "diff refuses two different hosts" "$($AARTOOL diff "$_rep_src" "$_d_other" 2>&1)" "different hosts"
+  check_rc "diff exits 2 when it cannot compare" 2 "$AARTOOL" diff "$_rep_src" "$_d_other"
+  rm -f "$_d_after" "$_d_other"
+fi
+
+echo '{"not":"a report"}' > /tmp/aartool-notreport.$$.json
+check    "diff rejects a non-report" "$($AARTOOL diff /tmp/aartool-notreport.$$.json /tmp/aartool-notreport.$$.json 2>&1)" "not a cyberaar-baseline report"
+rm -f /tmp/aartool-notreport.$$.json
+check    "diff needs two arguments" "$($AARTOOL diff one.json 2>&1)" "exactly two reports"
+
 # ── Per-command help ─────────────────────────────────────────────────────────
 check    "inspect help" "$($AARTOOL inspect --help 2>&1)" "Changes nothing"
 check    "plan help"    "$($AARTOOL plan --help 2>&1)"    "--target"
@@ -148,6 +189,7 @@ check    "apply help"   "$($AARTOOL apply --help 2>&1)"   "--yes"
 check    "surface help" "$($AARTOOL surface --help 2>&1)" "--strict"
 check    "doctor help"  "$($AARTOOL doctor --help 2>&1)"  "Changes nothing"
 check    "report help"  "$($AARTOOL report --help 2>&1)"  "self-contained"
+check    "diff help"    "$($AARTOOL diff --help 2>&1)"    "Exit codes"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
