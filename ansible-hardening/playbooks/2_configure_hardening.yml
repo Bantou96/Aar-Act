@@ -22,26 +22,26 @@
 #    # 1. Dry-run against a single host (always start here)
 #    ANSIBLE_LOG_PATH=~/logs/$(date +%Y-%m-%d)-hardening.log \
 #    ansible-playbook --diff -u <admin_user> -b \
-#      -i inventory/hosts.yml \
+#      -i inventory/hosts \
 #      --extra-vars "target=my_test_server" \
 #      playbooks/2_configure_hardening.yml --tags hardening --check
 #
 #    # 2. Apply to a specific group
 #    ANSIBLE_LOG_PATH=~/logs/$(date +%Y-%m-%d)-hardening.log \
 #    ansible-playbook --diff -u <admin_user> -b \
-#      -i inventory/hosts.yml \
+#      -i inventory/hosts \
 #      --extra-vars "target=rhel_servers" \
 #      playbooks/2_configure_hardening.yml --tags hardening
 #
 #    # 3. Specific category only
 #    ansible-playbook --diff -u <admin_user> -b \
-#      -i inventory/hosts.yml \
+#      -i inventory/hosts \
 #      --extra-vars "target=my_test_server" \
 #      playbooks/2_configure_hardening.yml --tags ssh
 #
 #    # 4. Skip specific roles using disable vars (preferred over --skip-tags)
 #    ansible-playbook --diff -u <admin_user> -b \
-#      -i inventory/hosts.yml \
+#      -i inventory/hosts \
 #      --extra-vars "target=rhel_servers linux_bootloader_password_rhel9_disabled=true" \
 #      playbooks/2_configure_hardening.yml --tags hardening
 #

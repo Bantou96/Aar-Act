@@ -71,7 +71,7 @@ _render_html() {
     html_plan_entries["$_tkey"]="$_entry"
   done
 
-  _inv_flag="inventory/hosts.yml"
+  _inv_flag="inventory/hosts"
   [[ -n "$ANSIBLE_INVENTORY" ]] && _inv_flag=$(html_escape "$ANSIBLE_INVENTORY")
   _pb="playbooks/2_configure_hardening.yml"
   [[ -n "$ANSIBLE_DIR" ]] && _pb="${ANSIBLE_DIR}/playbooks/2_configure_hardening.yml"

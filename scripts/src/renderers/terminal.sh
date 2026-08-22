@@ -26,7 +26,7 @@ _ansible_terminal_plan() {
     return
   fi
 
-  local _inv="-i inventory/hosts.yml"
+  local _inv="-i inventory/hosts"
   [[ -n "$ANSIBLE_INVENTORY" ]] && _inv="-i ${ANSIBLE_INVENTORY}"
   local _pb="playbooks/2_configure_hardening.yml"
   [[ -n "$ANSIBLE_DIR" ]] && _pb="${ANSIBLE_DIR}/playbooks/2_configure_hardening.yml"

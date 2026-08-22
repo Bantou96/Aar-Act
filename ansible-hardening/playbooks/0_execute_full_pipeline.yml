@@ -1,7 +1,7 @@
 ---
 # =============================================================================
 #  CyberAar | Main Playbook Orchestrator
-#  Run: ansible-playbook 0_execute_full_pipeline.yml -i inventory/hosts.yml
+#  Run: ansible-playbook 0_execute_full_pipeline.yml -i inventory/hosts
 # =============================================================================
 
 - name: "CyberAar | Step 1 — Pre-Hardening Baseline"

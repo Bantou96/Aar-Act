@@ -56,7 +56,7 @@ Examples:
   cyberaar-baseline --host-file /etc/cyberaar/hosts.txt --user admin --output-dir /var/log/cyberaar
 
   # Fleet scan from Ansible inventory
-  cyberaar-baseline --inventory inventory/hosts.yml --user admin --output-dir /var/log/cyberaar
+  cyberaar-baseline --inventory inventory/hosts --user admin --output-dir /var/log/cyberaar
 
   # With Ansible remediation suggestions
   cyberaar-baseline --host 10.0.1.10 --ansible-dir ~/cyberaar-toolkit/ansible-hardening
@@ -1602,7 +1602,7 @@ _ansible_terminal_plan() {
     return
   fi
 
-  local _inv="-i inventory/hosts.yml"
+  local _inv="-i inventory/hosts"
   [[ -n "$ANSIBLE_INVENTORY" ]] && _inv="-i ${ANSIBLE_INVENTORY}"
   local _pb="playbooks/2_configure_hardening.yml"
   [[ -n "$ANSIBLE_DIR" ]] && _pb="${ANSIBLE_DIR}/playbooks/2_configure_hardening.yml"
@@ -1688,7 +1688,7 @@ _render_json() {
   local _j_host _j_os _j_inv
   _j_host=$(json_escape "$HOSTNAME_VAL")
   _j_os=$(json_escape "$OS_VAL")
-  _j_inv=$(json_escape "${ANSIBLE_INVENTORY:-inventory/hosts.yml}")
+  _j_inv=$(json_escape "${ANSIBLE_INVENTORY:-inventory/hosts}")
 
   cat > "$JSON_OUT" <<EOF
 {
@@ -1791,7 +1791,7 @@ _render_html() {
     html_plan_entries["$_tkey"]="$_entry"
   done
 
-  _inv_flag="inventory/hosts.yml"
+  _inv_flag="inventory/hosts"
   [[ -n "$ANSIBLE_INVENTORY" ]] && _inv_flag=$(html_escape "$ANSIBLE_INVENTORY")
   _pb="playbooks/2_configure_hardening.yml"
   [[ -n "$ANSIBLE_DIR" ]] && _pb="${ANSIBLE_DIR}/playbooks/2_configure_hardening.yml"
