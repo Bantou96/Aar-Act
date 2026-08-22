@@ -17,6 +17,7 @@ PARTS=(
   src/lib/remote.sh
   src/lib/core.sh
   src/checks/sys.sh
+  src/checks/kernel.sh
   src/checks/auth.sh
   src/checks/ssh.sh
   src/checks/fs.sh

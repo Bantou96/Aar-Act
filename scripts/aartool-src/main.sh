@@ -30,7 +30,7 @@
 # =============================================================================
 set -euo pipefail
 
-AARTOOL_VERSION="0.1.0"
+AARTOOL_VERSION="0.2.0"
 
 # ── Output ───────────────────────────────────────────────────────────────────
 if [[ -t 1 ]]; then
@@ -56,6 +56,9 @@ Commands:
   inspect     Audit a machine and write HTML + JSON reports. Changes nothing.
   plan        Show what hardening would change on a target. Changes nothing.
   apply       Apply hardening to a target.
+  surface     Kernel attack surface: what a local privilege escalation
+              would still reach on this machine, and how to close it.
+  doctor      Check everything plan and apply depend on.
 
 Global options:
   -h, --help        Show this help, or help for a command
@@ -76,6 +79,9 @@ Examples:
 
   # Apply it. Asks you to confirm the target by name.
   aartool apply --target web-01 --user ubuntu
+
+  # What would the next kernel LPE still reach here?
+  aartool surface
 
 Run 'aartool <command> --help' for the options of a single command.
 EOF

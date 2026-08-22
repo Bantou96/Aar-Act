@@ -30,7 +30,7 @@
 # =============================================================================
 set -euo pipefail
 
-AARTOOL_VERSION="0.1.0"
+AARTOOL_VERSION="0.2.0"
 
 # ── Output ───────────────────────────────────────────────────────────────────
 if [[ -t 1 ]]; then
@@ -56,6 +56,9 @@ Commands:
   inspect     Audit a machine and write HTML + JSON reports. Changes nothing.
   plan        Show what hardening would change on a target. Changes nothing.
   apply       Apply hardening to a target.
+  surface     Kernel attack surface: what a local privilege escalation
+              would still reach on this machine, and how to close it.
+  doctor      Check everything plan and apply depend on.
 
 Global options:
   -h, --help        Show this help, or help for a command
@@ -76,6 +79,9 @@ Examples:
 
   # Apply it. Asks you to confirm the target by name.
   aartool apply --target web-01 --user ubuntu
+
+  # What would the next kernel LPE still reach here?
+  aartool surface
 
 Run 'aartool <command> --help' for the options of a single command.
 EOF
@@ -156,6 +162,71 @@ target_in_inventory() {
   grep -qE "^\s*${target}(\s|$)" "$INVENTORY" && return 0
   grep -qE "^\s*\[${target}(:children)?\]\s*$" "$INVENTORY" && return 0
   return 1
+}
+
+# ── Kernel attack surface catalogue ──────────────────────────────────────────
+# One row per doorway. The KRN-xx family in the baseline audits these; this
+# catalogue is what makes them actionable, and it carries the two things an
+# audit result cannot: what the mitigation costs, and whether it is safe to
+# apply without knowing the workload.
+#
+# Fields, tab separated:
+#   id | sysctl key | desired value | tier | what it closes | what it costs
+#
+# tier is 'safe' or 'strict'. safe means no mainstream workload is known to
+# depend on it, so it can be applied on a server without a conversation.
+# strict means it will break something real for somebody, and the cost column
+# says what. Defaulting to safe is the difference between a tool people run and
+# a tool people uninstall after it takes down their containers.
+#
+# scripts/tests/test_aartool.sh asserts every id here has a matching KRN check,
+# so the catalogue and the audit cannot drift apart.
+
+surface_catalogue() {
+  cat <<'ROWS'
+KRN-02	kernel.unprivileged_bpf_disabled	1	safe	Unprivileged eBPF, a recurring source of kernel exploits	Nothing on a server. Some eBPF observability agents run privileged anyway.
+KRN-04	vm.unprivileged_userfaultfd	0	safe	userfaultfd, used to turn kernel races into reliable exploits	Nothing outside CRIU and some live-migration tooling.
+KRN-06	kernel.kexec_load_disabled	1	safe	Booting an arbitrary kernel without firmware, bypassing Secure Boot	Nothing, unless you use kdump crash capture.
+KRN-07	dev.tty.ldisc_autoload	0	safe	Autoloading old, lightly audited TTY line-discipline modules	Nothing on a server. Affects some serial and ham radio setups.
+KRN-09	net.core.bpf_jit_harden	2	safe	JIT-sprayed code in kernel memory	A small BPF throughput cost. Irrelevant unless you run XDP at line rate.
+KRN-10	kernel.sysrq	4	safe	Kernel operations from the physical console, including a memory dump	Loses SysRq except the keyboard reset combination.
+KRN-01	kernel.unprivileged_userns_clone	0	strict	The doorway most published Linux LPEs walk through	Breaks rootless Docker and Podman, Chrome's sandbox, and most CI runners.
+KRN-03	kernel.io_uring_disabled	2	strict	io_uring, young and disproportionately represented in recent LPEs	Breaks workloads that use it: some databases, proxies and modern async runtimes.
+KRN-05	kernel.modules_disabled	1	strict	Loading a rootkit as a kernel module	Irreversible until reboot. Blocks every later modprobe, including yours.
+ROWS
+}
+
+# Read a sysctl, printing '?' when the key does not exist on this kernel.
+surface_read() { sysctl -n "$1" 2>/dev/null || printf '?'; }
+
+# A key is satisfied if it already meets or exceeds the desired value. Several
+# of these are "higher is stricter", so an exact match would report a machine
+# that is MORE locked down than we ask as non-compliant.
+surface_ok() {
+  local key="$1" want="$2" have="$3"
+  [[ "$have" == "?" ]] && return 2          # not present on this kernel
+  case "$key" in
+    kernel.unprivileged_bpf_disabled|net.core.bpf_jit_harden|kernel.io_uring_disabled)
+      [[ "$have" =~ ^[0-9]+$ ]] && [[ "$have" -ge "$want" ]] ;;
+    kernel.sysrq)
+      # 0 is stricter than 4; anything else is permissive.
+      [[ "$have" == "0" || "$have" == "4" ]] ;;
+    user.max_user_namespaces|kernel.unprivileged_userns_clone|vm.unprivileged_userfaultfd)
+      [[ "$have" == "0" ]] ;;
+    *)
+      [[ "$have" == "$want" ]] ;;
+  esac
+}
+
+# Debian and Ubuntu expose the user namespace switch under a different key from
+# the RHEL family. Resolve it per machine rather than guessing from /etc/os-release,
+# which is wrong on derivatives.
+surface_userns_key() {
+  if [[ -e /proc/sys/kernel/unprivileged_userns_clone ]]; then
+    printf 'kernel.unprivileged_userns_clone'
+  else
+    printf 'user.max_user_namespaces'
+  fi
 }
 
 # ── inspect ──────────────────────────────────────────────────────────────────
@@ -328,6 +399,302 @@ cmd_harden() {
   bash "$HARDEN" "${args[@]}"
 }
 
+# ── surface ──────────────────────────────────────────────────────────────────
+# The command this toolkit exists to offer that a distribution vendor does not.
+#
+# Red Hat and Debian ship the patch. Nothing helps you in the window before the
+# patch exists, or on the machine you cannot reboot until the change window in
+# three weeks. These settings close classes of local privilege escalation rather
+# than individual CVEs, take effect immediately, and survive a kernel that is
+# still vulnerable.
+
+cmd_surface_usage() {
+  cat <<'EOF'
+aartool surface — kernel attack surface. Assess by default; changes nothing.
+
+Usage:
+  aartool surface [options]
+
+Options:
+      --strict          Include mitigations that break real workloads.
+                        Read the cost column first.
+      --fix             Print the sysctl drop-in that would close the gaps.
+                        Writes nothing.
+      --write FILE      Write that drop-in to FILE instead of printing it.
+      --apply           Write to /etc/sysctl.d/60-aartool-surface.conf and load
+                        it. Needs root. Asks for confirmation.
+  -y, --yes             Skip the confirmation on --apply.
+  -h, --help            Show this help
+
+Two tiers, because a mitigation that breaks the workload gets reverted and
+teaches people to ignore the tool:
+
+  safe      no mainstream workload is known to depend on it
+  strict    will break something real for somebody, and the cost is printed
+
+Without --strict, only the safe tier is considered.
+
+Every setting here is a sysctl. Nothing is compiled, nothing is rebooted, and
+anything applied can be undone by deleting the drop-in file and rebooting, or by
+setting the value back.
+EOF
+}
+
+cmd_surface() {
+  local strict=false emit="" out_file="" do_apply=false assume_yes=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --strict) strict=true; shift ;;
+      --fix)    emit="print"; shift ;;
+      --write)  [[ $# -ge 2 ]] || die "--write needs a file path."; emit="file"; out_file="$2"; shift 2 ;;
+      --apply)  do_apply=true; shift ;;
+      -y|--yes) assume_yes=true; shift ;;
+      -h|--help) cmd_surface_usage; return 0 ;;
+      --) shift; break ;;
+      -*) die "Unknown option for surface: $1. Try 'aartool surface --help'." ;;
+      *)  die "surface takes no positional arguments." ;;
+    esac
+  done
+
+  local tiers="safe"
+  [[ "$strict" == true ]] && tiers="safe strict"
+
+  local -a gap_key=() gap_val=() gap_id=() gap_cost=()
+  local n_ok=0 n_na=0
+
+  printf '\n%sKernel attack surface%s   %s\n' "$BOLD" "$RESET" "$(uname -r)"
+  printf '%s\n' "────────────────────────────────────────────────────────────────────"
+
+  local id key want tier closes cost have status
+  while IFS=$'\t' read -r id key want tier closes cost; do
+    [[ -n "$id" ]] || continue
+    case " $tiers " in *" $tier "*) ;; *) continue ;; esac
+
+    # The user namespace switch lives under a different key per distribution.
+    [[ "$id" == "KRN-01" ]] && key="$(surface_userns_key)"
+
+    have="$(surface_read "$key")"
+    if surface_ok "$key" "$want" "$have"; then
+      status="closed";  n_ok=$((n_ok+1))
+    elif [[ "$have" == "?" ]]; then
+      status="absent";  n_na=$((n_na+1))
+    else
+      status="OPEN"
+      gap_key+=("$key"); gap_val+=("$want"); gap_id+=("$id"); gap_cost+=("$cost")
+    fi
+
+    # A closed door is one line; an open one earns three, because the operator
+    # has a decision to make and needs the cost in front of them to make it.
+    case "$status" in
+      closed) printf '  %s✔%s  %-7s %s\n' "$GREEN" "$RESET" "$id" "$closes" ;;
+      absent) printf '  %s·%s  %-7s %s %s(not present on this kernel)%s\n' "$CYAN" "$RESET" "$id" "$closes" "$CYAN" "$RESET" ;;
+      OPEN)
+        printf '\n  %s✗%s  %-7s %s%s = %s%s\n' "$RED" "$RESET" "$id" "$BOLD" "$key" "$have" "$RESET"
+        printf '     %scloses%s  %s\n' "$CYAN" "$RESET" "$closes"
+        printf '     %scost%s    %s\n' "$CYAN" "$RESET" "$cost"
+        printf '     %sfix%s     %s = %s\n\n' "$CYAN" "$RESET" "$key" "$want" ;;
+    esac
+  done < <(surface_catalogue)
+
+  local n_gap="${#gap_key[@]}"
+  printf '%s\n' "────────────────────────────────────────────────────────────────────"
+  printf '  %d closed, %d open, %d not applicable' "$n_ok" "$n_gap" "$n_na"
+  [[ "$strict" == false ]] && printf '   %s(safe tier only; --strict for the rest)%s' "$CYAN" "$RESET"
+  printf '\n\n'
+
+  if [[ "$n_gap" -eq 0 ]]; then
+    success "Nothing to close in this tier."
+    return 0
+  fi
+
+  # Nothing below this point runs unless the operator asked for it.
+  [[ -z "$emit" && "$do_apply" == false ]] && {
+    info "Run 'aartool surface --fix' to see the drop-in that closes these, or --apply to apply it."
+    return 0
+  }
+
+  local dropin
+  dropin="$(surface_render_dropin gap_key gap_val gap_id)"
+
+  if [[ "$emit" == "print" ]]; then
+    printf '%s\n' "$dropin"
+    return 0
+  fi
+  if [[ "$emit" == "file" ]]; then
+    printf '%s\n' "$dropin" > "$out_file" || die "Cannot write $out_file"
+    success "Written: $out_file"
+    info "Apply with: sudo sysctl --system"
+    return 0
+  fi
+
+  # ── apply ──────────────────────────────────────────────────────────────────
+  [[ "${EUID:-$(id -u)}" -eq 0 ]] || die "--apply needs root. Re-run with sudo, or use --write and apply it yourself."
+
+  local target="/etc/sysctl.d/60-aartool-surface.conf"
+  printf '%sWill write%s %s and run sysctl --system\n' "$BOLD" "$RESET" "$target"
+  printf '%sClosing%s   %d setting(s)\n\n' "$BOLD" "$RESET" "$n_gap"
+
+  if [[ "$assume_yes" == false ]]; then
+    [[ -t 0 ]] || die "--apply needs confirmation and there is no terminal. Pass --yes if you meant it."
+    local answer=""
+    printf 'Apply these to this machine? Type yes to confirm: '
+    read -r answer
+    [[ "$answer" == "yes" ]] || die "Not confirmed. Nothing was changed."
+    echo
+  fi
+
+  printf '%s\n' "$dropin" > "$target" || die "Cannot write $target"
+  success "Wrote $target"
+  if sysctl --system >/dev/null 2>&1; then
+    success "Loaded. Verify with: aartool surface$( [[ "$strict" == true ]] && printf ' --strict' )"
+  else
+    warn "Wrote the file but 'sysctl --system' reported an error. Check: sysctl --system"
+  fi
+  info "To undo: rm $target && reboot (or set the values back by hand)."
+}
+
+# Rendered as a drop-in rather than applied with `sysctl -w`, so the change
+# survives a reboot and is visible in one file that can be deleted to revert.
+surface_render_dropin() {
+  local -n _k="$1" _v="$2" _i="$3"
+  printf '# Written by aartool %s on %s\n' "$AARTOOL_VERSION" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf '#\n'
+  printf '# Kernel attack surface reduction. Each line closes a class of local\n'
+  printf '# privilege escalation rather than a single CVE, and takes effect without\n'
+  printf '# a reboot once loaded with: sysctl --system\n'
+  printf '#\n'
+  printf '# To revert: delete this file and reboot, or set the values back by hand.\n'
+  printf '\n'
+  local n="${#_k[@]}" idx
+  for (( idx=0; idx<n; idx++ )); do
+    printf '# %s\n%s = %s\n' "${_i[$idx]}" "${_k[$idx]}" "${_v[$idx]}"
+  done
+}
+
+# ── doctor ───────────────────────────────────────────────────────────────────
+# Everything that has to be true before plan or apply can work, checked in one
+# place and reported all at once.
+#
+# The failure this replaces: ansible-playbook exits with "couldn't resolve module
+# ansible.posix.sysctl" partway through a run, which tells the operator nothing
+# about ansible-galaxy and nothing about which of the two collections is
+# missing. Preflight is cheap; a half-applied hardening run is not.
+
+_doc_ok=0; _doc_bad=0
+_doc_pass() { printf '  %s✔%s  %-34s %s\n' "$GREEN" "$RESET" "$1" "${2:-}"; _doc_ok=$((_doc_ok+1)); }
+_doc_fail() {
+  printf '  %s✗%s  %-34s %s\n' "$RED" "$RESET" "$1" "${2:-}"
+  [[ -n "${3:-}" ]] && printf '     %sfix%s  %s\n' "$CYAN" "$RESET" "$3"
+  _doc_bad=$((_doc_bad+1))
+}
+_doc_warn() {
+  printf '  %s!%s  %-34s %s\n' "$YELLOW" "$RESET" "$1" "${2:-}"
+  [[ -n "${3:-}" ]] && printf '     %snote%s %s\n' "$CYAN" "$RESET" "$3"
+}
+
+cmd_doctor_usage() {
+  cat <<'EOF'
+aartool doctor — check everything plan and apply depend on. Changes nothing.
+
+Usage:
+  aartool doctor [--target HOST]
+
+Options:
+      --target HOST   Also test SSH reachability and sudo on that host
+  -h, --help          Show this help
+
+Exits non-zero if anything is missing, so it works as a CI gate.
+EOF
+}
+
+cmd_doctor() {
+  local target=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -t|--target) [[ $# -ge 2 ]] || die "$1 needs a value."; target="$2"; shift 2 ;;
+      -h|--help)   cmd_doctor_usage; return 0 ;;
+      -*) die "Unknown option for doctor: $1." ;;
+      *)  die "doctor takes no positional arguments." ;;
+    esac
+  done
+
+  resolve_paths
+  printf '\n%saartool doctor%s\n' "$BOLD" "$RESET"
+  printf '%s\n' "────────────────────────────────────────────────────────────────────"
+
+  # ── The toolkit itself ─────────────────────────────────────────────────────
+  _doc_pass "toolkit located" "$ANSIBLE_BASE"
+  [[ -r "$BASELINE" ]] && _doc_pass "cyberaar-baseline.sh" "readable" \
+    || _doc_fail "cyberaar-baseline.sh" "missing or unreadable" "Re-clone, or run: bash scripts/build.sh"
+  [[ -r "$HARDEN" ]] && _doc_pass "run-hardening.sh" "readable" \
+    || _doc_fail "run-hardening.sh" "missing or unreadable" "Re-clone the repository"
+
+  # ── Ansible ────────────────────────────────────────────────────────────────
+  if command -v ansible-playbook >/dev/null 2>&1; then
+    local av; av="$(ansible-playbook --version 2>/dev/null | head -1)"
+    _doc_pass "ansible-playbook" "${av:-present}"
+  else
+    _doc_fail "ansible-playbook" "not on PATH" "pip install ansible   (or use the container: see execution-environment/)"
+  fi
+
+  # Named individually. "install the collections" is not actionable when one of
+  # the two is already there and the other is not.
+  local req="$ANSIBLE_BASE/requirements.yml" c
+  if command -v ansible-galaxy >/dev/null 2>&1; then
+    for c in ansible.posix community.general; do
+      if ansible-galaxy collection list 2>/dev/null | grep -q "^${c} "; then
+        _doc_pass "collection ${c}" "installed"
+      else
+        _doc_fail "collection ${c}" "missing" "ansible-galaxy collection install -r ${req}"
+      fi
+    done
+  else
+    _doc_fail "ansible-galaxy" "not on PATH" "pip install ansible"
+  fi
+
+  # ── Inventory ──────────────────────────────────────────────────────────────
+  if [[ -f "$INVENTORY" ]]; then
+    local hosts; hosts="$(grep -cE '^[a-zA-Z0-9][a-zA-Z0-9._-]*' "$INVENTORY" 2>/dev/null || echo 0)"
+    _doc_pass "inventory" "$INVENTORY ($hosts entries)"
+  elif [[ -f "$INVENTORY_EXAMPLE" ]]; then
+    _doc_fail "inventory" "not created yet" "cp $INVENTORY_EXAMPLE $INVENTORY"
+  else
+    _doc_fail "inventory" "not found" "Create $INVENTORY in INI format"
+  fi
+
+  # ── The machine this is running on ─────────────────────────────────────────
+  local osname="unknown"
+  [[ -r /etc/os-release ]] && osname="$(. /etc/os-release 2>/dev/null; printf '%s %s' "${NAME:-?}" "${VERSION_ID:-}")"
+  _doc_pass "control node OS" "$osname"
+  _doc_pass "kernel" "$(uname -r)"
+
+  # ── Optional: can we actually reach the target ─────────────────────────────
+  if [[ -n "$target" ]]; then
+    if [[ ! -f "$INVENTORY" ]]; then
+      _doc_warn "target $target" "skipped" "No inventory to resolve it against"
+    elif ! target_in_inventory "$target"; then
+      _doc_fail "target $target" "not in inventory" "Add it to $INVENTORY"
+    elif ! command -v ansible >/dev/null 2>&1; then
+      _doc_warn "target $target" "skipped" "ansible not on PATH"
+    else
+      if ansible -i "$INVENTORY" "$target" -m ping >/dev/null 2>&1; then
+        _doc_pass "target $target" "reachable"
+      else
+        _doc_fail "target $target" "unreachable" "ansible -i $INVENTORY $target -m ping   (check SSH user and keys)"
+      fi
+    fi
+  fi
+
+  printf '%s\n' "────────────────────────────────────────────────────────────────────"
+  if [[ "$_doc_bad" -eq 0 ]]; then
+    printf '  %s%d checks passed. Ready.%s\n\n' "$GREEN" "$_doc_ok" "$RESET"
+    return 0
+  fi
+  printf '  %s%d problem(s)%s, %d fine. Fix the above and run doctor again.\n\n' "$RED" "$_doc_bad" "$RESET" "$_doc_ok"
+  return 1
+}
+
 # ── Dispatch ─────────────────────────────────────────────────────────────────
 main() {
   [[ $# -gt 0 ]] || { usage; exit 1; }
@@ -336,6 +703,8 @@ main() {
     inspect)        shift; cmd_inspect "$@" ;;
     plan)           shift; cmd_harden plan  "$@" ;;
     apply)          shift; cmd_harden apply "$@" ;;
+    surface)        shift; cmd_surface "$@" ;;
+    doctor)         shift; cmd_doctor "$@" ;;
     -h|--help|help) usage ;;
     -V|--version|version) printf 'aartool %s\n' "$AARTOOL_VERSION" ;;
     # Named so the error can be specific rather than "unknown command".

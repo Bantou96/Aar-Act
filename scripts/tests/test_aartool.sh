@@ -81,10 +81,43 @@ check    "missing inventory points at the example" \
          "$(AARTOOL_INVENTORY=/nonexistent/hosts $AARTOOL plan -t any 2>&1)" \
          "cp "
 
+# ── surface and doctor ───────────────────────────────────────────────────────
+check    "surface runs read-only"  "$($AARTOOL surface 2>&1)"          "Kernel attack surface"
+check    "surface names the tier"  "$($AARTOOL surface 2>&1)"          "safe tier only"
+check    "surface --strict widens" "$($AARTOOL surface --strict 2>&1)" "KRN-01"
+check    "surface --fix emits a drop-in" "$($AARTOOL surface --fix 2>&1)" "sysctl --system"
+check_rc "surface changes nothing without --apply" 0 "$AARTOOL" surface
+check    "doctor reports"          "$($AARTOOL doctor 2>&1)"           "toolkit located"
+
+# --apply must not be satisfiable by a pipe, same rule as 'apply'.
+check    "surface --apply needs root or a tty" \
+         "$($AARTOOL surface --apply </dev/null 2>&1)" \
+         "root"
+
+# ── The catalogue and the audit must not drift ───────────────────────────────
+# Every doorway aartool offers to close has a KRN check that reports on it, and
+# every KRN check that maps to a sysctl is offered. Without this, someone adds a
+# mitigation to one side and the two views of the same machine start disagreeing
+# — which is exactly the class of bug this toolkit exists to find.
+cat_ids=$(bash -c 'source aartool-src/lib/surface.sh; surface_catalogue' | cut -f1 | sort -u)
+krn_ids=$(grep -ohE '"KRN-[0-9]{2}"' src/checks/kernel.sh | tr -d '"' | sort -u)
+missing=""
+for id in $cat_ids; do
+  printf '%s\n' "$krn_ids" | grep -qx "$id" || missing="$missing $id"
+done
+if [[ -z "$missing" ]]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  printf 'FAIL  catalogue entries with no KRN check:%s\n' "$missing"
+fi
+
 # ── Per-command help ─────────────────────────────────────────────────────────
 check    "inspect help" "$($AARTOOL inspect --help 2>&1)" "Changes nothing"
 check    "plan help"    "$($AARTOOL plan --help 2>&1)"    "--target"
 check    "apply help"   "$($AARTOOL apply --help 2>&1)"   "--yes"
+check    "surface help" "$($AARTOOL surface --help 2>&1)" "--strict"
+check    "doctor help"  "$($AARTOOL doctor --help 2>&1)"  "Changes nothing"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
