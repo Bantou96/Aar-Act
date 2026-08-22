@@ -56,7 +56,7 @@ Examples:
   cyberaar-baseline --host-file /etc/cyberaar/hosts.txt --user admin --output-dir /var/log/cyberaar
 
   # Fleet scan from Ansible inventory
-  cyberaar-baseline --inventory inventory/hosts.yml --user admin --output-dir /var/log/cyberaar
+  cyberaar-baseline --inventory inventory/hosts --user admin --output-dir /var/log/cyberaar
 
   # With Ansible remediation suggestions
   cyberaar-baseline --host 10.0.1.10 --ansible-dir ~/cyberaar-toolkit/ansible-hardening

@@ -23,7 +23,7 @@
 #
 #  Examples:
 #    # Connectivity test
-#    ansible -i inventory/hosts.yml linux_servers -m ping
+#    ansible -i inventory/hosts linux_servers -m ping
 #
 #    # Dry-run hardening only
 #    bash run-hardening.sh -u ubuntu -t ubuntu-vm-01 -c
@@ -82,7 +82,7 @@ search="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Pass 1: script is inside ansible-hardening/
 for _ in 1 2 3 4 5 6; do
-  if [[ -f "$search/inventory/hosts.yml" && -d "$search/playbooks" ]]; then
+  if [[ -f "$search/inventory/hosts" && -d "$search/playbooks" ]]; then
     ANSIBLE_BASE="$search"; break
   fi
   search="$(dirname "$search")"

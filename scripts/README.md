@@ -202,7 +202,7 @@ A self-contained single-file HTML report with:
       "fail_ids": ["AUTH-09", "NET-06", ...],
       "warn_ids": ["SYS-02", "AUTH-10", ...],
       "playbook": "playbooks/2_configure_hardening.yml",
-      "inventory": "inventory/hosts.yml"
+      "inventory": "inventory/hosts"
     }
   }
 }

@@ -25,7 +25,7 @@ _render_json() {
   local _j_host _j_os _j_inv
   _j_host=$(json_escape "$HOSTNAME_VAL")
   _j_os=$(json_escape "$OS_VAL")
-  _j_inv=$(json_escape "${ANSIBLE_INVENTORY:-inventory/hosts.yml}")
+  _j_inv=$(json_escape "${ANSIBLE_INVENTORY:-inventory/hosts}")
 
   cat > "$JSON_OUT" <<EOF
 {
