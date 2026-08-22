@@ -51,7 +51,7 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 
 | Deliverable | Description | Version |
 |-------------|-------------|---------|
-| `scripts/aartool` | One front door: `inspect`, `plan`, `apply`, `surface` (kernel attack surface), `doctor` (preflight), `report` (dashboard), `diff` (drift) | v0.4.0 |
+| `scripts/aartool` | One front door: `inspect`, `plan`, `apply`, `surface` (kernel attack surface), `doctor` (preflight), `report` (dashboard), `diff` (drift), `install` | v0.5.0 |
 | `scripts/cyberaar-baseline.sh` | Standalone bash script: audits a Linux server across 96 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
 | `ansible-hardening/` | Ansible collection (`cyberaar.hardening`): 51 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
 | `execution-environment/` | Docker image: self-contained EE with Ansible + collection + playbooks, no local install required | `ghcr.io/cyberaar/ee-hardening` |
@@ -274,6 +274,23 @@ ansible-hardening/reports/after/<hostname>/report.json    ← post-hardening
 ---
 
 ## Deliverable 0c: `aartool`, one front door
+
+```bash
+git clone https://github.com/cyberaar/cyberaar-toolkit
+cd cyberaar-toolkit
+sudo scripts/aartool install          # or: scripts/aartool install --prefix ~/.local
+aartool doctor                        # is everything it needs actually here?
+sudo aartool inspect                  # audit this machine
+aartool surface                       # what would the next kernel LPE reach?
+```
+
+`install` creates a **symlink**, not a copy, and that is not a detail. aartool
+locates the playbooks, the baseline script and the dashboard by walking up from
+its own file until it finds `ansible-hardening/`. Copied to `/usr/local/bin`
+there is nothing above it but `/usr` and `/`, so a copy finds none of them. Keep
+the clone where it is, or set `AARTOOL_HOME` — and if you do copy it, the error
+message tells you exactly that.
+
 
 The toolkit grew two entry points with two conventions for one workflow.
 `cyberaar-baseline.sh` takes `--host` and `--user`; `run-hardening.sh` takes `-t`

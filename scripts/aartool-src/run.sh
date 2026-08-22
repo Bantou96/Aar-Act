@@ -10,6 +10,7 @@ main() {
     doctor)         shift; cmd_doctor "$@" ;;
     report)         shift; cmd_report "$@" ;;
     diff)           shift; cmd_diff "$@" ;;
+    install)        shift; cmd_install "$@" ;;
     -h|--help|help) usage ;;
     -V|--version|version) printf 'aartool %s\n' "$AARTOOL_VERSION" ;;
     # Named so the error can be specific rather than "unknown command".

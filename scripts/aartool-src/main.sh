@@ -30,7 +30,7 @@
 # =============================================================================
 set -euo pipefail
 
-AARTOOL_VERSION="0.4.0"
+AARTOOL_VERSION="0.5.0"
 
 # ── Output ───────────────────────────────────────────────────────────────────
 if [[ -t 1 ]]; then
@@ -61,6 +61,7 @@ Commands:
   doctor      Check everything plan and apply depend on.
   report      Visualise audit reports, or bake them into one shareable file.
   diff        What changed between two audits. Exits non-zero on a regression.
+  install     Put aartool on your PATH.
 
 Global options:
   -h, --help        Show this help, or help for a command

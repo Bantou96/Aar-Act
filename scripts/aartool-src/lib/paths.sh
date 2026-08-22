@@ -31,10 +31,22 @@ _find_up() {
 
 resolve_paths() {
   local here root
-  here="$(_self_dir)"
 
-  root="$(_find_up "ansible-hardening" "$here")" \
-    || die "Cannot find the toolkit. Looked for ansible-hardening/ in $here and six directories above it."
+  # An explicit home wins over the search. Needed by anyone who COPIES aartool
+  # somewhere rather than symlinking it, and by container images that mount the
+  # toolkit at a fixed path.
+  if [[ -n "${AARTOOL_HOME:-}" ]]; then
+    [[ -d "$AARTOOL_HOME/ansible-hardening" ]] \
+      || die "AARTOOL_HOME is set to '$AARTOOL_HOME' but there is no ansible-hardening/ there."
+    root="$AARTOOL_HOME"
+  else
+    here="$(_self_dir)"
+    root="$(_find_up "ansible-hardening" "$here")" \
+      || die "Cannot find the toolkit. Looked for ansible-hardening/ in $here and six directories above it.
+        If you copied aartool out of the repository rather than symlinking it, point it back:
+          export AARTOOL_HOME=/path/to/cyberaar-toolkit
+        'aartool install' creates a symlink precisely so this does not happen."
+  fi
 
   ANSIBLE_BASE="$root/ansible-hardening"
   # Overridable so a run can point at another estate's inventory, and so the
