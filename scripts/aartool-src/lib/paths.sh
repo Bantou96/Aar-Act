@@ -41,6 +41,7 @@ resolve_paths() {
   # tests can work against a fixture instead of whatever is on the machine.
   INVENTORY="${AARTOOL_INVENTORY:-$ANSIBLE_BASE/inventory/hosts}"
   INVENTORY_EXAMPLE="$ANSIBLE_BASE/inventory/hosts.example"
+  TOOLKIT_DASHBOARD="$root/dashboard/index.html"
   BASELINE="$root/scripts/cyberaar-baseline.sh"
   HARDEN="$root/scripts/run-hardening.sh"
 
