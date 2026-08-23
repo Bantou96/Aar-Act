@@ -58,17 +58,23 @@ ADMIN_USER="ansible"
 TARGET="linux_servers"
 STEP="2"
 HARDENING_TAGS="hardening"
+SSH_KEY=""
 CHECK_MODE=false
 ASK_BECOME_PASS=false
 LOG_DIR="$HOME/logs"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
-while getopts "u:t:s:T:Kch" opt; do
+while getopts "u:t:s:T:i:Kch" opt; do
   case $opt in
     u) ADMIN_USER="$OPTARG" ;;
     t) TARGET="$OPTARG" ;;
     s) STEP="$OPTARG" ;;
     T) HARDENING_TAGS="$OPTARG" ;;
+    # An estate with a dedicated key is the normal case, not the exception.
+    # Without this the only way to connect was to have the key in an agent or
+    # at a default path, and the failure looked like a permissions problem on
+    # the target rather than a missing flag here.
+    i) SSH_KEY="$OPTARG" ;;
     K) ASK_BECOME_PASS=true ;;
     c) CHECK_MODE=true ;;
     h) grep "^#" "$0" | grep -v "^#!/" | sed 's/^# \?//'; exit 0 ;;
@@ -150,6 +156,7 @@ BASE_FLAGS=(
   "-i" "$INVENTORY"
   "--extra-vars" "target=${TARGET}"
 )
+[[ -n "$SSH_KEY"      ]] && BASE_FLAGS+=("--private-key" "$SSH_KEY")
 [[ "$CHECK_MODE"      == true ]] && BASE_FLAGS+=("--check")
 [[ "$ASK_BECOME_PASS" == true ]] && BASE_FLAGS+=("--ask-become-pass")
 

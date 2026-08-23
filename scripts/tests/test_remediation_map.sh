@@ -91,5 +91,37 @@ if [[ -d "$MOL_DIR" && -f "$CI" ]]; then
   done <<<"$in_ci"
 fi
 
+# ── A role default must satisfy the check it remediates ──────────────────────
+# The deepest version of "advice that does not work". Not a wrong tag, not a
+# missing role: the role runs, succeeds, and writes a value the checker rejects.
+# AUTH-03 demanded PASS_MAX_DAYS <= 90 while linux_authselect_ubuntu defaulted
+# to 365, so an operator could apply the recommended fix, re-audit, and see no
+# change. Forever. Meanwhile the RHEL role for the same control used 90, so the
+# two platforms disagreed with each other as well.
+#
+# One row per pair we have actually reasoned about. Not exhaustive, and not
+# meant to be: it exists so a known contradiction cannot come back.
+#   check | file | variable | operator | bound
+while IFS='|' read -r cid file var op bound; do
+  [[ -z "$cid" || "$cid" == \#* ]] && continue
+  path="../ansible-hardening/roles/$file/defaults/main.yml"
+  if [[ ! -f "$path" ]]; then
+    fail "$cid: $path does not exist"; continue
+  fi
+  val=$(grep -oP "^${var}:\s*\K[0-9]+" "$path" | head -1)
+  if [[ -z "$val" ]]; then
+    fail "$cid: $var not found in $file/defaults/main.yml"
+  elif [[ "$op" == "le" && "$val" -le "$bound" ]] || [[ "$op" == "ge" && "$val" -ge "$bound" ]]; then
+    PASS=$((PASS + 1))
+  else
+    fail "$cid: $file sets $var=$val, but the check requires $op $bound, so applying the remediation cannot clear the finding"
+  fi
+done <<'PAIRS'
+AUTH-03|linux_authselect_ubuntu|linux_authselect_pass_max_days|le|90
+AUTH-03|linux_user_management_rhel9|linux_password_max_days|le|90
+AUTH-07|linux_authselect_ubuntu|linux_authselect_pass_min_days|ge|1
+AUTH-08|linux_authselect_ubuntu|linux_authselect_pass_warn_age|ge|7
+PAIRS
+
 printf '\n%d assertions passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

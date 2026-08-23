@@ -47,13 +47,28 @@ case "$_SYS_PKG" in
         "Appliquez: '$_SYS_PKG update --security -y'"
     fi ;;
   apt-get)
+    # Scoped to SECURITY updates, like the dnf and zypper branches above it.
+    #
+    # This counted every upgradable package, so the same check ID meant
+    # "unpatched CVEs" on RHEL and "any package is not the newest" on Debian.
+    # A docs server with unattended-upgrades running correctly, zero security
+    # updates outstanding and twenty routine ones reported exactly the same
+    # FAIL as a RHEL host with twenty unpatched CVEs. Anyone comparing an
+    # Ubuntu fleet against a RHEL fleet was reading two different questions.
+    #
+    # apt marks the origin in the simulated Inst line:
+    #   Inst libfoo [1.2] (1.3 Ubuntu:24.04/noble-security [amd64])
     apt-get update -qq 2>/dev/null || true
-    PENDING=$(apt-get -s upgrade 2>/dev/null | grep -c "^Inst" || true)
+    _SYS_APT_SIM=$(apt-get -s upgrade 2>/dev/null | grep "^Inst" || true)
+    PENDING=$(printf '%s\n' "$_SYS_APT_SIM" | grep -c -- '-security' || true)
+    _SYS_APT_TOTAL=$(printf '%s\n' "$_SYS_APT_SIM" | grep -c . || true)
     if [[ "$PENDING" -eq 0 ]]; then
-      add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
+      add_result "System" "PASS" "SYS-03" "No pending security updates" "Système à jour" \
+        "0 security (${_SYS_APT_TOTAL} total pending)" ""
     else
-      add_result "System" "FAIL" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
-        "Appliquez: 'apt-get upgrade -y'"
+      add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour de sécurité en attente" \
+        "${PENDING} security (${_SYS_APT_TOTAL} total pending)" \
+        "Appliquez: 'apt-get upgrade -y' (ou laissez unattended-upgrades le faire)"
     fi ;;
   zypper)
     # list-patches --category security is the SUSE equivalent of --security.

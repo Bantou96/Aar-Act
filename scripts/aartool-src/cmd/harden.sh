@@ -17,6 +17,11 @@ Usage:
 Options:
   -t, --target HOST|GROUP   Host or inventory group. Required.
   -u, --user USER           SSH user (default: ansible)
+      --ssh-key FILE        SSH private key. inspect has always taken one;
+                            plan and apply did not, so on an estate with a
+                            dedicated key they failed with a permission error
+                            that pointed at the target rather than at the
+                            missing flag.
       --only TAGS           Limit to categories, comma separated.
                             e.g. ssh, firewall, audit, kernel, users
       --full                Run the three-step pipeline: audit, harden, audit.
@@ -33,12 +38,15 @@ EOF
 
 cmd_harden() {
   local mode="$1"; shift          # plan | apply
-  local target="" user="" tags="" full=false become=false assume_yes=false
+  local target="" user="" sshkey="" tags="" full=false become=false assume_yes=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -t|--target) [[ $# -ge 2 ]] || die "$1 needs a value."; target="$2"; shift 2 ;;
       -u|--user)   [[ $# -ge 2 ]] || die "$1 needs a value."; user="$2";   shift 2 ;;
+      --ssh-key)   [[ $# -ge 2 ]] || die "$1 needs a value."
+                   [[ -r "$2" ]] || die "SSH key not readable: $2"
+                   sshkey="$2"; shift 2 ;;
       --only)      [[ $# -ge 2 ]] || die "$1 needs a value."; tags="$2";   shift 2 ;;
       --full)      full=true;       shift ;;
       -K|--ask-become-pass) become=true; shift ;;
@@ -63,6 +71,7 @@ cmd_harden() {
 
   local -a args=(-t "$target" -s "$( [[ "$full" == true ]] && echo all || echo 2 )")
   [[ -n "$user" ]]      && args+=(-u "$user")
+  [[ -n "$sshkey" ]]    && args+=(-i "$sshkey")
   [[ -n "$tags" ]]      && args+=(-T "$tags")
   [[ "$become" == true ]] && args+=(-K)
   [[ "$mode" == plan ]] && args+=(-c)

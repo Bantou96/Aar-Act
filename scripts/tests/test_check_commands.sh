@@ -58,5 +58,25 @@ else
   ok
 fi
 
+# ── One check ID, one meaning, on every platform ─────────────────────────────
+# SYS-03 asked dnf and zypper for SECURITY updates and apt for ALL upgradable
+# packages, so the same finding meant "unpatched CVEs" on one fleet and "a
+# package is not the newest" on another. Anyone comparing the two was reading
+# two different questions and could not have known.
+sys03=$(sed -n '/^# SYS-03/,/^# SYS-04/p' src/checks/sys.sh)
+for branch in 'dnf|dnf5|yum' 'apt-get' 'zypper'; do
+  # Comments stripped. Twice now a guard in this file has matched the comment
+  # explaining the bug rather than the code, and passed on a file that still
+  # had the bug. Scan what runs, never what is written about what runs.
+  seg=$(printf '%s\n' "$sys03" | sed -n "/^  ${branch})/,/;;/p" | sed 's/#.*//')
+  if [[ -z "$seg" ]]; then
+    bad "SYS-03 has no '${branch}' branch any more; check this guard still matches the code"
+  elif printf '%s\n' "$seg" | grep -qiE '\-\-security|category security|\-security'; then
+    ok
+  else
+    bad "SYS-03's ${branch} branch does not scope to security updates, so it does not mean the same thing as the others"
+  fi
+done
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
