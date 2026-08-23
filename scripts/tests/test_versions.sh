@@ -75,5 +75,41 @@ else
   bad "CHANGELOG.md has no '## [${COLLECTION}]' entry for the version in galaxy.yml"
 fi
 
+# ── No version written down twice ────────────────────────────────────────────
+# The JSON renderer was the obvious case and the one this file was written for.
+# It was not the only one: src/main.sh carried 4.2.0 in a header comment, in the
+# --help banner (inside a quoted heredoc, which is precisely why it could not
+# drift back), and in the output of `--version` itself. So the canonical way of
+# asking the tool its version returned a number three releases stale, on a
+# release where the whole point was getting the numbers right.
+#
+# One place per version. Anything that looks like a semver outside the single
+# assignment line has to justify itself, and the only legitimate matches so far
+# are example IP addresses, which are excluded by requiring a v-prefix or a
+# quote/space boundary rather than a digit-dot run inside an address.
+for f in src/main.sh aartool-src/main.sh; do
+  strays=$(grep -nP '(?<![0-9.])v?[0-9]+\.[0-9]+\.[0-9]+(?![0-9.])' "$f" \
+           | grep -vP '^\s*[0-9]+:(SCRIPT|AARTOOL)_VERSION=' \
+           | grep -vP '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' \
+           | grep -vP '(--host|--ansible-dir|/tmp/report-|10\.0\.)' || true)
+  if [[ -z "$strays" ]]; then
+    ok
+  else
+    bad "$f writes a version literal outside its VERSION assignment:"
+    printf '%s\n' "$strays" | sed 's/^/        /'
+  fi
+done
+
+# `--version` must report the declared version, not a string that happens to
+# look like one. Run the built bundles and compare.
+got=$(bash cyberaar-baseline.sh --version 2>/dev/null | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+eq "cyberaar-baseline.sh --version output" "$got" "$BASELINE_SRC"
+got=$(bash aartool --version 2>/dev/null | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+eq "aartool --version output" "$got" "$AARTOOL_SRC"
+
+# The --help banner too: it is the first thing a new user reads.
+got=$(bash cyberaar-baseline.sh --help 2>/dev/null | grep -oP 'Baseline Checker v\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+eq "cyberaar-baseline.sh --help banner" "$got" "$BASELINE_SRC"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

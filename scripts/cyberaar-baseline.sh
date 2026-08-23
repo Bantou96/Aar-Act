@@ -3,7 +3,7 @@
 #  CyberAar Security Baseline Checker
 #  Vérificateur de Sécurité de Base CyberAar
 #
-#  Version   : 4.2.0
+#  Version   : see SCRIPT_VERSION below, which is the only place it is written
 #  Author    : CyberAar (https://github.com/cyberaar/aartool)
 #  License   : GPL v3
 #  Target    : RHEL/CentOS/Ubuntu/Debian (Linux Government Servers)
@@ -21,8 +21,8 @@ SCRIPT_VERSION="4.3.0"
 SCRIPT_NAME="cyberaar-baseline"
 
 _show_help() {
-  cat <<'HELPEOF'
-CyberAar Security Baseline Checker v4.2.0
+  cat <<HELPEOF
+CyberAar Security Baseline Checker v${SCRIPT_VERSION}
 
 Usage: cyberaar-baseline [OPTIONS]
 
@@ -99,7 +99,7 @@ while [[ $# -gt 0 ]]; do
     --output-dir) OUTPUT_DIR="$2"; shift 2 ;;
     --install)    DO_INSTALL=true; shift ;;
     --uninstall)  DO_UNINSTALL=true; shift ;;
-    --version)    echo "cyberaar-baseline v4.2.0"; exit 0 ;;
+    --version)    echo "cyberaar-baseline v${SCRIPT_VERSION}"; exit 0 ;;
     --help|-h)    _show_help; exit 0 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
