@@ -24,7 +24,7 @@ AUTH-04 AUTH-09 AUTH-11 AUTH-15
 SYS-03 SYS-04 SYS-05 SYS-11
 NET-01 NET-02 NET-05
 LOG-01 LOG-04 LOG-08
-FS-01 FS-05 FS-06
+FS-01 FS-05 FS-06 FS-07
 IDS
 }
 
@@ -1120,6 +1120,45 @@ MORE
   If a package operation fails afterwards, point it at a directory you control
   rather than removing noexec:
     export TMPDIR=/var/lib/mytmp
+E
+  ;;
+
+  FS-07) cat <<'E'
+WHAT
+  World-writable directories that do not have the sticky bit set.
+
+WHY
+  Without the sticky bit, any user who can write to a directory can delete or
+  rename anyone else's files in it, not just their own. That is the mechanism
+  behind a whole family of symlink and rename races: an attacker swaps a file
+  another process is about to open, between the check and the open. /tmp is the
+  classic case, which is why /tmp has had the sticky bit since the 1980s.
+
+COST
+  Read the list before you act on it. On any host that runs containers, almost
+  every hit is inside the image and snapshot store, and those permissions
+  reflect the contents of the images rather than anything about this machine.
+  Mass-chmodding a snapshot tree corrupts layers and breaks the containers
+  built on them. On a real docs server all 3622 findings were under
+  /var/lib/containerd and not one of them was worth changing.
+
+BY HAND
+  # Look first, and group by where they actually live:
+  find / -xdev -type d -perm -0002 ! -perm -1000 2>/dev/null \
+    | cut -d/ -f1-4 | sort | uniq -c | sort -rn | head
+  # Then fix only what is genuinely yours:
+  find /srv /opt /home -xdev -type d -perm -0002 ! -perm -1000 \
+    -exec chmod a+t {} +
+
+WITH AARTOOL
+  aartool plan --target HOST --user USER --only filesystem,permissions
+  Read that plan rather than applying it blind. The role fixes the paths it
+  knows about; a container store is not one of them, and it should not be.
+
+MORE
+  Exclude the container root from the question instead of from the fix. If your
+  storage driver lives under /var/lib/docker or /var/lib/containerd, findings
+  there are about your images, and the place to fix them is the Dockerfile.
 E
   ;;
 

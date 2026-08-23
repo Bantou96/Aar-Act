@@ -215,10 +215,20 @@ else
 fi
 
 # SYS-10 Ctrl-Alt-Delete disabled
-if systemctl is-masked ctrl-alt-del.target &>/dev/null; then
-  add_result "System" "PASS" "SYS-10" "Ctrl-Alt-Del masked" "Ctrl-Alt-Suppr désactivé" "ctrl-alt-del.target: masked" ""
+#
+# `systemctl is-masked` is not a systemd verb. It never has been: systemd
+# answers "Unknown command verb 'is-masked', did you mean 'is-failed'?" and
+# exits non-zero, so this check reported FAIL on every host ever scanned,
+# including hosts where the target was correctly masked. Confirmed across a
+# 15-node estate: 15 FAIL, 0 PASS, every one of them masked.
+#
+# `is-enabled` is the verb that reports masking, and it prints "masked" for a
+# unit symlinked to /dev/null. Accept both "masked" and "masked-runtime".
+CAD_STATE=$(systemctl is-enabled ctrl-alt-del.target 2>/dev/null || true)
+if [[ "$CAD_STATE" == masked* ]]; then
+  add_result "System" "PASS" "SYS-10" "Ctrl-Alt-Del masked" "Ctrl-Alt-Suppr désactivé" "ctrl-alt-del.target: ${CAD_STATE}" ""
 else
-  add_result "System" "FAIL" "SYS-10" "Ctrl-Alt-Del not masked" "Ctrl-Alt-Suppr actif" "ctrl-alt-del.target: not masked" \
+  add_result "System" "FAIL" "SYS-10" "Ctrl-Alt-Del not masked" "Ctrl-Alt-Suppr actif" "ctrl-alt-del.target: ${CAD_STATE:-unknown}" \
     "Masquez: 'systemctl mask ctrl-alt-del.target && systemctl daemon-reload'"
 fi
 }

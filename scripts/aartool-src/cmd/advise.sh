@@ -34,6 +34,11 @@ _advise_costly() {
     SYS-04)                      return 0 ;;  # MAC enforcing without a permissive pass
     AUTH-04|AUTH-09|AUTH-14)     return 0 ;;  # PAM edits, self-inflicted lockout
     AUTH-05|AUTH-11|FS-05)       return 0 ;;  # needs a human: what IS that account/binary
+    # World-writable paths are overwhelmingly inside container storage on any
+    # host that runs containers, and mass-chmodding a snapshot tree corrupts
+    # image layers. Found on a real docs server where all 3622 hits were under
+    # /var/lib/containerd: the finding was true and the remediation was wrong.
+    FS-04|FS-07)                 return 0 ;;
     *) return 1 ;;
   esac
 }

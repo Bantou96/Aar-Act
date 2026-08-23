@@ -88,5 +88,11 @@ jobs:
       - name: Versions agree across sources, bundles, reports and the image tag
         run: bash scripts/tests/test_versions.sh
 
+      # SYS-10 tested for Ctrl-Alt-Del masking with `systemctl is-masked`, a verb
+      # systemd does not have, so it reported FAIL on every host ever scanned.
+      # Subcommands the checks invoke are validated against the real tool's help.
+      - name: Checks call subcommands that exist
+        run: bash scripts/tests/test_check_commands.sh
+
       - name: Escaping regression tests
         run: bash scripts/tests/test_escaping.sh
