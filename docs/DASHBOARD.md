@@ -9,8 +9,7 @@ document covers using the dashboard by hand.
 
 ---
 
-## Security Dashboard
-
+## Using it by hand
 `dashboard/index.html` is a single-file, zero-dependency web dashboard for visualising baseline reports across your entire fleet. No install, no server, no internet connection required.
 
 ### Features

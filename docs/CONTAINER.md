@@ -9,8 +9,7 @@ same as it does on a host.
 
 ---
 
-## Docker Execution Environment (no install)
-
+## Running it
 If you don't want to install Ansible locally, pull the pre-built Docker image:
 
 ```bash
@@ -47,8 +46,6 @@ docker run --rm -it \
 ```
 
 > Full reference: [`execution-environment/README.md`](../execution-environment/README.md)
-
----
 
 ---
 

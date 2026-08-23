@@ -17,11 +17,14 @@ This document is for using the collection directly.
 
 ---
 
-## Ansible Hardening Collection
+## How the collection is organised
 
-The Ansible collection (`cyberaar.hardening`) contains **52 hardening roles** organised in parallel pairs, each control area has a `_rhel9` variant and an `_ubuntu` variant (plus some Ubuntu-only roles like `fail2ban`). OS detection is automatic: the playbook applies the correct role set based on `ansible_os_family`.
+52 roles in parallel pairs: each control area has a `_rhel9` variant and an
+`_ubuntu` variant, plus a few Ubuntu-only roles such as `fail2ban`. OS detection
+is automatic, so the playbook applies the correct set per host based on
+`ansible_os_family`.
 
-### The Three-Step Pipeline
+### The three-step pipeline
 
 ```
 playbooks/0_execute_full_pipeline.yml
@@ -120,8 +123,6 @@ Reports are saved to `ansible-hardening/reports/after/<hostname>/`.
 
 ---
 
----
-
 ## Running the Pipeline
 
 ### The `run-hardening.sh` wrapper (recommended)
@@ -196,8 +197,6 @@ ansible-playbook --diff \
 
 ---
 
----
-
 ## Hardening Roles Reference
 
 Each control area has **two parallel roles**: one for RHEL 9 family and one for Ubuntu/Debian. Both are applied in a single play; the correct one activates automatically via `ansible_os_family`.
@@ -260,8 +259,6 @@ linux_aide_ubuntu_disabled: true
 
 ---
 
----
-
 ## Tag Reference
 
 Use tags to run only a subset of the pipeline. All tags work with both `--tags` and `--skip-tags`.
@@ -298,8 +295,6 @@ Use tags to run only a subset of the pipeline. All tags work with both `--tags` 
 | `baseline` | Baseline audit steps (Steps 1 & 3) |
 | `before` | Step 1 only |
 | `after` | Step 3 only |
-
----
 
 ---
 
@@ -342,8 +337,6 @@ group_vars/linux_servers.yml        ← shared defaults
 ```
 
 Every role's `defaults/main.yml` exposes all tunable parameters. Review them before running to understand what will be applied in your environment.
-
----
 
 ---
 

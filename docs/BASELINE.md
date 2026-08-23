@@ -11,9 +11,9 @@ stays independently usable.
 
 ---
 
-## Baseline Audit Script (`cyberaar-baseline.sh`)
+## What it produces
 
-The standalone audit script runs **109 security checks** across 9 sections and produces:
+It runs **109 security checks** across 9 sections and produces:
 
 - **Terminal output**: colour-coded PASS / WARN / FAIL with a security score
 - **HTML report**: self-contained file for sharing with management or auditors
@@ -70,8 +70,6 @@ cyberaar-baseline --inventory ansible-hardening/inventory/hosts \
 Checks that require human judgment are flagged `(manual review required)` in the output, the script highlights them, the operator decides.
 
 > Full reference: [`scripts/README.md`](../scripts/README.md)
-
----
 
 ---
 
