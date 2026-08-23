@@ -173,5 +173,26 @@ if command -v node >/dev/null 2>&1 && [[ -f tests/fixtures/audit-fixture.json ]]
   else ok; fi
 fi
 
+# ── Print ────────────────────────────────────────────────────────────────────
+# Print-to-PDF is how an audit leaves the browser and enters an engagement
+# report. The old print block hid the chrome and inverted the background, which
+# produces a screenshot of a website. These assert the pieces that make it a
+# document instead, because nobody prints the dashboard during development and
+# a regression here would be found by a client.
+grep -q '@page' "$DASH" && ok || bad "no @page rule; the PDF has no defined paper size or margins"
+grep -q 'id="printCover"'    "$DASH" && ok || bad "no print cover block; the PDF would not say what was audited or when"
+grep -q 'id="printFindings"' "$DASH" && ok || bad "no per-host findings section; the PDF would be a scorecard with no findings in it"
+grep -q 'display: table-header-group' "$DASH" && ok \
+  || bad "table headers do not repeat across pages, so columns lose their labels after the first break"
+
+# The accent at #00e5b0 is 1.4:1 on white and unreadable printed. The light
+# palette from the website is what the print block must switch to.
+# grep -q closes the pipe on its first match, sed takes SIGPIPE, and under
+# `set -o pipefail` the pipeline reports failure even though the match
+# succeeded. Count instead of short-circuiting.
+_accent=$(sed -n '/@media print/,/^    }$/p' "$DASH" | grep -c '#0F766E' || true)
+if [[ "${_accent:-0}" -gt 0 ]]; then ok
+else bad "print does not switch to the light-ground accent; #00e5b0 is 1.4:1 on white"; fi
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

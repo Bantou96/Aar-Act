@@ -45,7 +45,7 @@ document covers using the dashboard by hand.
 | aartool remediation | `aartool plan` and `aartool apply` scoped with `--only`, built from the `remediation_tags` in the report so the dashboard carries no copy of the map |
 | Needs a decision | Findings whose fix breaks something real are listed separately and left out of the run-it-now commands, as `aartool advise` does |
 | Before / after | Load a pre- and post-hardening report for the same host and the movement is worked out for you |
-| PDF export | Browser print to PDF. Chrome, the drawer and the controls hide themselves |
+| PDF export | Browser print to PDF produces a document, not a screenshot of a website: a cover block stating scope, audit window, check counts and fleet score; the light palette from cyberaar.io so the accent is legible on paper; table headers that repeat across pages; and a per-host **Open findings** section that does not exist on screen, because on screen those live in the drawer and a printed summary with no findings in it is a scorecard rather than a report |
 | Fully offline | No CDN, no npm, no build step, no network of any kind. A test asserts the file references nothing outside itself |
 
 ---
@@ -122,8 +122,11 @@ ansible-hardening/reports/after/<hostname>/report.json    ← post-hardening
   affects twelve machines is worth more of your week than three that affect one.
 - **Watch for "needs a decision".** Those are the fixes that break something
   real, and they are deliberately not in the commands you are given to run.
-- **Export PDF**: the button top right, then your browser's print dialog. The
-  controls and the drawer hide themselves.
+- **Export PDF**: the button top right, then your browser's print dialog.
+  What comes out is meant to be attached to an engagement report: a cover block
+  saying what was audited and when, the fleet evidence, then every host's open
+  findings in reachability order with the `aartool explain` command for each.
+  Roughly one page per two hosts.
 
 > Full reference: [`dashboard/README.md`](../dashboard/README.md)
 

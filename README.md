@@ -224,6 +224,40 @@ subsystem so `scp` genuinely cannot work, and runs the whole loop through them.
 
 ---
 
+## `aartool report`: one file you can send someone
+
+The toolkit ships a dashboard: one HTML file, no server, no internet. `report`
+bakes your results straight into a copy of it, so what you hand over opens
+offline on a machine that has never heard of this toolkit.
+
+```bash
+aartool report ./reports/*.json --out fleet.html    # self-contained, sendable
+aartool report ./reports/*.json --open              # just look at it
+aartool report --serve 8080                         # headless server
+```
+
+It is built for the person reading the audit rather than the person who ran it:
+hosts sorted worst first with a visible way in, an estate heatmap that separates
+a policy problem from one bad machine, and findings ranked by how many machines
+each one affects. Remediation is shown as aartool commands throughout, and
+print-to-PDF produces a document you can attach to an engagement report.
+
+**Sharing it outside the estate it came from:**
+
+```bash
+aartool report ./reports/*.json --anonymise --out share.html
+```
+
+An audit report is a list of a machine's weaknesses with its name attached.
+`--anonymise` turns hostnames into `server-01`, `server-02` and addresses into
+`ip-01`, consistently across every file so a before-and-after pair still lines
+up. The mapping is printed once and stored nowhere. `--redact` handles the
+things only you know are identifying, and refuses any pattern that would also
+rewrite the report's own fields, because that produces a valid file which opens
+to an empty page.
+
+---
+
 ## `aartool surface`
 
 Red Hat and Debian ship the patch. Nothing helps you in the window *before* the

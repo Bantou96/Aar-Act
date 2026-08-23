@@ -459,10 +459,127 @@
     #dropZone .cmd { text-align: left; margin: 1.25rem auto 0; max-width: 560px; }
     #app { display: none; }
 
+    /* ══════════════════════════════════════════════════════════════════════
+       PRINT
+
+       The previous version hid the chrome and inverted the background, which
+       produces a screenshot of a website rather than a document. What comes out
+       of this now is meant to be attached to an engagement report: a cover
+       block that states what was audited and when, then the evidence, in an
+       order that survives being read on paper by someone who was not in the
+       room.
+
+       Colours switch to the light palette from cyberaar.io rather than being
+       forced to black. The accent at #00e5b0 is 1.4:1 on white and unreadable
+       printed; #0F766E is the same brand colour chosen for that ground, and it
+       is what the website itself uses in light mode.
+       ══════════════════════════════════════════════════════════════════════ */
+    .print-only { display: none; }
+
+    @page { size: A4; margin: 15mm 13mm; }
+
     @media print {
-      header, .varbar, .btn, .copy, .overlay, .drawer { display: none !important; }
-      body { background: #fff; color: #000; }
-      .panel-card { border-color: #ccc; background: #fff; break-inside: avoid; }
+      :root {
+        --bg:        #ffffff;
+        --surface:   #ffffff;
+        --surface-2: #f8fafc;
+        --border:    #e2e8f0;
+        --border-2:  #cbd5e1;
+        --text:      #0f172a;
+        --muted:     #475569;
+        --accent:    #0F766E;   /* 4.5:1 on white; #00e5b0 is 1.4:1 */
+        --warn:      #b45309;   /* 5.0:1 on white; #f59e0b is 2.2:1 */
+        --danger:    #dc2626;
+      }
+      body { background: #fff; font-size: 10.5pt; }
+      body::before { display: none; }
+
+      header, .varbar, .overlay, .drawer,
+      .btn, .copy, .filters, .hostrow-cta, .screen-hint { display: none !important; }
+      /* Not hidden: on paper this is a command the reader can type. It only
+         appears in the fleet table; the drawer, where it is abbreviated to
+         "explain", does not print at all. */
+      .explain-link { color: var(--accent); font-size: 7.5pt; white-space: nowrap; }
+
+      main { padding: 0; max-width: none; }
+      .print-only { display: block; }
+
+      /* Cover block. Someone reading this in six months needs to know what it
+         is without asking, so scope and date lead. */
+      .print-cover { margin-bottom: 9mm; padding-bottom: 5mm; border-bottom: 2px solid var(--accent); }
+      .print-cover h1 {
+        font-family: var(--mono); font-size: 20pt; color: var(--accent);
+        letter-spacing: -0.02em; margin-bottom: 1mm;
+      }
+      .print-cover .sub { font-size: 11pt; color: var(--text); margin-bottom: 3mm; }
+      .print-cover dl {
+        display: grid; grid-template-columns: auto 1fr; gap: 1mm 5mm;
+        font-size: 9.5pt;
+      }
+      .print-cover dt { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-size: 8pt; padding-top: 0.6mm; }
+      .print-cover dd { font-family: var(--mono); }
+
+      .print-h {
+        font-size: 12pt; font-weight: 700; color: var(--text);
+        margin: 7mm 0 3mm; padding-bottom: 1.5mm;
+        border-bottom: 1px solid var(--border-2);
+        break-after: avoid;
+      }
+      .print-note { font-size: 9pt; color: var(--muted); margin-bottom: 3mm; }
+
+      /* Panels become plain sections. Boxes inside boxes waste paper. */
+      .panel-card { border: none; background: none; break-inside: avoid; }
+      .panel-hd { border-bottom: 1px solid var(--border-2); padding: 0 0 1.5mm; margin-bottom: 3mm; }
+      .panel-bd { padding: 0; }
+      .grid { gap: 6mm; }
+      .row-stats { grid-template-columns: repeat(3, 1fr) !important; }
+      .row-2 { grid-template-columns: 1fr !important; }
+      .hero-stat { grid-column: span 3 !important; }
+      .hero-stat .panel-bd { padding: 0; }
+
+      .stat-val { font-size: 17pt; }
+      .stat-rule { display: none; }
+      .hero-v { font-size: 30pt; }
+
+      /* Host rows: a clickable control on screen, a table row on paper. */
+      .hostlist { display: block; }
+      .hostrow {
+        display: grid; grid-template-columns: 3px 1fr auto;
+        border: none; border-bottom: 1px solid var(--border);
+        border-radius: 0; padding: 1.6mm 0; break-inside: avoid;
+        background: none;
+      }
+      .hostrow-name { font-size: 10.5pt; }
+      .hostrow-num  { font-size: 15pt; }
+      .hostrow-track { display: none; }
+
+      .tbl { font-size: 9pt; }
+      .tbl th { background: var(--surface-2); color: var(--text); }
+      /* Repeat the header on every page a long table spans, or the columns
+         become unlabelled after the first break. */
+      .tbl thead { display: table-header-group; }
+      .tbl tr { break-inside: avoid; }
+
+      .heat { overflow: visible; break-inside: avoid; }
+      .heat-cell { width: 22px; height: 20px; }
+      .heat thead { display: table-header-group; }
+
+      .badge { border: 1px solid currentColor; }
+      .decide { white-space: nowrap; }
+      .cmd { background: var(--surface-2); border-color: var(--border-2); font-size: 8pt; }
+
+      /* Each host's open findings, the section that makes this a deliverable
+         rather than a summary. Generated only for print. */
+      .pf { break-inside: avoid; margin-bottom: 5mm; }
+      .pf-h {
+        display: flex; align-items: baseline; gap: 3mm;
+        border-bottom: 1px solid var(--border-2); padding-bottom: 1mm; margin-bottom: 2mm;
+      }
+      .pf-name { font-family: var(--mono); font-weight: 700; font-size: 11pt; }
+      .pf-score { font-family: var(--mono); font-weight: 700; margin-left: auto; }
+      .pf-row { display: grid; grid-template-columns: 46px 62px 1fr; gap: 2mm; font-size: 9pt; padding: 0.7mm 0; }
+      .pf-none { font-size: 9pt; color: var(--accent); }
+      .page-break { break-before: page; }
     }
   </style>
 </head>
@@ -523,13 +640,14 @@
   </div>
 
   <div id="app">
+    <div class="print-only print-cover" id="printCover"></div>
     <div class="grid row-stats" id="statRow"></div>
 
     <div class="grid row-2">
       <div class="panel-card">
         <div class="panel-hd">
           <span class="panel-title">Score by host</span>
-          <span class="panel-note">Worst first &middot; select one to open its findings</span>
+          <span class="panel-note">Worst first<span class="screen-hint"> &middot; select one to open its findings</span></span>
         </div>
         <div class="panel-bd" id="hostBars"></div>
       </div>
@@ -560,7 +678,7 @@
     <div class="panel-card" style="margin-bottom:1rem">
       <div class="panel-hd">
         <span class="panel-title">Estate heatmap</span>
-        <span class="panel-note">Open findings per host and category &middot; a red column is a policy problem, a red row is a machine problem</span>
+        <span class="panel-note">Open findings per host and category &middot; a red column is a policy problem, a red row is a machine problem<span class="screen-hint"> &middot; select any cell to open that host</span></span>
       </div>
       <div class="panel-bd"><div class="heat" id="heatmap"></div></div>
     </div>
@@ -574,6 +692,11 @@
         <div class="tbl-wrap" id="commonTbl"></div>
       </div>
     </div>
+
+    <!-- On screen the findings live in the drawer, one host at a time. On
+         paper there is no drawer, so a printed summary with no findings in it
+         would be a scorecard rather than a report. -->
+    <div class="print-only page-break" id="printFindings"></div>
   </div>
 </main>
 
@@ -748,6 +871,7 @@ function render() {
       ? `${total} host${total !== 1 ? 's' : ''} loaded`
       : `${hosts.length} of ${total} hosts shown`;
 
+  renderPrint(hosts);
   renderStats(hosts);
   renderHostBars(hosts);
   renderWaves(hosts);
@@ -770,6 +894,59 @@ function gauge(score) {
       </svg>
       <div class="gauge-num" style="color:${col}">${score}</div>
     </div>`;
+}
+
+/* Everything that only exists on paper. The screen has a drawer for detail and
+   a title bar saying what this is; a PDF has neither, and lands on a desk weeks
+   later in front of someone who was not there when it was run. */
+function renderPrint(hosts) {
+  const now = new Date();
+  const stamp = now.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+  const dates = hosts.map(h => latest(h).date).filter(Boolean).sort();
+  const n = hosts.length;
+  const sum = k => hosts.reduce((a, h) => a + latest(h).summary[k], 0);
+  const avg = n ? Math.round(hosts.reduce((a, h) => a + latest(h).score, 0) / n) : 0;
+  const total = Object.keys(DB).length;
+
+  document.getElementById('printCover').innerHTML = `
+    <h1>aartool</h1>
+    <div class="sub">Security baseline report</div>
+    <dl>
+      <dt>Scope</dt><dd>${n} host${n !== 1 ? 's' : ''}${n < total ? ` of ${total} loaded (filtered)` : ''}</dd>
+      <dt>Audited</dt><dd>${dates.length ? esc(dates[0]) + (dates[0] !== dates[dates.length-1] ? ' to ' + esc(dates[dates.length-1]) : '') : 'unknown'}</dd>
+      <dt>Checks</dt><dd>${(sum('pass') + sum('warn') + sum('fail')).toLocaleString()} run &middot; ${sum('fail')} failed &middot; ${sum('warn')} warned</dd>
+      <dt>Fleet score</dt><dd>${avg} of 100</dd>
+      <dt>Generated</dt><dd>${stamp}</dd>
+    </dl>`;
+
+  const body = hosts.map(h => {
+    const l = latest(h);
+    const open = l.results.filter(r => r.status !== 'PASS');
+    open.sort((a, b) =>
+      (waveOf(a.id) - waveOf(b.id)) ||
+      ((a.status === 'FAIL' ? 0 : 1) - (b.status === 'FAIL' ? 0 : 1)) ||
+      a.id.localeCompare(b.id));
+    return `
+      <div class="pf">
+        <div class="pf-h">
+          <span class="pf-name">${esc(h)}</span>
+          <span style="color:var(--muted);font-size:9pt">${esc(l.os || '')} &middot; ${esc(l.date)}</span>
+          <span class="pf-score" style="color:${scoreColor(l.score)}">${l.score}/100</span>
+        </div>
+        ${open.length ? open.map(r => `
+          <div class="pf-row">
+            <span class="badge ${r.status}">${r.status}</span>
+            <span class="chk-id">${esc(r.id)}</span>
+            <span>${esc(r.check)}${DECIDE.has(r.id) ? ' <span class="decide">needs a decision</span>' : ''}${r.detail ? `<span style="color:var(--muted)"> &mdash; ${esc(r.detail)}</span>` : ''}</span>
+          </div>`).join('')
+        : '<div class="pf-none">Every check passed.</div>'}
+      </div>`;
+  }).join('');
+
+  document.getElementById('printFindings').innerHTML =
+    `<div class="print-h">Open findings by host</div>
+     <div class="print-note">Ordered by reachability: what is reachable from the network first, then what turns an account into root, then what would have stopped you noticing. Items marked as needing a decision have a fix that breaks something real; see <span class="chk-id">aartool explain &lt;ID&gt;</span>.</div>
+     ${body}`;
 }
 
 function renderStats(hosts) {
@@ -800,8 +977,8 @@ function renderStats(hosts) {
           <div class="hero-t">Fleet score</div>
           <div class="hero-v" style="color:${scoreColor(avg)}">${avg}<span style="font-size:1.4rem;color:var(--muted)">/100</span></div>
           <div class="hero-sub">
-            ${n} host${n !== 1 ? 's' : ''} &middot; ${checks.toLocaleString()} checks run<br>
-            ${good} at 80 or above &middot; ${crit} below 60
+            ${n} host${n !== 1 ? 's' : ''}, ${checks.toLocaleString()} checks run<br>
+            ${good} at 80 or above, ${n - good - crit} between 60 and 79, ${crit} below 60
           </div>
         </div>
       </div>
