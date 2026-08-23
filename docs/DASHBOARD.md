@@ -3,6 +3,22 @@
 A single HTML file that renders audit reports with no server, no build step and
 no external requests, so it works on an isolated network.
 
+It is built for the person who has to form a judgement about an estate, not for
+the person who ran the scan. Panels, in the order an auditor asks the questions:
+
+| panel | the question it answers |
+|---|---|
+| Stat row | How big is this estate, how is it doing, how much is outstanding |
+| **Score by host** | Which machine do I open first. Sorted worst first, click to open |
+| Where the findings are | Which area is weak across the whole estate, not just one host |
+| **Fix once, help most hosts** | Which single finding, fixed once, clears the most machines |
+| Host drawer | What to fix first on this machine, in `aartool advise` wave order, with the commands |
+
+Remediation is expressed as `aartool` commands throughout, scoped with `--only`
+from the `remediation_tags` the report carries. Anything whose fix has a real
+operational cost is marked **needs a decision** and kept out of the run-it-now
+sequence, exactly as `aartool advise` does.
+
 `aartool report --out fleet.html` bakes results straight into a copy of it,
 producing one file you can email; see [AARTOOL.md](AARTOOL.md#report). This
 document covers using the dashboard by hand.
@@ -16,29 +32,38 @@ document covers using the dashboard by hand.
 
 | Feature | Description |
 |---|---|
-| Fleet overview | Score ring per host (green ≥ 80%, amber ≥ 60%, red < 60%), PASS / WARN / FAIL counts, sorted worst-first |
-| Before/After delta | Load a pre- and post-hardening report for the same host: score delta pill appears automatically |
-| Host detail panel | Click any host card: slide-in panel with full check table |
-| Status filter | Filter checks by FAIL / WARN / PASS inside the detail panel |
-| Ansible remediation | Copy-ready `ansible-playbook` command pre-filled with hostname and inventory path |
-| PDF export | Browser print → PDF (header and panel hidden automatically) |
-| Fully offline | No CDN, no npm, no build step: works in air-gapped environments |
+| Stat row | Hosts, fleet score, PASS / WARN / FAIL, how many hosts are below 60, how many findings need a decision |
+| Score by host | A bar per host, coloured by threshold (accent ≥ 80, amber ≥ 60, red below), worst first. Select one to open it |
+| Where the findings are | FAIL / WARN / PASS per category across every host shown, so a weak area is visible before any individual machine is |
+| Fix once, help most hosts | The findings ranked by how many machines they affect. The answer to "what is the single most useful thing to do this week" |
+| Sort, scope and search | Sort by score, failures, name or movement. Narrow to hosts below 60 or with failures. Search host, OS, check ID or text |
+| Host drawer | First audit against latest with the delta, the plan in `aartool advise` wave order, the aartool commands, and every check with a filter |
+| aartool remediation | `aartool plan` and `aartool apply` scoped with `--only`, built from the `remediation_tags` in the report so the dashboard carries no copy of the map |
+| Needs a decision | Findings whose fix breaks something real are listed separately and left out of the run-it-now commands, as `aartool advise` does |
+| Before / after | Load a pre- and post-hardening report for the same host and the movement is worked out for you |
+| PDF export | Browser print to PDF. Chrome, the drawer and the controls hide themselves |
+| Fully offline | No CDN, no npm, no build step, no network of any kind. A test asserts the file references nothing outside itself |
 
 ---
 
-### Step 1: Generate JSON reports
+### Step 1: Produce reports
 
 ```bash
-# Run directly on the local machine
-sudo bash scripts/cyberaar-baseline.sh \
-  --json-out /tmp/before-$(hostname).json
+sudo aartool inspect                                  # this machine
+aartool inspect --host 10.0.1.10 --user admin         # one remote host
+aartool inspect --inventory inventory/hosts           # a whole estate
+```
 
-# Or via Ansible (pre-hardening)
-ansible-playbook \
-  -i ansible-hardening/inventory/hosts \
-  --extra-vars "target=myserver" -u admin -b \
-  ansible-hardening/playbooks/1_execute_baseline_before.yml
-# → report saved to ansible-hardening/reports/before/myserver/report.json
+Reports land in `./reports` as HTML and JSON. The dashboard reads the JSON.
+
+For a before-and-after on one host, audit it, apply hardening, then audit it
+again. The dashboard works the movement out from the timestamps; you do not
+have to label anything.
+
+```bash
+sudo aartool inspect                      # before
+aartool apply --target myserver --user admin --only ssh
+sudo aartool inspect                      # after
 ```
 
 ---
@@ -86,11 +111,15 @@ ansible-hardening/reports/after/<hostname>/report.json    ← post-hardening
 
 ### Step 4: Explore
 
-- **Fleet view**: all hosts on one screen, worst score first
-- **Click a host card**: opens the detail panel with all 109 checks
-- **Filter** by FAIL / WARN / PASS to focus on what matters
-- **Ansible remediation** block shows the exact command to remediate FAIL/WARN items
-- **Export PDF**: click the button top right, then use your browser's print dialog
+- **Start at Score by host.** Worst first. That is the machine to open.
+- **Select a bar** to open the drawer: the plan in wave order, the aartool
+  commands, and every check with a filter.
+- **Read Fix once, help most hosts** before opening anything. One finding that
+  affects twelve machines is worth more of your week than three that affect one.
+- **Watch for "needs a decision".** Those are the fixes that break something
+  real, and they are deliberately not in the commands you are given to run.
+- **Export PDF**: the button top right, then your browser's print dialog. The
+  controls and the drawer hide themselves.
 
 > Full reference: [`dashboard/README.md`](../dashboard/README.md)
 
