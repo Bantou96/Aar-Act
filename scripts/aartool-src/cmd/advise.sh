@@ -236,8 +236,10 @@ cmd_advise() {
   cat <<EOF
    1. Run the wave 1 preview and read the diff. Nothing is changed by a plan.
    2. Apply wave 1 to ONE host, keeping a second SSH session open the whole time.
-   3. Re-audit that host and compare, so you know what actually moved:
-        sudo aartool inspect -o ./reports
+   3. Re-audit ${tgt} and compare, so you know what actually moved. Audit it
+      the same way you did the first time: this plan was built from a report of
+      ${host:-that host}, and 'sudo aartool inspect' would audit the machine you
+      are standing on instead.
         aartool diff $report ./reports/<the new one>.json
    4. Only then roll the wave to a group, and start again at wave 2.
 
