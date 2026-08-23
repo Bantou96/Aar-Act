@@ -44,6 +44,12 @@ done
 for phrase in 'aartool plan' 'aartool apply' 'aartool explain' 'aartool advise' 'aartool inspect'; do
   grep -qF "$phrase" "$DASH" && ok || bad "the dashboard never mentions '$phrase'"
 done
+# The host row is a button that opens everything else. Before the redesign
+# nothing said so, and the drill-down was a feature you had to already know
+# about. If the visible call to action goes, that regression is silent.
+grep -qF 'View details' "$DASH" && ok \
+  || bad "the host row has no visible 'View details' affordance; a clickable row that does not look clickable is a hidden feature"
+
 for phrase in 'ansible-playbook' 'Ansible Remediation'; do
   if grep -qF "$phrase" "$DASH"; then
     bad "the dashboard still tells auditors to run '$phrase'; remediation goes through aartool"
@@ -116,7 +122,7 @@ if command -v node >/dev/null 2>&1; then
       DB[r.host]=[r]; renderAll();
       for (const h of Object.keys(DB)) openDrawer(h);
       const all=Object.values(__s).map(e=>e._html||"").join("");
-      console.log(["statRow","hostBars","catBars","commonTbl","drawerB"]
+      console.log(["statRow","hostBars","waveDist","catBars","heatmap","commonTbl","drawerB"]
         .map(id=>id+":"+((__s[id]&&__s[id]._html)||"").length).join(" "));
       if (!all.includes("aartool plan")) { console.log("NOCMD"); }
     })();`;

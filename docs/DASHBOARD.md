@@ -32,9 +32,13 @@ document covers using the dashboard by hand.
 
 | Feature | Description |
 |---|---|
-| Stat row | Hosts, fleet score, PASS / WARN / FAIL, how many hosts are below 60, how many findings need a decision |
-| Score by host | A bar per host, coloured by threshold (accent ≥ 80, amber ≥ 60, red below), worst first. Select one to open it |
-| Where the findings are | FAIL / WARN / PASS per category across every host shown, so a weak area is visible before any individual machine is |
+| Fleet score | A gauge and the number, given more room than anything else on the page because it is the one figure a reader repeats afterwards |
+| Stat row | FAIL / WARN / PASS, how many hosts are below 60, how many findings need a decision |
+| Score by host | One row per host, worst first: name, score, failure counts, a threshold-coloured bar and a **View details** button. Selecting it opens everything about that machine |
+| How exposed is the estate | Open findings distributed across the four reachability waves. A tall wave 1 means exposure from outside; a tall wave 3 means you would not find out if there were |
+| Estate heatmap | Hosts down, categories across. A red **column** is a policy problem across the fleet, a red **row** is one bad machine. Select any cell to open that host |
+| Where the findings are | FAIL / WARN / PASS per category across every host shown |
+| Score trend | A sparkline per host in the drawer, drawn only when there is more than one audit, because a single point is not a trend |
 | Fix once, help most hosts | The findings ranked by how many machines they affect. The answer to "what is the single most useful thing to do this week" |
 | Sort, scope and search | Sort by score, failures, name or movement. Narrow to hosts below 60 or with failures. Search host, OS, check ID or text |
 | Host drawer | First audit against latest with the delta, the plan in `aartool advise` wave order, the aartool commands, and every check with a filter |
