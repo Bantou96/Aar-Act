@@ -24,6 +24,19 @@
       --danger:    #ef4444;
       --mono: ui-monospace, SFMono-Regular, "DejaVu Sans Mono", Menlo, Consolas, monospace;
       --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+
+      /* One type scale, used everywhere. The dashboard had a dozen ad-hoc rem
+         values and everything ended up looking equally important, which on an
+         instrument panel is the same as nothing being important. */
+      --fs-hero: 3.1rem;   /* the fleet score, and nothing else */
+      --fs-xl:   1.9rem;   /* stat values, host score */
+      --fs-lg:   1.05rem;  /* host name, drawer title */
+      --fs-md:   0.9rem;   /* body copy */
+      --fs-sm:   0.8rem;   /* tables */
+      --fs-xs:   0.74rem;  /* meta lines */
+      --fs-2xs:  0.67rem;  /* uppercase labels */
+
+      --r-sm: 5px; --r-md: 8px; --r-lg: 12px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,9 +46,23 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      font-size: 14px;
+      font-size: 15px;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* The same ambient wash the website uses behind its hero. It is the only
+       decoration on the page and it exists so the dashboard is recognisably
+       the same product as cyberaar.io, not to be looked at. */
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(680px 420px at 88% -8%, rgba(0,229,176,0.09), transparent 62%),
+        radial-gradient(520px 360px at 2% 4%, rgba(0,229,176,0.05), transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    header, .varbar, main, .drawer { position: relative; z-index: 1; }
 
     /* ── Top bar ─────────────────────────────────────────────────────────── */
     header {
@@ -119,74 +146,179 @@
       border-bottom: 1px solid var(--border);
     }
     .panel-title {
-      font-size: 0.74rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.07em;
-      color: var(--muted);
+      font-size: var(--fs-2xs); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.09em;
+      color: var(--text);
     }
-    .panel-note { font-size: 0.7rem; color: var(--muted); }
-    .panel-bd { padding: 0.9rem; flex: 1; min-width: 0; }
+    .panel-note { font-size: var(--fs-xs); color: var(--muted); }
+    .panel-bd { padding: 1rem; flex: 1; min-width: 0; }
 
-    .grid { display: grid; gap: 0.9rem; }
-    .row-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); margin-bottom: 0.9rem; }
-    .row-2     { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); margin-bottom: 0.9rem; }
-    @media (max-width: 1100px) {
-      .row-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .row-2     { grid-template-columns: minmax(0, 1fr); }
+    .grid { display: grid; gap: 1rem; }
+    /* The hero spans two columns and five smaller stats fill the rest. Six
+       identical boxes made the number that matters look like the number of
+       WARNs. */
+    .row-stats {
+      grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, 1fr));
+      margin-bottom: 1rem;
     }
-    @media (max-width: 620px) {
+    .row-2 { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); margin-bottom: 1rem; }
+    @media (max-width: 1240px) {
+      .row-stats { grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 1fr)); }
+      .hero-stat { grid-column: span 4; }
+    }
+    @media (max-width: 1040px) {
+      .row-2 { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 700px) {
       .row-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero-stat { grid-column: span 2; }
       main { padding: 1rem 0.9rem 2rem; }
       header, .varbar { padding-left: 0.9rem; padding-right: 0.9rem; }
     }
+
+    /* ── Hero stat: the fleet score, with a gauge arc ────────────────────── */
+    .hero-stat .panel-bd {
+      display: flex; align-items: center; gap: 1.25rem;
+      padding: 1.1rem 1.2rem;
+    }
+    .gauge { position: relative; width: 116px; height: 116px; flex-shrink: 0; }
+    .gauge svg { transform: rotate(-90deg); display: block; }
+    .gauge-num {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 1.55rem; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .hero-t {
+      font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); font-weight: 700;
+    }
+    .hero-v {
+      font-family: var(--mono); font-size: var(--fs-hero); font-weight: 700;
+      line-height: 1; margin: 0.25rem 0 0.35rem; font-variant-numeric: tabular-nums;
+    }
+    .hero-sub { font-size: var(--fs-xs); color: var(--muted); line-height: 1.6; }
+    @media (max-width: 700px) { .gauge { display: none; } }
 
     /* ── Stat panel ─────────────────────────────────────────────────────── */
     .stat { text-align: left; }
     .stat-val {
       font-family: var(--mono);
-      font-size: 2rem; font-weight: 700; line-height: 1.1;
+      font-size: var(--fs-xl); font-weight: 700; line-height: 1.05;
       font-variant-numeric: tabular-nums;
     }
     .stat-lbl {
-      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--muted); margin-top: 0.3rem;
+      font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin-top: 0.35rem; font-weight: 700;
     }
-    .stat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
-    .stat-rule { height: 3px; border-radius: 2px; margin-top: 0.6rem; opacity: 0.85; }
+    .stat-sub { font-size: var(--fs-xs); color: var(--muted); margin-top: 0.2rem; line-height: 1.5; }
+    .stat-rule { height: 3px; border-radius: 2px; margin-top: 0.7rem; opacity: 0.9; }
 
-    /* ── Bar gauge, the "score by host" panel ───────────────────────────────
-       A horizontal bar per host, worst first, coloured by threshold. This is
-       the panel the whole dashboard exists for: an auditor should be able to
-       land here and know within two seconds which machine to open. */
-    .bg-row {
+    /* ── Host row ───────────────────────────────────────────────────────────
+       The panel the whole dashboard exists for: land here, know which machine
+       to open, open it.
+
+       It used to be a bar and a number with no affordance at all. The row was
+       clickable and nothing said so, so the drill-down holding every finding
+       and every command was a feature you had to already know about. Now the
+       host name leads, the score is the second largest number on the page, and
+       "View details" is always visible rather than appearing on hover: an
+       affordance that needs a hover to be discovered does not exist on a
+       touchscreen. */
+    .hostlist { display: flex; flex-direction: column; gap: 0.5rem; }
+    .hostrow {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 62px;
-      align-items: center; gap: 0.75rem;
-      padding: 0.4rem 0.5rem;
-      border-radius: 5px;
-      cursor: pointer;
-      border: 1px solid transparent;
-      width: 100%; text-align: left;
-      background: transparent; color: inherit; font: inherit;
+      grid-template-columns: 3px minmax(0, 1fr) auto auto;
+      align-items: center; gap: 0 1rem;
+      padding: 0.7rem 0.9rem 0.7rem 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      cursor: pointer; text-align: left;
+      font: inherit; color: inherit; width: 100%;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
     }
-    .bg-row:hover { background: var(--surface-2); border-color: var(--border-2); }
-    .bg-name {
-      font-family: var(--mono); font-size: 0.78rem;
-      margin-bottom: 0.28rem;
-      display: flex; align-items: baseline; gap: 0.5rem;
+    .hostrow:hover { border-color: var(--accent); background: #14203a; transform: translateY(-1px); }
+    .hostrow-accent { align-self: stretch; border-radius: var(--r-md) 0 0 var(--r-md); }
+    .hostrow-main { min-width: 0; padding-left: 0.9rem; }
+    .hostrow-name {
+      font-family: var(--mono); font-size: var(--fs-lg); font-weight: 700; color: var(--text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .bg-os { color: var(--muted); font-size: 0.68rem; }
-    .bg-track {
-      height: 9px; border-radius: 5px;
-      background: rgba(255,255,255,0.06);
-      overflow: hidden;
+    .hostrow-meta {
+      font-size: var(--fs-xs); color: var(--muted);
+      margin: 0.2rem 0 0.45rem;
+      display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
     }
-    .bg-fill { height: 100%; border-radius: 5px; transition: width 0.4s ease; }
-    .bg-score {
-      font-family: var(--mono); font-size: 1.05rem; font-weight: 700;
-      text-align: right; font-variant-numeric: tabular-nums;
+    .hostrow-meta b { font-family: var(--mono); font-weight: 700; }
+    .hostrow-track { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.07); overflow: hidden; }
+    .hostrow-fill  { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+    .hostrow-score { text-align: right; }
+    .hostrow-num {
+      font-family: var(--mono); font-size: var(--fs-xl); font-weight: 700;
+      line-height: 1; font-variant-numeric: tabular-nums;
     }
-    .bg-delta { font-family: var(--mono); font-size: 0.66rem; }
+    .hostrow-delta { font-family: var(--mono); font-size: var(--fs-xs); margin-top: 0.2rem; }
+    .hostrow-cta {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: var(--fs-xs); font-weight: 600; color: var(--muted);
+      border: 1px solid var(--border-2); border-radius: var(--r-sm);
+      padding: 0.35rem 0.7rem; white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .hostrow:hover .hostrow-cta, .hostrow:focus-visible .hostrow-cta {
+      color: var(--accent); border-color: var(--accent); background: rgba(0,229,176,0.08);
+    }
+    .hostrow-cta span { transition: transform 0.15s; }
+    .hostrow:hover .hostrow-cta span { transform: translateX(2px); }
+    @media (max-width: 760px) {
+      .hostrow { grid-template-columns: 3px minmax(0, 1fr) auto; row-gap: 0.6rem; }
+      .hostrow-cta { grid-column: 2 / -1; justify-content: center; }
+    }
+
+    /* ── Heatmap: hosts down, categories across ─────────────────────────────
+       The question a per-host list cannot answer: is this one bad machine or
+       is the whole estate weak in one area? A column that is red all the way
+       down is a policy problem; a row that is red is a machine problem. */
+    .heat { overflow-x: auto; }
+    .heat table { border-collapse: separate; border-spacing: 3px; }
+    .heat th {
+      font-size: var(--fs-2xs); font-weight: 600; color: var(--muted);
+      text-align: left; padding: 0 0.3rem 0.25rem 0; white-space: nowrap;
+    }
+    .heat th.rot { writing-mode: vertical-rl; transform: rotate(180deg); padding: 0 0 0.35rem; height: 78px; }
+    .heat td.hostcell {
+      font-family: var(--mono); font-size: var(--fs-xs); color: var(--text);
+      white-space: nowrap; padding-right: 0.5rem; max-width: 190px;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .heat-cell {
+      width: 26px; height: 24px; border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer; padding: 0;
+      font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 700;
+      color: rgba(255,255,255,0.82);
+    }
+    .heat-cell:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    /* ── Wave distribution ──────────────────────────────────────────────────
+       Where the open findings sit on the reachability ladder. A tall wave 1
+       means the estate is exposed from outside; a tall wave 3 means you would
+       not find out if it were. */
+    .wavebar { display: flex; height: 30px; border-radius: var(--r-sm); overflow: hidden; margin-bottom: 0.7rem; }
+    .wavebar div {
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 700;
+      color: #04231c; min-width: 0;
+    }
+    .wavekey { display: flex; flex-direction: column; gap: 0.35rem; }
+    .wavekey-row { display: flex; align-items: baseline; gap: 0.5rem; font-size: var(--fs-xs); }
+    .wavekey-sw { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .wavekey-n { font-family: var(--mono); color: var(--muted); margin-left: auto; }
+
+    /* ── Sparkline, drawn only when a host has more than one audit ───────── */
+    .spark { display: block; }
+    .spark-wrap { display: flex; align-items: center; gap: 0.9rem; }
 
     /* ── Category breakdown ─────────────────────────────────────────────── */
     .cat-row { display: grid; grid-template-columns: 108px minmax(0,1fr) 54px; align-items: center; gap: 0.6rem; padding: 0.28rem 0; }
@@ -397,22 +529,40 @@
       <div class="panel-card">
         <div class="panel-hd">
           <span class="panel-title">Score by host</span>
-          <span class="panel-note">Select a host to open its findings</span>
+          <span class="panel-note">Worst first &middot; select one to open its findings</span>
         </div>
         <div class="panel-bd" id="hostBars"></div>
       </div>
 
-      <div class="panel-card">
-        <div class="panel-hd">
-          <span class="panel-title">Where the findings are</span>
-          <span class="legend">
-            <span><i style="background:var(--danger)"></i>FAIL</span>
-            <span><i style="background:var(--warn)"></i>WARN</span>
-            <span><i style="background:var(--accent)"></i>PASS</span>
-          </span>
+      <div style="display:flex;flex-direction:column;gap:1rem;min-width:0">
+        <div class="panel-card">
+          <div class="panel-hd">
+            <span class="panel-title">How exposed is the estate</span>
+            <span class="panel-note">Open findings by reachability</span>
+          </div>
+          <div class="panel-bd" id="waveDist"></div>
         </div>
-        <div class="panel-bd" id="catBars"></div>
+
+        <div class="panel-card" style="flex:1">
+          <div class="panel-hd">
+            <span class="panel-title">Where the findings are</span>
+            <span class="legend">
+              <span><i style="background:var(--danger)"></i>FAIL</span>
+              <span><i style="background:var(--warn)"></i>WARN</span>
+              <span><i style="background:var(--accent)"></i>PASS</span>
+            </span>
+          </div>
+          <div class="panel-bd" id="catBars"></div>
+        </div>
       </div>
+    </div>
+
+    <div class="panel-card" style="margin-bottom:1rem">
+      <div class="panel-hd">
+        <span class="panel-title">Estate heatmap</span>
+        <span class="panel-note">Open findings per host and category &middot; a red column is a policy problem, a red row is a machine problem</span>
+      </div>
+      <div class="panel-bd"><div class="heat" id="heatmap"></div></div>
     </div>
 
     <div class="panel-card">
@@ -600,8 +750,26 @@ function render() {
 
   renderStats(hosts);
   renderHostBars(hosts);
+  renderWaves(hosts);
   renderCategories(hosts);
+  renderHeatmap(hosts);
   renderCommon(hosts);
+}
+
+/* An SVG arc. No library, because this file has to open from a USB stick on a
+   network with nothing on it. */
+function gauge(score) {
+  const R = 50, C = 2 * Math.PI * R, on = C * (score / 100);
+  const col = scoreColor(score);
+  return `
+    <div class="gauge">
+      <svg width="116" height="116" viewBox="0 0 116 116" aria-hidden="true">
+        <circle cx="58" cy="58" r="${R}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="9"/>
+        <circle cx="58" cy="58" r="${R}" fill="none" stroke="${col}" stroke-width="9"
+                stroke-linecap="round" stroke-dasharray="${on.toFixed(1)} ${(C - on).toFixed(1)}"/>
+      </svg>
+      <div class="gauge-num" style="color:${col}">${score}</div>
+    </div>`;
 }
 
 function renderStats(hosts) {
@@ -609,10 +777,12 @@ function renderStats(hosts) {
   const sum = k => hosts.reduce((a, h) => a + latest(h).summary[k], 0);
   const avg = n ? Math.round(hosts.reduce((a, h) => a + latest(h).score, 0) / n) : 0;
   const crit = hosts.filter(h => latest(h).score < 60).length;
+  const good = hosts.filter(h => latest(h).score >= 80).length;
   const decisions = new Set();
   hosts.forEach(h => latest(h).results.forEach(r => {
     if (r.status !== 'PASS' && DECIDE.has(r.id)) decisions.add(r.id);
   }));
+  const checks = sum('pass') + sum('warn') + sum('fail');
 
   const stat = (val, lbl, color, sub) => `
     <div class="panel-card"><div class="panel-bd stat">
@@ -622,35 +792,129 @@ function renderStats(hosts) {
       <div class="stat-rule" style="background:${color}"></div>
     </div></div>`;
 
-  document.getElementById('statRow').innerHTML =
-    stat(n, 'Hosts', 'var(--text)', n ? `${sum('pass') + sum('warn') + sum('fail')} checks run` : '') +
-    stat(avg + '%', 'Fleet score', scoreColor(avg), 'Mean across shown hosts') +
+  const hero = `
+    <div class="panel-card hero-stat">
+      <div class="panel-bd">
+        ${gauge(avg)}
+        <div style="min-width:0">
+          <div class="hero-t">Fleet score</div>
+          <div class="hero-v" style="color:${scoreColor(avg)}">${avg}<span style="font-size:1.4rem;color:var(--muted)">/100</span></div>
+          <div class="hero-sub">
+            ${n} host${n !== 1 ? 's' : ''} &middot; ${checks.toLocaleString()} checks run<br>
+            ${good} at 80 or above &middot; ${crit} below 60
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('statRow').innerHTML = hero +
     stat(sum('fail'), 'FAIL', 'var(--danger)', 'Open failures') +
     stat(sum('warn'), 'WARN', 'var(--warn)', 'Worth reviewing') +
     stat(sum('pass'), 'PASS', 'var(--accent)', 'Controls met') +
-    stat(crit, 'Below 60', crit ? 'var(--danger)' : 'var(--accent)',
-         decisions.size ? `${decisions.size} need a decision` : 'None outstanding');
+    stat(crit, 'Below 60', crit ? 'var(--danger)' : 'var(--accent)', crit ? 'Open these first' : 'None') +
+    stat(decisions.size, 'Need a decision', decisions.size ? 'var(--warn)' : 'var(--accent)',
+         decisions.size ? 'Fixes that break something' : 'Nothing contentious');
 }
 
 function renderHostBars(hosts) {
+  const el = document.getElementById('hostBars');
   if (!hosts.length) {
-    document.getElementById('hostBars').innerHTML =
-      '<p class="panel-note">No host matches the current filter.</p>';
+    el.innerHTML = '<p class="panel-note">No host matches the current filter.</p>';
     return;
   }
-  document.getElementById('hostBars').innerHTML = hosts.map(h => {
+  el.innerHTML = '<div class="hostlist">' + hosts.map(h => {
     const l = latest(h), d = deltaOf(h), c = scoreColor(l.score);
-    const deltaTxt = d === null ? ''
-      : `<span class="bg-delta" style="color:${d > 0 ? 'var(--accent)' : d < 0 ? 'var(--danger)' : 'var(--muted)'}">${d > 0 ? '+' : ''}${d}</span>`;
+    const nRep = DB[h].length;
+    const delta = d === null ? '' :
+      `<div class="hostrow-delta" style="color:${d > 0 ? 'var(--accent)' : d < 0 ? 'var(--danger)' : 'var(--muted)'}">${d > 0 ? '+' : ''}${d} since first</div>`;
+    const counts = [
+      l.summary.fail ? `<span style="color:var(--danger)"><b>${l.summary.fail}</b> FAIL</span>` : '',
+      l.summary.warn ? `<span style="color:var(--warn)"><b>${l.summary.warn}</b> WARN</span>`  : '',
+      !l.summary.fail && !l.summary.warn ? '<span style="color:var(--accent)">all checks passed</span>' : '',
+    ].filter(Boolean).join('<span style="color:var(--border-2)">&middot;</span>');
+
     return `
-      <button class="bg-row" onclick="openDrawer('${esc(h)}')" title="Open ${esc(h)}">
-        <div>
-          <div class="bg-name">${esc(h)} <span class="bg-os">${esc(l.os || '')}</span></div>
-          <div class="bg-track"><div class="bg-fill" style="width:${l.score}%;background:${c}"></div></div>
-        </div>
-        <div class="bg-score" style="color:${c}">${l.score}${deltaTxt ? '<br>' + deltaTxt : ''}</div>
+      <button class="hostrow" onclick="openDrawer('${esc(h)}')"
+              aria-label="Open findings for ${esc(h)}, score ${l.score} out of 100">
+        <span class="hostrow-accent" style="background:${c}"></span>
+        <span class="hostrow-main">
+          <span class="hostrow-name">${esc(h)}</span>
+          <span class="hostrow-meta">
+            ${counts}
+            <span style="color:var(--border-2)">&middot;</span>
+            <span>${esc(l.os || 'unknown OS')}</span>
+            ${nRep > 1 ? `<span style="color:var(--border-2)">&middot;</span><span>${nRep} audits</span>` : ''}
+          </span>
+          <span class="hostrow-track"><span class="hostrow-fill" style="width:${l.score}%;background:${c}"></span></span>
+        </span>
+        <span class="hostrow-score">
+          <span class="hostrow-num" style="color:${c}">${l.score}</span>
+          ${delta}
+        </span>
+        <span class="hostrow-cta">View details <span>&rarr;</span></span>
       </button>`;
-  }).join('');
+  }).join('') + '</div>';
+}
+
+/* Where the open findings sit on the reachability ladder, across everything
+   shown. This is the shape of the estate's exposure in one line. */
+function renderWaves(hosts) {
+  const counts = [0, 0, 0, 0];
+  hosts.forEach(h => latest(h).results.forEach(r => {
+    if (r.status !== 'PASS') counts[waveOf(r.id) - 1]++;
+  }));
+  const total = counts.reduce((a, b) => a + b, 0);
+  const el = document.getElementById('waveDist');
+  if (!total) {
+    el.innerHTML = '<p class="panel-note" style="color:var(--accent)">Nothing open on any host shown.</p>';
+    return;
+  }
+  const cols = ['var(--danger)', 'var(--warn)', '#6366f1', 'var(--muted)'];
+  const bar = counts.map((n, i) => n
+    ? `<div style="width:${(n / total * 100).toFixed(2)}%;background:${cols[i]}" title="Wave ${i+1}: ${n}">${n / total > 0.07 ? n : ''}</div>`
+    : '').join('');
+  const key = WAVES.map((w, i) => `
+    <div class="wavekey-row">
+      <span class="wavekey-sw" style="background:${cols[i]}"></span>
+      <span><b>Wave ${w.n}</b> ${w.title}</span>
+      <span class="wavekey-n">${counts[i]}</span>
+    </div>`).join('');
+  el.innerHTML = `<div class="wavebar">${bar}</div><div class="wavekey">${key}</div>`;
+}
+
+/* Hosts down, categories across. A per-host list cannot tell you whether a
+   weakness is one machine or the whole estate; this can. */
+function renderHeatmap(hosts) {
+  const el = document.getElementById('heatmap');
+  if (!hosts.length) { el.innerHTML = '<p class="panel-note">Nothing to show.</p>'; return; }
+
+  const cats = [...new Set(hosts.flatMap(h => latest(h).results.map(r => r.category)))].sort();
+  const cell = (h, c) => {
+    const rs = latest(h).results.filter(r => r.category === c);
+    const f = rs.filter(r => r.status === 'FAIL').length;
+    const w = rs.filter(r => r.status === 'WARN').length;
+    const score = f * 2 + w;                       // failures weigh double
+    let bg = 'rgba(0,229,176,0.16)';               // clean
+    if (score > 0) bg = 'rgba(245,158,11,0.22)';
+    if (score >= 3) bg = 'rgba(245,158,11,0.42)';
+    if (f >= 1)     bg = 'rgba(239,68,68,0.35)';
+    if (f >= 3)     bg = 'rgba(239,68,68,0.62)';
+    const label = f + w || '';
+    return `<td><button class="heat-cell" style="background:${bg}"
+      onclick="openDrawer('${esc(h)}')"
+      title="${esc(h)} &middot; ${esc(c)}: ${f} FAIL, ${w} WARN">${label}</button></td>`;
+  };
+
+  el.innerHTML = `
+    <table>
+      <thead><tr><th></th>${cats.map(c => `<th class="rot">${esc(c)}</th>`).join('')}</tr></thead>
+      <tbody>${hosts.map(h => `
+        <tr>
+          <td class="hostcell" title="${esc(h)}">${esc(h)}</td>
+          ${cats.map(c => cell(h, c)).join('')}
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
 }
 
 /* Which area of the estate is weakest. An auditor asks this before they ask
@@ -749,6 +1013,32 @@ function closeDrawer() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
+/* Score across every audit of this host. Drawn only when there is more than
+   one, because a single point is not a trend and pretending otherwise is how
+   dashboards start lying. */
+function sparkline(reps) {
+  if (reps.length < 2) return '';
+  const W = 190, H = 44, P = 4;
+  const xs = reps.map((_, i) => P + i * (W - 2 * P) / (reps.length - 1));
+  const ys = reps.map(r => H - P - (r.score / 100) * (H - 2 * P));
+  const d = xs.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const last = reps[reps.length - 1];
+  const col = scoreColor(last.score);
+  return `
+    <div class="spark-wrap">
+      <svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <path d="${d}" fill="none" stroke="${col}" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        ${xs.map((x, i) => `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="2.5"
+              fill="${i === xs.length - 1 ? col : 'var(--muted)'}"/>`).join('')}
+      </svg>
+      <div>
+        <div class="cmp-p">Across ${reps.length} audits</div>
+        <div class="cmp-c">${esc(reps[0].date)} &rarr; ${esc(last.date)}</div>
+      </div>
+    </div>`;
+}
+
 function renderDrawer() {
   const reps = DB[_host], l = latest(_host);
   const before = reps.length >= 2 ? reps[0] : null;
@@ -774,7 +1064,8 @@ function renderDrawer() {
     const d = l.score - before.score;
     const dTxt = d === 0 ? '' :
       `<div class="cmp-c" style="color:${d > 0 ? 'var(--accent)' : 'var(--danger)'}">${d > 0 ? '+' : ''}${d} points since ${before.date}</div>`;
-    cmp = `<div class="cmp">${box('First audit &nbsp;' + before.date, before)}${box('Latest &nbsp;' + l.date, l, dTxt)}</div>`;
+    cmp = `<div class="cmp">${box('First audit &nbsp;' + before.date, before)}${box('Latest &nbsp;' + l.date, l, dTxt)}` +
+          `<div class="cmp-box">${sparkline(reps)}</div></div>`;
   } else {
     cmp = `<div class="cmp">${box('Latest &nbsp;' + l.date, l,
       '<div class="cmp-c">Load a second report for this host to see movement</div>')}</div>`;
