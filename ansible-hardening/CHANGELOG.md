@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0]: 2026-08-23
+
+Hardening was applied end to end to a live server for the first time: doctor,
+plan, apply, re-inspect, diff, on a docs host running BookStack in containers.
+The service stayed up, the score moved 72 to 75, nothing regressed. Getting
+there surfaced four defects that no test had, and every fix below came from that
+run rather than from review.
+
+### Fixed
+
+- **`SYS-10` could never pass, on any host, ever.** It tested masking with
+  `systemctl is-masked`, which is not a systemd verb: systemd answers "Unknown
+  command verb" and exits non-zero. Every host ever scanned reported FAIL,
+  including hosts where `ctrl-alt-del.target` was correctly symlinked to
+  `/dev/null`. Confirmed across 15 nodes: 15 FAIL, 0 PASS, all masked. Now uses
+  `is-enabled`, which reports `masked`, and prints the observed state as
+  evidence.
+- **`SYS-03` meant two different things depending on the platform.** dnf and
+  zypper were asked for security updates; apt was asked for every upgradable
+  package. A host with automatic security updates working, zero security updates
+  outstanding and twenty routine ones reported the same FAIL as a RHEL host with
+  twenty live CVEs. The apt branch now scopes to security and reports both
+  counts: "0 security (20 total pending)".
+- **`AUTH-03` could not be fixed by its own remediation.** The check wants
+  `PASS_MAX_DAYS <= 90`; `linux_user_management_rhel9` set 90 and
+  `linux_authselect_ubuntu`, which owns `/etc/login.defs` on Ubuntu, set 365. On
+  Ubuntu you could apply the recommended fix, re-audit and see no change,
+  indefinitely. The Ubuntu default is now 90, matching RHEL and the check.
+- **`plan` and `apply` could not use an SSH key.** `inspect` always could. On an
+  estate with a dedicated key they failed with `Permission denied (publickey)`,
+  which reads as a fault on the target rather than a missing flag.
+  `--ssh-key` is plumbed through `run-hardening.sh` as `-i`.
+- **`doctor --target` could not check a host that needs a user.** It connected
+  as whoever ran it, so it called a reachable host unreachable and printed a fix
+  line that repeated its own mistake. It takes `--user` and `--ssh-key` now.
+
+### Added
+
+- `doctor` also verifies passwordless sudo on the target. Reachable is not the
+  same as able to change anything, and finding that out at apply time means
+  finding out halfway through a hardening run.
+- `FS-04` and `FS-07` are treated as decisions rather than wave items, with a
+  knowledge-base entry for `FS-07`. On a container host essentially every
+  world-writable directory is inside the image store: on the machine used for
+  this run, all 3622 of them were under `/var/lib/containerd`, where a mass
+  chmod corrupts image layers.
+- `test_check_commands.sh` validates every `systemctl` verb the checks invoke
+  against the real tool's help, and asserts `SYS-03` scopes to security updates
+  on all three package managers.
+- `test_remediation_map.sh` asserts role defaults satisfy the thresholds the
+  checks demand, so a role cannot again write a value its own checker rejects.
+
+### Changed
+
+- `linux_authselect_pass_max_days` default 365 to 90. CIS Ubuntu 22.04 5.5.1.2
+  permits up to 365 and NIST SP 800-63B argues against forced expiry entirely;
+  override the variable if your policy differs. The point is that the tool and
+  its own remediation now agree on a number.
+
 ## [3.0.0]: 2026-08-23
 
 The release that gives the toolkit a front door. Everything here was either

@@ -20,6 +20,27 @@ that opens offline. `aartool` is the front door to all of it.
 
 **Full manual: [docs/AARTOOL.md](docs/AARTOOL.md)**
 
+### Tested on a real estate, not only in CI
+
+Every release is exercised against live servers before it ships, and the
+findings from those runs are what most of the fixes in the changelog come from.
+
+- **15 production nodes audited** through a bastion, 15 of 15 succeeded. That
+  run found a defect on the estate itself: a Jinja whitespace rule had collapsed
+  the entire monitoring block of `/etc/hosts` onto one physical line on **every
+  node**, for months, with nothing reporting it.
+- **Hardening applied end to end** to a live documentation server running
+  BookStack in containers: `doctor` to `plan` to `apply` to re-`inspect` to
+  `diff`. Score 72 to 75, three findings cleared, **nothing regressed and the
+  service stayed up throughout**.
+- That single run found four defects in aartool that no test had caught,
+  including a check that could never pass on any host and a check whose own
+  remediation wrote a value the check rejected. All four are fixed, and each has
+  a guard proven to fail on the bug it prevents.
+
+CI covers Rocky 9 and Ubuntu 22.04 across 31 Molecule scenarios. Debian 12 is
+supported by the role logic but has no Molecule image yet: treat it as untested.
+
 ---
 
 ## Install
