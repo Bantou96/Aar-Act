@@ -21,7 +21,7 @@ _doc_warn() {
 
 cmd_doctor_usage() {
   cat <<'EOF'
-aartool doctor — check everything plan and apply depend on. Changes nothing.
+aartool doctor: check everything plan and apply depend on. Changes nothing.
 
 Usage:
   aartool doctor [--target HOST]

@@ -17,9 +17,12 @@ PARTS=(
   aartool-src/main.sh
   aartool-src/lib/paths.sh
   aartool-src/lib/surface.sh
+  aartool-src/lib/kb.sh
   aartool-src/cmd/inspect.sh
   aartool-src/cmd/harden.sh
   aartool-src/cmd/surface.sh
+  aartool-src/cmd/advise.sh
+  aartool-src/cmd/explain.sh
   aartool-src/cmd/doctor.sh
   aartool-src/cmd/report.sh
   aartool-src/cmd/diff.sh

@@ -15,7 +15,7 @@
 #
 # Run: bash scripts/tests/test_remediation_map.sh
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 MAP="src/lib/ansible_map.sh"
 PLAYBOOK="../ansible-hardening/playbooks/2_configure_hardening.yml"
@@ -62,6 +62,34 @@ while IFS= read -r line; do
     fi
   done
 done < <(grep -E '^\s*\["[A-Z]+-[0-9]+"\]=' "$MAP")
+
+# ── Molecule scenarios and the CI matrix ─────────────────────────────────────
+# The matrix is a hand-written list. A scenario added on disk and not added here
+# never runs, and nothing says so: CI stays green because it is green on the
+# scenarios it was told about. That is the same shape as an unmapped check and
+# an invalid remediation tag, so it gets the same treatment.
+MOL_DIR=../ansible-hardening/molecule
+CI=../.github/workflows/molecule.yml
+if [[ -d "$MOL_DIR" && -f "$CI" ]]; then
+  on_disk=$(find "$MOL_DIR" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | sort)
+  in_ci=$(sed -n '/scenario:/,/steps:/p' "$CI" | grep -oP '^\s+- \K[a-z0-9_]+' | sort)
+  while read -r sc; do
+    [[ -z "$sc" ]] && continue
+    if printf '%s\n' "$in_ci" | grep -qx "$sc"; then
+      PASS=$((PASS + 1))
+    else
+      fail "molecule scenario '$sc' exists on disk but is not in the CI matrix, so it never runs"
+    fi
+  done <<<"$on_disk"
+  while read -r sc; do
+    [[ -z "$sc" ]] && continue
+    if printf '%s\n' "$on_disk" | grep -qx "$sc"; then
+      PASS=$((PASS + 1))
+    else
+      fail "CI matrix names molecule scenario '$sc', which does not exist"
+    fi
+  done <<<"$in_ci"
+fi
 
 printf '\n%d assertions passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

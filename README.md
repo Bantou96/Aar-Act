@@ -27,6 +27,13 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 - [Prerequisites](#prerequisites)
 - [Deliverable 0: Docker Execution Environment](#deliverable-0-docker-execution-environment-no-install)
 - [Deliverable 0b: Security Dashboard](#deliverable-0b-security-dashboard)
+- [**`aartool`, one front door**](#deliverable-0c-aartool-one-front-door) *(full manual: [docs/AARTOOL.md](docs/AARTOOL.md))*
+  - [`aartool advise`](#aartool-advise-the-order-to-fix-things-in)
+  - [`aartool explain`](#aartool-explain-what-the-finding-actually-means)
+  - [`aartool surface`](#aartool-surface-the-window-before-the-patch)
+  - [`aartool report`](#aartool-report-the-dashboard-one-command-away)
+  - [`aartool diff`](#aartool-diff-drift-and-the-exit-code-that-makes-it-useful)
+  - [`aartool doctor`](#aartool-doctor)
 - [Deliverable 1: Baseline Audit Script](#deliverable-1-baseline-audit-script-cyberaar-baselinesh)
 - [Deliverable 2: Ansible Hardening Collection](#deliverable-2-ansible-hardening-collection)
   - [The Three-Step Pipeline](#the-three-step-pipeline)
@@ -52,8 +59,9 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 | Deliverable | Description | Version |
 |-------------|-------------|---------|
 | `scripts/aartool` | One front door: `inspect`, `plan`, `apply`, `surface` (kernel attack surface), `doctor` (preflight), `report` (dashboard), `diff` (drift), `install` | v0.5.0 |
-| `scripts/cyberaar-baseline.sh` | Standalone bash script: audits a Linux server across 96 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
-| `ansible-hardening/` | Ansible collection (`cyberaar.hardening`): 51 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
+| `scripts/cyberaar-baseline.sh` | Standalone bash script: audits a Linux server across 109 security checks, produces HTML + JSON reports with Ansible remediation plan | v4.2.0 |
+| `ansible-hardening/` | Ansible collection (`cyberaar.hardening`): 52 CIS-aligned hardening roles for RHEL 9 family and Ubuntu/Debian | v2.0.0 |
+| `scripts/aartool` | One front door for the two above: audit, get an ordered plan, understand any finding, preview, apply, prove what changed. Manual: [docs/AARTOOL.md](docs/AARTOOL.md) | v0.6.0 |
 | `execution-environment/` | Docker image: self-contained EE with Ansible + collection + playbooks, no local install required | `ghcr.io/cyberaar/ee-hardening` |
 | `dashboard/index.html` | Single-file web dashboard: visualise baseline JSON reports across multiple hosts, before/after comparison, PDF export | zero dependencies |
 
@@ -72,17 +80,34 @@ cyberaar-toolkit/
 ├── execution-environment/
 │   ├── Containerfile                 # Docker image definition (build from repo root)
 │   └── README.md                     # EE usage guide
+├── docs/
+│   └── AARTOOL.md                    # aartool manual: every flag, bastions, troubleshooting
 ├── scripts/
+│   ├── aartool                       # One front door for everything below, generated bundle
+│   ├── build-aartool.sh              # Rebuilds aartool from aartool-src/
 │   ├── cyberaar-baseline.sh          # Standalone audit script (v4.2.0), generated bundle
 │   ├── build.sh                      # Rebuilds cyberaar-baseline.sh from src/
 │   ├── run-hardening.sh              # Pipeline runner (wraps ansible-playbook)
 │   ├── README.md                     # Baseline checker full reference
-│   └── src/                          # Source layout (edit here, not in the bundle)
-│       ├── main.sh                   # Shebang, CLI args, install/uninstall
-│       ├── run.sh                    # Execution entry point
-│       ├── lib/                      # core.sh, ansible_map.sh, remote.sh
-│       ├── checks/                   # 8 files, one per check section
-│       └── renderers/                # terminal.sh, json.sh, html.sh
+│   ├── aartool-src/                  # Source layout (edit here, not in the bundle)
+│   │   ├── main.sh                   # Shebang, output helpers, usage, -v
+│   │   ├── run.sh                    # Command dispatch
+│   │   ├── lib/                      # paths.sh, surface.sh, kb.sh (the explain entries)
+│   │   └── cmd/                      # one file per command: inspect, harden, advise,
+│   │                                 #   explain, surface, doctor, report, diff, install
+│   ├── src/                          # Source layout for the baseline bundle
+│   │   ├── main.sh                   # Shebang, CLI args, install/uninstall
+│   │   ├── run.sh                    # Execution entry point
+│   │   ├── lib/                      # core.sh, ansible_map.sh, remote.sh, distro.sh
+│   │   ├── checks/                   # 9 files, one per check section
+│   │   └── renderers/                # terminal.sh, json.sh, html.sh
+│   └── tests/                        # Guards: each was written after the bug it prevents
+│       ├── test_aartool.sh           # CLI behaviour, explain, advise
+│       ├── test_docs.sh              # Documentation matches the CLI
+│       ├── test_remediation_map.sh   # Every remediation tag is real
+│       ├── test_distro.sh            # Right role family on derivatives
+│       ├── test_escaping.sh          # </script> in a hostname cannot break a report
+│       └── fixtures/                 # Sample audit JSON
 ├── ansible-hardening/
 │   ├── galaxy.yml                    # Collection metadata (cyberaar.hardening v2.0.0)
 │   ├── requirements.yml              # ansible.posix + community.general
@@ -99,8 +124,9 @@ cyberaar-toolkit/
 │   │   ├── 1_execute_baseline_before.yml    # Pre-hardening audit
 │   │   ├── 2_configure_hardening.yml        # Hardening roles (RHEL9 + Ubuntu)
 │   │   └── 3_execute_baseline_after.yml     # Post-hardening audit
-│   └── roles/                        # 51 hardening roles (parallel RHEL9 + Ubuntu)
-└── .github/                          # Issue templates, PR template
+│   ├── roles/                        # 52 hardening roles (parallel RHEL9 + Ubuntu)
+│   └── molecule/                     # 31 test scenarios, all wired into CI
+└── .github/                          # Issue templates, PR template, 5 workflows
 ```
 
 ---
@@ -264,7 +290,7 @@ ansible-hardening/reports/after/<hostname>/report.json    ← post-hardening
 ### Step 4: Explore
 
 - **Fleet view**: all hosts on one screen, worst score first
-- **Click a host card**: opens the detail panel with all 96 checks
+- **Click a host card**: opens the detail panel with all 109 checks
 - **Filter** by FAIL / WARN / PASS to focus on what matters
 - **Ansible remediation** block shows the exact command to remediate FAIL/WARN items
 - **Export PDF**: click the button top right, then use your browser's print dialog
@@ -275,20 +301,35 @@ ansible-hardening/reports/after/<hostname>/report.json    ← post-hardening
 
 ## Deliverable 0c: `aartool`, one front door
 
+> **Full manual: [docs/AARTOOL.md](docs/AARTOOL.md)**, with every flag, the
+> bastion recipe, exit codes, a troubleshooting table and how to extend it.
+
 ```bash
 git clone https://github.com/cyberaar/cyberaar-toolkit
 cd cyberaar-toolkit
 sudo scripts/aartool install          # or: scripts/aartool install --prefix ~/.local
 aartool doctor                        # is everything it needs actually here?
-sudo aartool inspect                  # audit this machine
-aartool surface                       # what would the next kernel LPE reach?
 ```
+
+Then the whole loop, on a machine you are sitting at:
+
+```bash
+sudo aartool inspect -o ./reports     # 109 checks. Changes nothing.
+aartool advise                        # what to fix first, and what each fix costs
+aartool explain KRN-01                # anything in it you do not recognise
+aartool plan  --target web-01 --user ubuntu --only ssh    # preview
+aartool apply --target web-01 --user ubuntu --only ssh    # do it
+aartool diff before.json after.json   # prove only what you intended changed
+```
+
+Add `-v` to any command to see what it is shelling out to. That is the flag
+that helps when the failure is in `ssh` or `ansible` rather than in aartool.
 
 `install` creates a **symlink**, not a copy, and that is not a detail. aartool
 locates the playbooks, the baseline script and the dashboard by walking up from
 its own file until it finds `ansible-hardening/`. Copied to `/usr/local/bin`
 there is nothing above it but `/usr` and `/`, so a copy finds none of them. Keep
-the clone where it is, or set `AARTOOL_HOME` — and if you do copy it, the error
+the clone where it is, or set `AARTOOL_HOME`, and if you do copy it the error
 message tells you exactly that.
 
 
@@ -316,7 +357,81 @@ scripts/aartool plan --target ubuntu-vm-01 --user ubuntu --only ssh
 scripts/aartool apply --target ubuntu-vm-01 --user ubuntu
 ```
 
-### `aartool surface` — the window before the patch
+### `aartool advise`: the order to fix things in
+
+An audit tells you what is wrong. It does not tell you what to do on Monday
+morning. Forty findings in report order have no ordering, so the cheapest item
+and the one an attacker is using right now look identical, and there is nothing
+separating the changes you can apply without a conversation from the changes
+that will take a workload down. Both omissions have the same result: the report
+is read once and filed.
+
+```bash
+aartool advise                                  # newest report it can find
+aartool advise ./reports/audit.json --target web-01 --user ubuntu
+aartool advise --wave 1 --safe-only             # just the outside-facing, safe half
+```
+
+The ordering is by **reachability**, not by CVSS-style severity, because
+reachability is what decides what an attacker gets to first:
+
+| wave | the question it answers |
+|---|---|
+| 1 | What can be reached from the network, with no account? |
+| 2 | What turns an account into root? |
+| 3 | What would mean you never found out? |
+| 4 | Hygiene and audit evidence. |
+
+Inside a wave, `FAIL` before `WARN`. Then anything whose fix has a real
+operational cost is lifted out into a separate **Decide before you apply** list:
+
+```
+── Wave 1 · Reachable from the network: no account needed
+   FAIL  SSH-01    PermitRootLogin enabled  explain
+   FAIL  NET-01    No host firewall active  [needs a decision]  explain
+   WARN  SYS-11    Running the newest installed kernel  explain
+
+     preview  aartool plan  --target web-01 --user ubuntu --only firewall,ssh,updates
+     apply    aartool apply --target web-01 --user ubuntu --only firewall,ssh,updates
+```
+
+`--safe-only` takes those items out of the waves without hiding them; they stay
+on the page in the decision list. Dropping findings quietly is the failure mode
+this tool exists to avoid.
+
+Every command it prints is generated from the same remediation map the reports
+use, and a test asserts that every tag it can print is carried by a role in the
+playbook. Without that test, a wrong tag produces a command that runs cleanly,
+matches nothing, changes nothing, exits zero, and leaves you believing the
+finding is fixed.
+
+### `aartool explain`: what the finding actually means
+
+```bash
+aartool explain KRN-01
+aartool explain --list        # all 109 check IDs and their titles
+aartool explain --written     # the ones with a long-form entry
+```
+
+Six sections, in the same order every time, so it stays skimmable: **WHAT** the
+check reads, **WHY** it matters as a concrete path from finding to compromised
+machine, the **COST** including what it breaks, how to fix it **BY HAND**, how
+to fix it **WITH AARTOOL**, and **MORE** for the part that is not obvious.
+
+The cost section is the one that matters. `KRN-01` says plainly that closing
+unprivileged user namespaces breaks rootless Docker, Chrome's sandbox and most
+CI runners, and that "not on this machine" is a legitimate answer. A hardening
+tool that only argues one side gets switched off entirely, and then none of its
+safe recommendations apply either.
+
+`explain` always answers. Where there is no written entry it assembles one from
+the remediation map, which covers 99 of the 109 IDs; where an ID is deliberately
+unmapped it says why no playbook can fix it. `SYS-11` needs a reboot, `KRN-08`
+is a boot parameter, `AUTH-11` needs a human who knows what that second UID 0
+account is for. A help command that refuses on a third of its inputs teaches
+people not to type it.
+
+### `aartool surface`: the window before the patch
 
 Red Hat and Debian ship the patch. Nothing helps you in the window *before* the
 patch exists, or on the machine you cannot reboot until the change window in
@@ -349,10 +464,10 @@ gets uninstalled, and then it protects nothing.
 Nothing here is compiled and nothing is rebooted. Everything applied lands in one
 drop-in file you can delete to revert. The same settings are audited as the
 `KRN-01`..`KRN-12` family in every baseline report, so the assessment and the
-remediation are two views of one thing — and a test asserts they cannot drift
+remediation are two views of one thing, and a test asserts they cannot drift
 apart.
 
-### `aartool report` — the dashboard, one command away
+### `aartool report`: the dashboard, one command away
 
 The toolkit already ships a single-file dashboard with no server and no internet
 requirement. The friction was everything around it: run an audit, find the JSON,
@@ -380,7 +495,7 @@ machine you were asked to audit, and `</script>` in one would otherwise end the
 block and turn the rest of a file you email to a client into markup. There is a
 test that attempts exactly that.
 
-### `aartool diff` — drift, and the exit code that makes it useful
+### `aartool diff`: drift, and the exit code that makes it useful
 
 ```bash
 aartool diff last-week.json today.json
@@ -438,7 +553,7 @@ the build if the two drift.
 
 ## Deliverable 1: Baseline Audit Script (`cyberaar-baseline.sh`)
 
-The standalone audit script runs **96 security checks** across 8 sections and produces:
+The standalone audit script runs **109 security checks** across 9 sections and produces:
 
 - **Terminal output**: colour-coded PASS / WARN / FAIL with a security score
 - **HTML report**: self-contained file for sharing with management or auditors
@@ -475,18 +590,22 @@ cyberaar-baseline --inventory ansible-hardening/inventory/hosts \
 
 ### What it checks
 
-96 checks across 8 sections, each mapped to a CIS benchmark control:
+109 checks across 9 sections, each mapped to a CIS benchmark control:
 
-| Section | Checks | Coverage highlights |
-|---|---|---|
-| 1. System & OS | 10 | OS support, kernel updates, SELinux/AppArmor, time sync, GRUB perms, Secure Boot, `/dev/shm`, Ctrl-Alt-Del |
-| 2. Authentication | 16 | Root lock, empty passwords, password age/complexity, faillock lockout, shell timeout, UID 0 audit, group/gshadow perms, sudo use_pty, sudo logfile |
-| 3. SSH Hardening | 15 | 15 sshd_config directives including ciphers, session timeout, banner, PermitEmpty, HostbasedAuth, sshd_config perms |
-| 4. Filesystem | 12 | World-writable files, SUID count, noexec mounts, sticky bit, crontab perms, unowned files, SSH key perms |
-| 5. Network | 12 | Firewall, IP forwarding, ICMP redirects, SYN cookies, source routing, martian logging, rp_filter, IPv6 RA, wireless disabled |
-| 6. Logging & Audit | 8 | auditd, rsyslog, logrotate, audit rules, log size, `audit=1` at boot, journald persistence, remote syslog |
-| 7. Integrity | 8 | AIDE, rootkit scanner, suspicious cron, open ports, package GPG check, fail2ban, AIDE DB, cron dir perms |
-| 8. Compliance | 12 | Legal banner, /tmp partition, /home+/var partitions, umask, ASLR, kptr_restrict, dmesg_restrict, ptrace, USB blacklist, cron service, cron.allow/at.allow |
+| Section | Prefix | Checks | Coverage highlights |
+|---|---|---|---|
+| 1. System & OS | `SYS` | 11 | OS support, kernel updates, pending reboot, SELinux/AppArmor, time sync, GRUB perms, Secure Boot, `/dev/shm`, Ctrl-Alt-Del |
+| 2. Authentication | `AUTH` | 16 | Root lock, empty passwords, password age/complexity, faillock lockout, shell timeout, UID 0 audit, group/gshadow perms, sudo use_pty, sudo logfile |
+| 3. SSH Hardening | `SSH` | 15 | sshd_config directives including ciphers, session timeout, banner, PermitEmpty, HostbasedAuth, sshd_config perms |
+| 4. Filesystem | `FS` | 12 | World-writable files, SUID count, noexec mounts, sticky bit, crontab perms, unowned files, SSH key perms |
+| 5. Network | `NET` | 13 | Firewall, IP forwarding, ICMP redirects, SYN cookies, source routing, martian logging, rp_filter, IPv6 RA, wireless disabled |
+| 6. Logging & Audit | `LOG` | 10 | auditd, rsyslog, logrotate, audit rules, log size, `audit=1` at boot, journald persistence, remote syslog |
+| 7. Integrity | `INT` | 8 | AIDE, rootkit scanner, suspicious cron, open ports, package GPG check, fail2ban, AIDE DB, cron dir perms |
+| 8. Compliance | `COMP` | 12 | Legal banner, /tmp partition, /home+/var partitions, umask, ASLR, kptr_restrict, dmesg_restrict, ptrace, USB blacklist, cron service, cron.allow/at.allow |
+| 9. Kernel attack surface | `KRN` | 12 | User namespaces, unprivileged eBPF, io_uring, userfaultfd, module lockdown, kexec, TTY ldisc autoload, lockdown mode, BPF JIT hardening, SysRq, exotic filesystem and protocol modules |
+
+`aartool explain --list` prints all 109 with their titles, and
+`aartool explain <ID>` explains any one of them.
 
 Checks that require human judgment are flagged `(manual review required)` in the output, the script highlights them, the operator decides.
 
@@ -496,7 +615,7 @@ Checks that require human judgment are flagged `(manual review required)` in the
 
 ## Deliverable 2: Ansible Hardening Collection
 
-The Ansible collection (`cyberaar.hardening`) contains **51 hardening roles** organised in parallel pairs, each control area has a `_rhel9` variant and an `_ubuntu` variant (plus some Ubuntu-only roles like `fail2ban`). OS detection is automatic: the playbook applies the correct role set based on `ansible_os_family`.
+The Ansible collection (`cyberaar.hardening`) contains **52 hardening roles** organised in parallel pairs, each control area has a `_rhel9` variant and an `_ubuntu` variant (plus some Ubuntu-only roles like `fail2ban`). OS detection is automatic: the playbook applies the correct role set based on `ansible_os_family`.
 
 ### The Three-Step Pipeline
 
@@ -513,7 +632,7 @@ playbooks/0_execute_full_pipeline.yml
 ├── Step 2, 2_configure_hardening.yml        [tags: hardening]
 │     ├── Verifies OS is supported (RedHat or Debian family)
 │     ├── Detects OS family and applies the matching role set
-│     ├── 51 roles applied in CIS dependency order:
+│     ├── 52 roles applied in CIS dependency order:
 │     │     kernel → MAC → auth → users → SSH → firewall →
 │     │     network → ipv6 → wireless → crypto → audit →
 │     │     journald → integrity → time → boot → banner →

@@ -11,7 +11,7 @@
 #
 # Run: bash scripts/tests/test_escaping.sh
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 # shellcheck source=/dev/null
 source src/lib/core.sh
 

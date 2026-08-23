@@ -8,6 +8,9 @@ on:
       - "scripts/aartool-src/**"
       - "scripts/build-aartool.sh"
       - "scripts/aartool"
+      - "scripts/tests/**"
+      - "README.md"
+      - "docs/AARTOOL.md"
       - ".github/workflows/aartool-build.yml"
   pull_request:
     branches: [main]
@@ -15,6 +18,9 @@ on:
       - "scripts/aartool-src/**"
       - "scripts/build-aartool.sh"
       - "scripts/aartool"
+      - "scripts/tests/**"
+      - "README.md"
+      - "docs/AARTOOL.md"
       - ".github/workflows/aartool-build.yml"
   workflow_dispatch:
 
@@ -47,7 +53,14 @@ jobs:
       - name: Shellcheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck -S warning scripts/aartool
+          shellcheck -S warning scripts/aartool scripts/tests/*.sh
 
       - name: Smoke test
         run: bash scripts/tests/test_aartool.sh
+
+      # Documentation that tells someone to run a flag the CLI does not accept
+      # fails silently: they run it, get an error, assume it is their fault, and
+      # stop trusting the tool. Every aartool invocation in a fenced code block
+      # in README.md and docs/AARTOOL.md is checked against the CLI's own help.
+      - name: Documentation matches the CLI
+        run: bash scripts/tests/test_docs.sh

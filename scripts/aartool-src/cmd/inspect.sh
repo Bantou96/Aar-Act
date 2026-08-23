@@ -5,7 +5,7 @@
 
 cmd_inspect_usage() {
   cat <<'EOF'
-aartool inspect — audit a machine. Changes nothing.
+aartool inspect: audit a machine. Changes nothing.
 
 Usage:
   aartool inspect [options]

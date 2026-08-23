@@ -13,7 +13,7 @@
 
 cmd_diff_usage() {
   cat <<'EOF'
-aartool diff — what changed between two audits. Changes nothing.
+aartool diff: what changed between two audits. Changes nothing.
 
 Usage:
   aartool diff BEFORE.json AFTER.json [options]
