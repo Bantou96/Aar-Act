@@ -22,6 +22,30 @@ It changes nothing unless you type `apply`.
 
 ---
 
+## Where it has been run
+
+CI is not evidence that a tool works on a real machine, only that it works on
+the machine CI builds. Every release is exercised against live servers first.
+
+| | |
+|---|---|
+| Estate audit | 15 production nodes through a bastion, 15 of 15 succeeded |
+| Hardening applied | live documentation server running BookStack in containers, `doctor` to `plan` to `apply` to re-`inspect` to `diff`, score 72 to 75, nothing regressed, service up throughout |
+| Remote transport | proved against a host with the `sftp` subsystem removed, where `scp` genuinely cannot work (`scripts/tests/proof-remote.sh`) |
+| CI | 31 Molecule scenarios on Rocky 9 and Ubuntu 22.04, plus 746 assertions across seven guard suites |
+
+Those runs are where most of the fixes come from. The estate audit found a
+defect on the estate itself, a Jinja whitespace rule that had collapsed the
+monitoring block of `/etc/hosts` onto one line on every node for months. The
+hardening run found four defects in aartool, including a check that could never
+pass on any host and a check whose own remediation wrote a value the check
+rejected.
+
+Debian 12 is supported by the role logic but has no Molecule image yet. Treat it
+as untested rather than as a claim.
+
+---
+
 ## Why it exists
 
 The toolkit grew two entry points with two conventions for one workflow.
