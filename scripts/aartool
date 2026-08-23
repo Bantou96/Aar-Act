@@ -263,6 +263,9 @@ Options:
   --inventory FILE      Audit every host in an Ansible inventory
   --user USER           SSH user for a remote audit
   --ssh-key FILE        SSH private key for a remote audit
+  --ssh-opt OPT         Extra ssh option, repeatable. For a host behind a
+                        bastion, which is most of them:
+                          --ssh-opt '-J admin@bastion.example.com'
   -o, --out DIR         Write reports to DIR (HTML and JSON)
   -h, --help            Show this help
 
@@ -282,7 +285,7 @@ cmd_inspect() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --host|--host-file|--inventory|--user|--ssh-key)
+      --host|--host-file|--inventory|--user|--ssh-key|--ssh-opt)
         [[ $# -ge 2 ]] || die "$1 needs a value."
         passthru+=("$1" "$2"); shift 2 ;;
       -o|--out)
