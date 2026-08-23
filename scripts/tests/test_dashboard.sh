@@ -141,5 +141,37 @@ else
   printf 'SKIP  node not available, render test not run\n'
 fi
 
+# ── Anonymising must not break the document it anonymises ────────────────────
+# --redact is a literal global substitution over the whole JSON, and the
+# report's structural keys are strings in that same document. `--redact
+# cyberaar` rewrote every "cyberaar_baseline" key, the bootstrap found no
+# reports, and the output was a valid HTML file showing an empty page. Valid,
+# openable, and containing nothing.
+if command -v node >/dev/null 2>&1 && [[ -f tests/fixtures/audit-fixture.json ]]; then
+  _tmp=$(mktemp -d); trap 'rm -rf "$_tmp"' EXIT
+
+  if bash ./aartool report tests/fixtures/audit-fixture.json --anonymise \
+       --out "$_tmp/anon.html" >/dev/null 2>&1; then
+    ok
+    n=$(grep -c '"cyberaar_baseline"' "$_tmp/anon.html" || true)
+    [[ "$n" -ge 1 ]] && ok || bad "the anonymised output lost its schema key, so it renders empty"
+
+    data=$(sed -n '/Injected by aartool/,$p' "$_tmp/anon.html")
+    if grep -q '"host":[[:space:]]*"server-' <<<"$data"; then ok
+    else bad "the anonymised output did not rename the host"; fi
+    if grep -q 'proof-target-01\|fixture-web-01' <<<"$data"; then
+      bad "the original hostname survived anonymising"
+    else ok; fi
+  else
+    bad "aartool report --anonymise failed on the fixture"
+  fi
+
+  # And the refusal that prevents the schema-key case entirely.
+  if bash ./aartool report tests/fixtures/audit-fixture.json --anonymise \
+       --redact cyberaar --out "$_tmp/bad.html" >/dev/null 2>&1; then
+    bad "--redact cyberaar was accepted; it rewrites the report's own schema key and the output renders nothing"
+  else ok; fi
+fi
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

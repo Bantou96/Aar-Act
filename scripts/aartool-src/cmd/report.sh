@@ -26,6 +26,13 @@ Options:
                     server: run it there, then tunnel with
                       ssh -L PORT:127.0.0.1:PORT user@host
       --open        Try to open the result in a browser
+      --anonymise   Replace every hostname with server-01, server-02, ... and
+                    every IP address with ip-01, ip-02, ... consistently across
+                    all reports, so the file can be shared outside the estate
+                    it came from. Prints the mapping and what it changed.
+      --redact PAT  Also replace this literal string everywhere. Repeatable.
+                    For the things only you know are identifying: a client name,
+                    a project codename, an admin account.
   -h, --help        Show this help
 
 With no arguments it opens the empty dashboard, where you can drag reports in
@@ -33,6 +40,9 @@ yourself.
 
   sudo aartool inspect --out /tmp/audit
   aartool report /tmp/audit/*.json --out fleet.html
+
+  # A version you can hand to someone outside the estate
+  aartool report /tmp/audit/*.json --anonymise --redact acme-corp --out share.html
 EOF
 }
 
@@ -42,15 +52,131 @@ EOF
 # their \u form keeps the document valid and closes the hole.
 _report_js_safe() { sed -e 's|<|\\u003c|g' -e 's|>|\\u003e|g'; }
 
+# ── Anonymising ───────────────────────────────────────────────────────────────
+# An audit report is a list of a machine's weaknesses with its name attached.
+# There are good reasons to show one to somebody: a client, a conference talk, a
+# post explaining the tool. There is no good reason to hand over the hostnames
+# while doing it.
+#
+# The substitution is literal and global, not a field rewrite. A hostname does
+# not only live in the "host" key; it turns up in evidence strings, in
+# remediation hints, in whatever a check happened to capture. Replacing the key
+# alone produces a document that looks anonymised and is not, which is worse
+# than not trying.
+#
+# It builds one mapping across every input file, so the same machine is the same
+# server-NN in all of them and a before/after pair still lines up.
+_report_anon_sed=""
+_report_anon_map=""
+
+_report_build_anon() {
+  local -n _files_ref="$1"; shift
+  local -a extra=("$@")
+  local f name ip n=0 script="" map=""
+
+  # Longest first. Replacing "web-01" before "web-01.example.com" would leave
+  # "server-04.example.com" behind, which still names the domain.
+  local hosts
+  hosts=$(grep -ho '"host":[[:space:]]*"[^"]*"' "${_files_ref[@]}" 2>/dev/null \
+          | sed 's/.*"host":[[:space:]]*"//; s/"$//' | sort -u \
+          | awk '{ print length, $0 }' | sort -rn | cut -d' ' -f2- || true)
+  while IFS= read -r name; do
+    [[ -z "$name" ]] && continue
+    n=$((n+1))
+    local alias; alias=$(printf 'server-%02d' "$n")
+    script+="s|$(_report_sed_escape "$name")|${alias}|g;"
+    map+="  ${name}  ->  ${alias}"$'\n'
+  done <<<"$hosts"
+
+  # Addresses, in the order they first appear so the numbering is stable.
+  local ips
+  ips=$(grep -hoE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' "${_files_ref[@]}" 2>/dev/null | sort -u || true)
+  local m=0
+  while IFS= read -r ip; do
+    [[ -z "$ip" ]] && continue
+    m=$((m+1))
+    script+="s|$(_report_sed_escape "$ip")|$(printf 'ip-%02d' "$m")|g;"
+  done <<<"$ips"
+  [[ "$m" -gt 0 ]] && map+="  ${m} IP address(es)  ->  ip-01 .. $(printf 'ip-%02d' "$m")"$'\n'
+
+  # --redact is a literal global substitution, which is what makes it useful and
+  # also what makes it dangerous: the report's own structural keys are just
+  # strings in the same document. `--redact cyberaar` rewrote every
+  # "cyberaar_baseline" key to "REDACTED_baseline", the dashboard's bootstrap
+  # found no reports to load, and the output was a perfectly valid HTML file
+  # showing an empty page. Refuse instead, and say why.
+  local schema="cyberaar_baseline host os date score summary results id category status check detail remediation ansible_remediation remediation_tags version fail_ids warn_ids playbook inventory pass warn fail total"
+  local e k
+  for e in ${extra[@]+"${extra[@]}"}; do
+    for k in $schema; do
+      if [[ "$k" == *"$e"* ]]; then
+        die "--redact '$e' would also rewrite the report's own '$k' field, and the
+        output would render an empty dashboard. Pick a more specific string, or
+        drop it: hostnames and addresses are already handled by --anonymise."
+      fi
+    done
+    script+="s|$(_report_sed_escape "$e")|REDACTED|g;"
+    map+="  ${e}  ->  REDACTED"$'\n'
+  done
+
+  _report_anon_sed="$script"
+  _report_anon_map="$map"
+}
+
+# A hostname can legitimately contain characters sed treats as syntax, and the
+# pipe has to be escaped too because it is also the s||| delimiter here. The
+# first version of this used a sed bracket expression containing a pipe, which
+# sed read as the end of the pattern, so it silently produced a broken script
+# and the whole command exited 1 with no message. Parameter expansion has no
+# delimiter to collide with.
+_report_sed_escape() {
+  local t="$1"
+  t="${t//\\/\\\\}"          # backslash first, or it doubles the others
+  t="${t//|/\\|}"
+  t="${t//./\\.}"
+  t="${t//\*/\\*}"
+  t="${t//\[/\\[}"
+  t="${t//\]/\\]}"
+  t="${t//^/\\^}"
+  t="${t//\$/\\$}"
+  t="${t//&/\\&}"
+  t="${t//\//\\/}"
+  printf '%s' "$t"
+}
+
+# What a reader would still be able to identify. Printed after the fact rather
+# than silently trusted, because the operator knows things this cannot: a client
+# name, an internal codename, a person.
+_report_anon_warn() {
+  local file="$1" leaks="" data
+  # Only the injected data. The dashboard above it contains example commands
+  # with an example address in them, so scanning the whole file warned on every
+  # single run, and a warning that always fires is one people stop reading.
+  data=$(sed -n '/Injected by aartool/,$p' "$file" 2>/dev/null || true)
+  [[ -n "$data" ]] || return 0
+  grep -qE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' <<<"$data" && leaks+=" an IP address,"
+  # Any host value that is not one of ours. Written as a positive match on what
+  # a real hostname looks like, because grep -E has no negative lookahead and
+  # the version that pretended otherwise checked nothing at all.
+  grep -o '"host":[[:space:]]*"[^"]*"' <<<"$data" 2>/dev/null \
+    | grep -qv '"server-[0-9]' && leaks+=" a hostname,"
+  if [[ -n "$leaks" ]]; then
+    warn "After anonymising, the output still contains:${leaks%,}"
+    warn "Read it before you publish it."
+  fi
+}
+
 cmd_report() {
-  local out="" serve="" do_open=false
-  local -a files=()
+  local out="" serve="" do_open=false anon=false
+  local -a files=() redact=()
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -o|--out)  [[ $# -ge 2 ]] || die "$1 needs a file path."; out="$2"; shift 2 ;;
       --serve)   [[ $# -ge 2 ]] || die "--serve needs a port."; serve="$2"; shift 2 ;;
       --open)    do_open=true; shift ;;
+      --anonymise|--anonymize) anon=true; shift ;;
+      --redact)  [[ $# -ge 2 ]] || die "--redact needs a string."; redact+=("$2"); shift 2 ;;
       -h|--help) cmd_report_usage; return 0 ;;
       --) shift; while [[ $# -gt 0 ]]; do files+=("$1"); shift; done ;;
       -*) die "Unknown option for report: $1. Try 'aartool report --help'." ;;
@@ -98,6 +224,12 @@ cmd_report() {
   local target="${out:-$(mktemp -t aartool-report-XXXXXX.html)}"
   cp "$dash" "$target" || die "Cannot write $target"
 
+  if [[ "$anon" == true ]]; then
+    _report_build_anon files ${redact[@]+"${redact[@]}"}
+    info "Anonymised. The mapping is printed once, here, and stored nowhere:"
+    printf '%s' "$_report_anon_map"
+  fi
+
   {
     printf '\n<script>\n'
     printf '// Injected by aartool %s. The dashboard is unmodified above this line.\n' "$AARTOOL_VERSION"
@@ -106,7 +238,11 @@ cmd_report() {
     for f in "${files[@]}"; do
       [[ "$first" == true ]] || printf ',\n'
       first=false
-      _report_js_safe < "$f"
+      if [[ "$anon" == true ]]; then
+        sed "$_report_anon_sed" < "$f" | _report_js_safe
+      else
+        _report_js_safe < "$f"
+      fi
     done
     printf '\n  ];\n'
     cat <<'JS'
@@ -128,6 +264,20 @@ cmd_report() {
 JS
     printf '</script>\n'
   } >> "$target"
+
+  # Verify the artefact rather than trusting the transformation that produced
+  # it. Anonymising rewrites the document with a generated sed script; if that
+  # script touches something structural the file is still valid HTML and still
+  # opens, and shows nothing at all.
+  local embedded
+  embedded=$(grep -c '"cyberaar_baseline"' "$target" || true)
+  if [[ "$embedded" -lt "${#files[@]}" ]]; then
+    die "Only ${embedded} of ${#files[@]} reports survived into $target with an intact
+        structure, so it would open empty. This is a bug in aartool, not in your
+        input; please report it with the flags you used."
+  fi
+
+  [[ "$anon" == true ]] && _report_anon_warn "$target"
 
   local n="${#files[@]}"
   if [[ -n "$out" ]]; then
