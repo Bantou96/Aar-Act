@@ -46,7 +46,7 @@ docker run --rm -it \
     /usr/share/cyberaar/playbooks/0_execute_full_pipeline.yml
 ```
 
-> Full reference: [`execution-environment/README.md`](execution-environment/README.md)
+> Full reference: [`execution-environment/README.md`](../execution-environment/README.md)
 
 ---
 

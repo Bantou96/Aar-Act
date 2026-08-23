@@ -93,6 +93,6 @@ ansible-hardening/reports/after/<hostname>/report.json    ← post-hardening
 - **Ansible remediation** block shows the exact command to remediate FAIL/WARN items
 - **Export PDF**: click the button top right, then use your browser's print dialog
 
-> Full reference: [`dashboard/README.md`](dashboard/README.md)
+> Full reference: [`dashboard/README.md`](../dashboard/README.md)
 
 ---

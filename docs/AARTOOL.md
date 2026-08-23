@@ -83,8 +83,8 @@ Everything works from the clone:
 ### In a container
 
 The repository ships an execution environment with Ansible and the collections
-already present. See `execution-environment/` and the Deliverable 0 section of
-the root README. Set `AARTOOL_HOME` to wherever the toolkit is mounted.
+already present. See [CONTAINER.md](CONTAINER.md). Set `AARTOOL_HOME` to
+wherever the toolkit is mounted.
 
 ---
 

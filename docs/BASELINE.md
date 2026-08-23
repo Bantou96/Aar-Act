@@ -69,7 +69,7 @@ cyberaar-baseline --inventory ansible-hardening/inventory/hosts \
 
 Checks that require human judgment are flagged `(manual review required)` in the output, the script highlights them, the operator decides.
 
-> Full reference: [`scripts/README.md`](scripts/README.md)
+> Full reference: [`scripts/README.md`](../scripts/README.md)
 
 ---
 
