@@ -38,6 +38,23 @@ scripts/aartool install --prefix ~/.local   # needs ~/.local/bin on PATH
 ./scripts/aartool advise                    # or just run it from the clone
 ```
 
+Or take the single file, on a machine you cannot clone onto. The audit script
+has no dependencies beyond the coreutils already there, which is what makes it
+work on an air-gapped box:
+
+```bash
+curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/cyberaar-baseline.sh
+curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+chmod +x cyberaar-baseline.sh && sudo ./cyberaar-baseline.sh
+```
+
+`aartool` and the Ansible collection tarball are attached to every release the
+same way, so neither Ansible Galaxy nor a container registry is on the critical
+path. Release assets do not carry the executable bit, hence the `chmod`. Verify
+against `SHA256SUMS`: for a tool that rewrites `sshd_config` and PAM, checking
+what you downloaded is not ceremony.
+
 Auditing the machine you are on still needs root either way: it reads
 `sshd_config`, `/etc/shadow`, the audit rules and sysctls. Auditing a *remote*
 host needs no privilege locally at all.
