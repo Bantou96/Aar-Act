@@ -111,7 +111,7 @@ cyberaar-baseline \
 
 # With Ansible remediation suggestions pointing to the local repo
 sudo cyberaar-baseline \
-  --ansible-dir ~/cyberaar-toolkit/ansible-hardening \
+  --ansible-dir ~/aartool/ansible-hardening \
   --html-out /tmp/report.html
 ```
 

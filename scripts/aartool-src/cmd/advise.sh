@@ -81,10 +81,10 @@ Options:
   -h, --help        This help
 
 Examples:
-  sudo aartool inspect -o ./reports
-  aartool advise ./reports/cyberaar-web-01-20260823-101500.json \
-    --target web-01 --user ubuntu
-  aartool advise --wave 1 --safe-only        # picks the newest report itself
+  sudo aartool inspect                       # reports land in ./reports
+  aartool advise                             # reads the newest one
+  aartool advise --target web-01 --user ubuntu
+  aartool advise --wave 1 --safe-only
 EOF
 }
 
@@ -118,12 +118,11 @@ cmd_advise() {
 
   if [[ -z "$report" ]]; then
     report="$(_advise_find_report || true)"
-    [[ -n "$report" ]] || die "No audit report given and none found.
-        Produce one first. inspect only writes files when you give it a
-        directory, so the -o is not optional here:
-          sudo aartool inspect -o ./reports
-        then, with no argument, advise picks the newest one:
-          aartool advise"
+    [[ -n "$report" ]] || die "No audit report given, and none found in ., ./reports or /var/log/cyberaar.
+        Produce one first:
+          sudo aartool inspect                          this machine
+          aartool inspect --host HOST --user USER       another machine
+        Reports land in ./reports, and advise with no argument reads the newest."
     info "Using the most recent report found: $report"
   fi
   [[ -f "$report" ]] || die "No such report: $report"

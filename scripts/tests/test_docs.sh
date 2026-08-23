@@ -18,7 +18,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 AARTOOL="./aartool"
-DOCS=(../README.md ../docs/AARTOOL.md)
+DOCS=(../README.md ../docs/AARTOOL.md ../docs/ANSIBLE.md ../docs/BASELINE.md ../docs/DASHBOARD.md ../docs/CONTAINER.md)
 
 PASS=0 FAIL=0
 fail() { FAIL=$((FAIL+1)); printf 'FAIL  %s\n' "$*"; }
@@ -78,8 +78,10 @@ done
 
 # The dedicated manual must exist and be linked from the README, or nobody
 # finds it.
-[[ -f ../docs/AARTOOL.md ]] && ok || fail "docs/AARTOOL.md is missing"
-grep -q 'docs/AARTOOL.md' ../README.md && ok || fail "README.md does not link to docs/AARTOOL.md"
+for d in AARTOOL ANSIBLE BASELINE DASHBOARD CONTAINER; do
+  [[ -f "../docs/$d.md" ]] && ok || fail "docs/$d.md is missing"
+  grep -q "docs/$d.md" ../README.md && ok || fail "README.md does not link to docs/$d.md"
+done
 
 # No em dashes: house style, and they are a nuisance to type on the keyboard
 # this repository is written from.
@@ -120,6 +122,29 @@ for doc in "${DOCS[@]}"; do
     fi
   done < <(grep -oP '\b(SYS|AUTH|SSH|NET|KRN|FS|LOG|INT|COMP)-[0-9]{2}\b' "$doc" | sort -u)
 done
+
+# Local links must resolve. Splitting the README into docs/ silently broke
+# three of them: links written relative to the repo root resolved to
+# docs/scripts/README.md and friends once the text moved down a directory.
+# GitHub renders them as normal links and only 404s when someone clicks.
+while read -r doc target; do
+  [[ -z "$doc" ]] && continue
+  base=$(dirname "$doc")
+  resolved=$(cd "$base" 2>/dev/null && realpath -m --relative-to=. "$target" 2>/dev/null)
+  if [[ -e "$base/$target" ]]; then
+    ok
+  else
+    fail "$(basename "$doc") links to '$target', which does not exist (${resolved:-unresolvable})"
+  fi
+done < <(
+  for doc in ../README.md ../CONTRIBUTING.md ../docs/*.md; do
+    [[ -f "$doc" ]] || continue
+    grep -oP '\]\(\K[^)#][^)]*' "$doc" \
+      | sed 's/#.*//' \
+      | grep -vE '^(https?:|mailto:)' \
+      | while read -r t; do [[ -n "$t" ]] && printf '%s %s\n' "$doc" "$t"; done
+  done
+)
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

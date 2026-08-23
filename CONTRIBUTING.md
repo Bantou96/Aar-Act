@@ -1,4 +1,4 @@
-# Contributing to cyberaar-toolkit
+# Contributing to aartool
 
 Thank you for helping! 😊
 

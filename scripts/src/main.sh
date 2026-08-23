@@ -4,7 +4,7 @@
 #  Vérificateur de Sécurité de Base CyberAar
 #
 #  Version   : 4.2.0
-#  Author    : CyberAar (https://github.com/cyberaar/cyberaar-toolkit)
+#  Author    : CyberAar (https://github.com/cyberaar/aartool)
 #  License   : GPL v3
 #  Target    : RHEL/CentOS/Ubuntu/Debian (Linux Government Servers)
 #
@@ -65,7 +65,7 @@ Examples:
   cyberaar-baseline --inventory inventory/hosts --user admin --output-dir /var/log/cyberaar
 
   # With Ansible remediation suggestions
-  cyberaar-baseline --host 10.0.1.10 --ansible-dir ~/cyberaar-toolkit/ansible-hardening
+  cyberaar-baseline --host 10.0.1.10 --ansible-dir ~/aartool/ansible-hardening
 
   # Install
   sudo bash cyberaar-baseline.sh --install

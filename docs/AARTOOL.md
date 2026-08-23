@@ -50,8 +50,8 @@ to run this", it is "did I mean this group or that one host".
 ## Install
 
 ```bash
-git clone https://github.com/cyberaar/cyberaar-toolkit
-cd cyberaar-toolkit
+git clone https://github.com/cyberaar/aartool
+cd aartool
 sudo scripts/aartool install                    # symlink into /usr/local/bin
 # or, without root:
 scripts/aartool install --prefix ~/.local       # ~/.local/bin must be on PATH
@@ -66,7 +66,7 @@ there is nothing above it but `/usr` and `/`, so a copy finds none of them.
 Keep the clone where it is, or point aartool at it:
 
 ```bash
-export AARTOOL_HOME=/opt/cyberaar-toolkit
+export AARTOOL_HOME=/opt/aartool
 ```
 
 If you do copy it and forget, the error says exactly this rather than failing
@@ -83,8 +83,8 @@ Everything works from the clone:
 ### In a container
 
 The repository ships an execution environment with Ansible and the collections
-already present. See `execution-environment/` and the Deliverable 0 section of
-the root README. Set `AARTOOL_HOME` to wherever the toolkit is mounted.
+already present. See [CONTAINER.md](CONTAINER.md). Set `AARTOOL_HOME` to
+wherever the toolkit is mounted.
 
 ---
 
@@ -93,17 +93,19 @@ the root README. Set `AARTOOL_HOME` to wherever the toolkit is mounted.
 On a machine you are sitting at:
 
 ```bash
-sudo aartool inspect -o ./reports   # 109 checks. Changes nothing.
-aartool advise                      # the ordered plan, from the newest report
-aartool explain KRN-01              # anything in it you do not recognise
+sudo aartool inspect     # 109 checks. Changes nothing.
+aartool advise           # the ordered plan, from the report inspect just wrote
+aartool explain KRN-01   # anything in it you do not recognise
 ```
 
-`inspect` writes an HTML report and a JSON report. The HTML opens offline with
-no external requests, which is the point on an isolated network. The JSON is
-what `advise`, `diff` and `report` read.
+`inspect` writes an HTML report and a JSON report into `./reports`, unless `-o`
+says otherwise. The HTML opens offline with no external requests, which is the
+point on an isolated network. The JSON is what `advise`, `diff` and `report`
+read.
 
-> `inspect` only writes files when you give it `-o DIR`. With no `-o` it prints
-> to the terminal and writes nothing, so `advise` afterwards has nothing to read.
+Under `sudo` the reports are handed back to the user who invoked it, so the
+second command does not need root as well. Pass `--no-save` if you want the
+terminal output and no files.
 
 ---
 
@@ -112,17 +114,19 @@ what `advise`, `diff` and `report` read.
 ### 1. Audit
 
 ```bash
-sudo aartool inspect -o ./reports                    # this machine
-aartool inspect --host 10.0.1.10 --user admin -o ./reports    # one remote host
-aartool inspect --inventory inventory/hosts -o ./reports      # a whole estate
+sudo aartool inspect                                  # this machine
+aartool inspect --host 10.0.1.10 --user admin         # one remote host
+aartool inspect --inventory ansible-hardening/inventory/hosts   # an estate
 ```
 
 ### 2. Get a plan, not a list
 
 ```bash
-aartool advise ./reports/cyberaar-web-01-20260823-101500.json \
-  --target web-01 --user ubuntu
+aartool advise --target web-01 --user ubuntu
 ```
+
+With no argument it reads the newest report in `.`, `./reports` or
+`/var/log/cyberaar`.
 
 Forty findings in report order is not a plan. It has no ordering, so the
 cheapest item and the one an attacker is using right now look the same, and it
@@ -205,7 +209,7 @@ until you have proved you can still log in with a third.
 ### 6. Prove what changed
 
 ```bash
-sudo aartool inspect -o ./reports
+sudo aartool inspect
 aartool diff ./reports/<before>.json ./reports/<after>.json
 ```
 
@@ -241,7 +245,8 @@ Audit a machine. Changes nothing.
 | `--ssh-key FILE` | SSH private key for a remote audit |
 | `--jump USER@HOST[:PORT]` | Reach the target through a bastion. See [bastions](#remote-hosts-and-bastions) |
 | `--ssh-opt OPT` | Extra `ssh` option, repeatable |
-| `-o, --out DIR` | Write HTML and JSON reports to DIR |
+| `-o, --out DIR` | Write HTML and JSON reports to DIR. Default `./reports` |
+| `--no-save` | Print to the terminal and write nothing |
 
 With no `--host`, `--host-file` or `--inventory` it audits the machine it is
 running on, which needs root.
@@ -352,8 +357,7 @@ Most machines worth hardening are not directly reachable. Use `--jump`:
 aartool inspect \
   --host 10.0.1.31 --user admin \
   --ssh-key ~/.ssh/id_ed25519 \
-  --jump admin@bastion.example.com \
-  -o ./reports
+  --jump admin@bastion.example.com
 ```
 
 Three things worth knowing before you run this against a real estate.
@@ -413,13 +417,13 @@ Run the command again with `-v` first. It prints the underlying `ssh` or
 
 | symptom | cause | fix |
 |---|---|---|
-| `Cannot find the toolkit` | aartool was copied rather than symlinked | `export AARTOOL_HOME=/path/to/cyberaar-toolkit`, or reinstall with `aartool install` |
+| `Cannot find the toolkit` | aartool was copied rather than symlinked | `export AARTOOL_HOME=/path/to/aartool`, or reinstall with `aartool install` |
 | `No inventory at .../inventory/hosts` | `inventory/hosts` is gitignored, so a fresh clone has none | `cp ansible-hardening/inventory/hosts.example ansible-hardening/inventory/hosts` |
 | `Target 'x' is not in the inventory` | typo, or the group is spelled differently | `grep -n x ansible-hardening/inventory/hosts` |
-| `No audit report given and none found` | `inspect` was run without `-o DIR`, so nothing was written | `sudo aartool inspect -o ./reports` |
+| `No audit report given and none found` | no audit has been run in this directory | `sudo aartool inspect`, which writes to `./reports` |
 | `does not look like a cyberaar audit report` | the HTML report was passed instead of the JSON | use the `.json` from the same run |
 | `couldn't resolve module ansible.posix.sysctl` | collections not installed | `ansible-galaxy collection install -r ansible-hardening/requirements.yml`, then `aartool doctor` |
-| `Please run as root` | a local audit reads `/etc/shadow`, sshd config and sysctls | `sudo aartool inspect -o ./reports` |
+| `A local audit needs root` | it reads `/etc/shadow`, sshd config, audit rules and sysctls | `sudo aartool inspect`, or audit another machine with `--host` |
 | SSH banned you mid-scan | agent offered too many keys, `fail2ban` acted | pass `--ssh-key`, which now implies `IdentitiesOnly=yes`, and wait out the ban |
 | `Host key verification failed` reaching a private host | `-J` was used and does not carry the key or options to the jump hop | use `--jump USER@BASTION` instead |
 | `scp: subsystem request failed` from an old version | the host has no `sftp` subsystem | upgrade the toolkit; the transport no longer uses `scp` |
@@ -450,7 +454,7 @@ If a finding is what you disagree with rather than a failure, `aartool explain
   run: aartool doctor
 
 - name: Audit
-  run: sudo aartool inspect -o ./reports
+  run: sudo aartool inspect -o ./reports    # explicit, for a fixed CI path
 
 - name: Fail the build on a regression
   run: aartool diff baseline/reference.json ./reports/*.json --quiet
