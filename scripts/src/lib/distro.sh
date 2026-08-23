@@ -29,6 +29,9 @@
 OS_RELEASE_PATH="${OS_RELEASE_PATH:-/etc/os-release}"
 
 _DISTRO_ID=""; _DISTRO_LIKE=""; _DISTRO_PRETTY=""; _DISTRO_VERSION=""
+# The path is deliberately a variable so tests can point at a fixture and a
+# mounted image can be identified; shellcheck cannot follow that statically.
+# shellcheck source=/dev/null
 if [[ -r "$OS_RELEASE_PATH" ]]; then
   _DISTRO_ID="$(       . "$OS_RELEASE_PATH" 2>/dev/null; printf '%s' "${ID:-}" )"
   _DISTRO_LIKE="$(     . "$OS_RELEASE_PATH" 2>/dev/null; printf '%s' "${ID_LIKE:-}" )"
