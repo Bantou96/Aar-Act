@@ -26,12 +26,14 @@
 _advise_costly() {
   case "$1" in
     KRN-01|KRN-03|KRN-05|KRN-08) return 0 ;;  # containers, io_uring users, modprobe, boot
-    SSH-02|SSH-09)               return 0 ;;  # locks out keyless users / old clients
-    NET-01|NET-05)               return 0 ;;  # firewall lockout / container networking
-    FS-01)                       return 0 ;;  # noexec /tmp breaks installers
+    SSH-02|SSH-13)               return 0 ;;  # locks out keyless users / old clients
+    NET-01)                      return 0 ;;  # firewall default-deny locks you out
+    NET-02)                      return 0 ;;  # ip_forward=0 kills container networking
+    NET-13)                      return 0 ;;  # disabling IPv6 breaks IPv6-only estates
+    FS-06|FS-09)                 return 0 ;;  # noexec /tmp breaks installers
     SYS-04)                      return 0 ;;  # MAC enforcing without a permissive pass
-    AUTH-04|AUTH-09)             return 0 ;;  # PAM edits, self-inflicted lockout
-    AUTH-11|FS-05)               return 0 ;;  # needs a human: what IS that account/binary
+    AUTH-04|AUTH-09|AUTH-14)     return 0 ;;  # PAM edits, self-inflicted lockout
+    AUTH-05|AUTH-11|FS-05)       return 0 ;;  # needs a human: what IS that account/binary
     *) return 1 ;;
   esac
 }
@@ -41,7 +43,7 @@ _advise_costly() {
 _advise_wave() {
   case "$1" in
     SSH-*|NET-*)               printf 1 ;;
-    KRN-*|AUTH-*|SYS-04|SYS-05|SYS-07|SYS-08|SYS-09|SYS-10|FS-01|FS-05)
+    KRN-*|AUTH-*|SYS-04|SYS-05|SYS-07|SYS-08|SYS-09|SYS-10|FS-01|FS-02|FS-03|FS-05|FS-06|FS-09)
                                printf 2 ;;
     LOG-*|INT-*|AUD-*)         printf 3 ;;
     SYS-02|SYS-03|SYS-11)      printf 1 ;;   # unpatched is reachable from the network
@@ -134,8 +136,13 @@ cmd_advise() {
   # Extract id/status/check from the results array without requiring jq. The
   # renderer writes one flat object per result with no nested objects, so a
   # record-per-line split on '},{' is exact rather than hopeful.
+  # The renderer writes the array on one line but pretty-prints the object
+  # around it, so the closing bracket is followed by a newline and four spaces.
+  # An earlier version of this pattern required "],\"ansible_remediation\"" with
+  # nothing between, matched the hand-built test fixture perfectly, and matched
+  # no real report at all. Hence \s* here, and a real report as the fixture.
   local records; records=$(tr -d '\n' < "$report" \
-    | grep -oP '"results":\s*\[\K.*?(?=\],"ansible_remediation")' \
+    | grep -oP '"results":\s*\[\K.*?(?=\]\s*,\s*"ansible_remediation")' \
     | sed 's/},{/}\n{/g')
   [[ -n "$records" ]] || die "Could not read any results out of $report."
 

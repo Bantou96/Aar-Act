@@ -36,8 +36,12 @@ Remote / Fleet options:
   --inventory <file>     Parse an Ansible inventory file for hosts
   --user <user>          SSH user for remote scan (default: root)
   --ssh-key <keyfile>    SSH private key for remote scan
-  --ssh-opt <opt>        Extra ssh option, repeatable. For a bastion:
-                           --ssh-opt '-J admin@bastion.example.com' 
+  --jump <user@host[:port]>
+                         Reach the target through this bastion. Builds the
+                         ProxyCommand itself, carrying --ssh-key onto the jump
+                         hop. Prefer this over --ssh-opt '-J ...', which does
+                         NOT pass the key or the connection options to hop 1.
+  --ssh-opt <opt>        Extra ssh option, repeatable
   --ansible-dir <dir>    Path to your Ansible repo (for playbook suggestions)
 
 Install options:
@@ -83,6 +87,7 @@ while [[ $# -gt 0 ]]; do
     --inventory)      ANSIBLE_INVENTORY="$2";shift 2 ;;
     --user)           REMOTE_USER="$2";     shift 2 ;;
     --ssh-key)        REMOTE_KEY="$2";      shift 2 ;;
+    --jump)           REMOTE_JUMP="$2";     shift 2 ;;
     # Repeatable, and split explicitly so --ssh-opt '-J host' and
     # --ssh-opt -J --ssh-opt host behave the same. read -ra rather than bare
     # word splitting: it says what it means and needs no shellcheck directive,
@@ -107,6 +112,7 @@ REMOTE_HOST="${REMOTE_HOST:-}"
 REMOTE_HOST_FILE="${REMOTE_HOST_FILE:-}"
 REMOTE_USER="${REMOTE_USER:-root}"
 REMOTE_KEY="${REMOTE_KEY:-}"
+REMOTE_JUMP="${REMOTE_JUMP:-}"
 ANSIBLE_INVENTORY="${ANSIBLE_INVENTORY:-}"
 ANSIBLE_DIR="${ANSIBLE_DIR:-}"
 

@@ -277,6 +277,30 @@ for id in $($AARTOOL explain --written 2>/dev/null); do
 done
 check_exact "every written entry names a real check" "$missing" ""
 
+# A written entry naming a real ID is not enough: it must describe THAT check.
+# Four entries in the first draft were written against the wrong ID (SSH-09 is
+# HostbasedAuthentication, not ciphers; NET-05 is dangerous services, not IP
+# forwarding; FS-01 is /etc/passwd perms, not /tmp; LOG-04 is audit rules, not
+# remote syslog). Every one existed, so the existence guard passed them all, and
+# explain would have confidently explained the wrong thing.
+#
+# The overlap test: a distinctive word from the check's own title must appear in
+# the entry. Crude, and it caught all four.
+STOP=" the and not for with all its configured disabled enabled active running ok correct perms "
+offtopic=""
+for id in $($AARTOOL explain --written 2>/dev/null); do
+  title=$($AARTOOL explain --list 2>/dev/null | awk -v i="$id" '$1==i{$1="";print}' | tr 'A-Z' 'a-z')
+  body=$($AARTOOL explain "$id" 2>/dev/null | tr 'A-Z' 'a-z')
+  hit=0
+  for w in $(tr -cs 'a-z0-9_.' ' ' <<<"$title"); do
+    [[ ${#w} -ge 4 ]] || continue
+    [[ "$STOP" == *" $w "* ]] && continue
+    [[ "$body" == *"$w"* ]] && { hit=1; break; }
+  done
+  [[ $hit -eq 1 ]] || offtopic="$offtopic $id"
+done
+check_exact "every written entry describes the check it names" "$offtopic" ""
+
 check    "explain rejects a bad ID"  "$($AARTOOL explain KRN-99 2>&1)" "No check called"
 check    "explain suggests the family" "$($AARTOOL explain KRN-99 2>&1)" "KRN-01"
 check_rc "explain bad ID exits 1"   1  $AARTOOL explain KRN-99
@@ -285,9 +309,16 @@ check    "explain refuses two IDs"  "$($AARTOOL explain KRN-01 KRN-02 2>&1)" "on
 
 # ── advise ───────────────────────────────────────────────────────────────────
 FIXTURE="tests/fixtures/audit-fixture.json"
+# This fixture is a REAL report, captured from a live remote audit, with only
+# the hostname and date replaced. The previous one was hand-written compact
+# JSON; advise's record splitter matched it and matched nothing the renderer
+# actually writes. A fixture that is not shaped like production is a test that
+# passes while the feature is broken.
+check "fixture is renderer-shaped, not hand-built" \
+      "$(tr -d '\n' < "$FIXTURE" | grep -c '\],  *"ansible_remediation"')" "1"
 ADV=$($AARTOOL advise "$FIXTURE" --target web-01 --user ubuntu 2>&1)
 
-check "advise names the host"        "$ADV" "fixture-web-01"
+check "advise names the host"        "$ADV" "proof-target-01"
 check "advise orders by reachability" "$ADV" "Wave 1"
 check "advise writes the target in"  "$ADV" "--target web-01 --user ubuntu"
 check "advise separates the costly"  "$ADV" "Decide before you apply"
@@ -310,7 +341,7 @@ SAFE=$($AARTOOL advise "$FIXTURE" --safe-only 2>&1)
 SAFE_WAVES=$(printf '%s\n' "$SAFE" | sed -n '1,/Decide before you apply/p')
 check "safe-only drops the costly from the waves" "$(printf '%s\n' "$SAFE_WAVES" | grep -c 'KRN-01')" "0"
 check "safe-only still lists them to decide on"   "$(printf '%s\n' "$SAFE" | grep -c 'aartool explain KRN-01')" "1"
-check "safe-only keeps the safe ones"             "$(printf '%s\n' "$SAFE_WAVES" | grep -c 'KRN-02')" "1"
+check "safe-only keeps the safe ones"             "$(printf '%s\n' "$SAFE_WAVES" | grep -c 'SSH-03')" "1"
 
 check "wave filter shows only that wave" \
       "$(printf '%s\n' "$($AARTOOL advise "$FIXTURE" --wave 3 2>&1)" | grep -c 'Wave 1')" "0"

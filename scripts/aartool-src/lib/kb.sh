@@ -19,12 +19,12 @@
 kb_ids() {
   cat <<'IDS'
 KRN-01 KRN-02 KRN-03 KRN-04 KRN-05 KRN-06 KRN-07 KRN-08 KRN-09 KRN-10 KRN-11 KRN-12
-SSH-01 SSH-02 SSH-03 SSH-09 SSH-10 SSH-11
+SSH-01 SSH-02 SSH-03 SSH-09 SSH-10 SSH-11 SSH-13
 AUTH-04 AUTH-09 AUTH-11 AUTH-15
 SYS-03 SYS-04 SYS-05 SYS-11
-NET-01 NET-05
-LOG-01 LOG-04
-FS-01 FS-05
+NET-01 NET-02 NET-05
+LOG-01 LOG-04 LOG-08
+FS-01 FS-05 FS-06
 IDS
 }
 
@@ -537,7 +537,7 @@ MORE
 E
   ;;
 
-  SSH-09) cat <<'E'
+  SSH-13) cat <<'E'
 WHAT
   The key exchange, cipher and MAC algorithms sshd will negotiate.
 
@@ -640,11 +640,18 @@ E
 
   AUTH-04) cat <<'E'
 WHAT
-  The PAM password stack: complexity, history and hashing algorithm.
+  The minimum password length pam_pwquality enforces: minlen in
+  /etc/security/pwquality.conf. The check wants 12 or more.
 
 WHY
-  Complexity rules are the least interesting part. Two things here matter far
-  more. First, the hashing algorithm: if /etc/shadow still holds md5 or a low
+  Length is the setting that actually helps, and NIST SP 800-63B now recommends
+  it over forced character classes precisely because it survives contact with
+  users. A 12-character passphrase resists offline cracking of a stolen shadow
+  file for orders of magnitude longer than an 8-character one with a digit and
+  a symbol bolted on.
+
+  Two neighbours matter as much and are separate checks. First, the hashing
+  algorithm: if /etc/shadow still holds md5 or a low
   round count, a stolen shadow file is cracked in hours rather than years.
   Second, remember=N, which stops the rotation theatre where a forced change
   becomes Password1 to Password2 and back.
@@ -961,7 +968,7 @@ MORE
 E
   ;;
 
-  NET-05) cat <<'E'
+  NET-02) cat <<'E'
 WHAT
   IP forwarding and the redirect and source-route sysctls: whether this host
   will route packets that are not addressed to it.
@@ -1044,7 +1051,7 @@ MORE
 E
   ;;
 
-  LOG-04) cat <<'E'
+  LOG-08) cat <<'E'
 WHAT
   Whether logs are shipped off the host, and whether local logs are persistent
   and access-restricted.
@@ -1080,7 +1087,7 @@ MORE
 E
   ;;
 
-  FS-01) cat <<'E'
+  FS-06) cat <<'E'
 WHAT
   Mount options on /tmp, /var/tmp and /dev/shm: nodev, nosuid and noexec.
 
@@ -1150,6 +1157,149 @@ MORE
   Take a baseline on a known-good build and diff against it on every host. A
   new setuid binary appearing between two audits is one of the highest-signal
   indicators available on a Linux box, and `aartool diff` will surface it.
+E
+  ;;
+
+  SSH-09) cat <<'E'
+WHAT
+  HostbasedAuthentication in sshd_config, and the .rhosts and .shosts files it
+  reads.
+
+WHY
+  Host-based authentication trusts the client machine rather than the person on
+  it. If host A is listed as trusted, sshd accepts A's assertion that the user
+  is who A says they are: no password, no key of their own. One compromised
+  machine in the trust set therefore becomes every machine in it, and the trust
+  is transitive in practice because nobody maps it. It is a survival of the
+  rlogin era and there is almost never a reason to have it on.
+
+COST
+  None on any modern estate. The only things that use it are old cluster
+  schedulers and some HPC batch systems, which will say so loudly.
+
+BY HAND
+  sed -i 's/^#*HostbasedAuthentication.*/HostbasedAuthentication no/' /etc/ssh/sshd_config
+  sed -i 's/^#*IgnoreRhosts.*/IgnoreRhosts yes/'                     /etc/ssh/sshd_config
+  sshd -t && systemctl reload sshd
+  # and look for what is already there:
+  find /home /root -maxdepth 2 -name '.rhosts' -o -name '.shosts' 2>/dev/null
+
+WITH AARTOOL
+  aartool apply --target HOST --user USER --only ssh
+
+MORE
+  Set IgnoreRhosts yes alongside it (that is SSH-08). Turning off host-based
+  auth while leaving .rhosts readable keeps the files around for whatever reads
+  them next.
+E
+  ;;
+
+  NET-05) cat <<'E'
+WHAT
+  Whether legacy cleartext network services are installed or listening: telnet,
+  rsh, rlogin, rexec, tftp, ypserv, ftp.
+
+WHY
+  Every one of these sends credentials in cleartext, and most authenticate the
+  peer weakly or not at all. Anyone who can see the traffic has the password,
+  which on a shared or cloud network is a larger set of people than you think.
+  They are also frequently forgotten rather than chosen: pulled in by a
+  dependency, enabled by an appliance image, still listening years later. An
+  attacker port-scanning your estate finds them long before you audit for them.
+
+COST
+  None, unless something genuinely uses them, in which case the fix is to
+  replace it rather than keep it. tftp is the common real exception: PXE boot
+  and network device firmware need it. If so, bind it to the provisioning
+  network and firewall it there.
+
+BY HAND
+  ss -tulpn | grep -E ':(23|21|69|512|513|514|111)\b'
+  systemctl list-unit-files | grep -E 'telnet|rsh|rlogin|rexec|tftp|ypserv|vsftpd'
+  apt purge -y telnetd rsh-server tftpd ypserv    # Debian / Ubuntu
+  dnf remove -y telnet-server rsh-server tftp-server ypserv   # RHEL
+
+WITH AARTOOL
+  aartool apply --target HOST --user USER --only services
+
+MORE
+  Removing the package beats masking the unit. A masked service comes back the
+  next time something re-enables it, and nothing will tell you.
+E
+  ;;
+
+  FS-01) cat <<'E'
+WHAT
+  Permissions and ownership on /etc/passwd. It must be root-owned and 644.
+
+WHY
+  /etc/passwd has to be world-readable, which is fine: it holds no hashes any
+  more. What matters is that it must not be world- or group-WRITABLE. An
+  attacker who can write it does not need an exploit at all. They add a line
+  with UID 0, or blank the second field so a system account has no password, or
+  change root's shell. It is the shortest path from any write primitive to root
+  on the machine, and it is silent.
+
+COST
+  None. A correct system already looks like this, so this check failing means
+  something changed it, and finding out what changed it matters more than
+  fixing the mode.
+
+BY HAND
+  stat -c '%U %G %a' /etc/passwd      # want: root root 644
+  chown root:root /etc/passwd && chmod 644 /etc/passwd
+  # find out who did it, before you conclude it was an accident:
+  ausearch -f /etc/passwd -ts recent 2>/dev/null
+  # and check the neighbours, which are separate checks:
+  stat -c '%n %U %G %a' /etc/shadow /etc/group /etc/gshadow /etc/sudoers
+
+WITH AARTOOL
+  aartool apply --target HOST --user USER --only filesystem,permissions
+
+MORE
+  /etc/shadow (FS-02) is the one that must not be world-READABLE. The two files
+  have opposite requirements and are easy to reason about backwards.
+E
+  ;;
+
+  LOG-04) cat <<'E'
+WHAT
+  Whether auditd has rules loaded. Not whether it is running: whether it is
+  watching anything.
+
+WHY
+  This is the check that catches the most convincing false sense of security in
+  the whole report. auditd starts, systemd reports active, every service check
+  goes green, and with an empty ruleset it records essentially nothing. When you
+  need it during an incident, six months of "audit was enabled" turns out to
+  mean six months of nothing. LOG-01 asks whether the daemon runs. This asks
+  whether it does anything.
+
+COST
+  Disk and I/O, in proportion to how aggressive the rules are. Rules on execve
+  for every user on a busy machine generate gigabytes a day. Start with the
+  identity and privilege rules, which are cheap and high-signal, and add
+  syscall rules deliberately.
+
+BY HAND
+  auditctl -l | wc -l          # 0 means running and watching nothing
+  cat > /etc/audit/rules.d/50-base.rules <<'EOF'
+  -w /etc/passwd -p wa -k identity
+  -w /etc/shadow -p wa -k identity
+  -w /etc/sudoers -p wa -k scope
+  -w /etc/sudoers.d/ -p wa -k scope
+  -w /var/log/sudo.log -p wa -k actions
+  -a always,exit -F arch=b64 -S execve -F euid=0 -F auid>=1000 -F auid!=-1 -k rootcmd
+  EOF
+  augenrules --load && auditctl -l | wc -l
+
+WITH AARTOOL
+  aartool apply --target HOST --user USER --only audit
+
+MORE
+  Make the rules immutable once you are happy with them: a final "-e 2" line
+  means they cannot be changed until reboot, so an intruder cannot quietly
+  unload the rule that would have recorded them.
 E
   ;;
 

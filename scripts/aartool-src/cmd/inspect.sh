@@ -16,9 +16,13 @@ Options:
   --inventory FILE      Audit every host in an Ansible inventory
   --user USER           SSH user for a remote audit
   --ssh-key FILE        SSH private key for a remote audit
-  --ssh-opt OPT         Extra ssh option, repeatable. For a host behind a
-                        bastion, which is most of them:
-                          --ssh-opt '-J admin@bastion.example.com'
+  --jump USER@HOST[:PORT]
+                        Reach the target through this bastion, which is how
+                        most estates are shaped. Use this rather than
+                        --ssh-opt '-J ...': ssh does not pass --ssh-key or the
+                        connection options to the jump hop, so -J fails on hop
+                        one with a host key error that never names the bastion.
+  --ssh-opt OPT         Extra ssh option, repeatable
   -o, --out DIR         Write reports to DIR (HTML and JSON)
   -h, --help            Show this help
 
@@ -38,7 +42,7 @@ cmd_inspect() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --host|--host-file|--inventory|--user|--ssh-key|--ssh-opt)
+      --host|--host-file|--inventory|--user|--ssh-key|--ssh-opt|--jump)
         [[ $# -ge 2 ]] || die "$1 needs a value."
         passthru+=("$1" "$2"); shift 2 ;;
       -o|--out)

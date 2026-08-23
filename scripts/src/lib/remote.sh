@@ -90,7 +90,40 @@ _remote_scan() {
   local json_out="$3"
 
   local ssh_opts=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes)
-  [[ -n "$REMOTE_KEY" ]] && ssh_opts+=(-i "$REMOTE_KEY")
+  if [[ -n "$REMOTE_KEY" ]]; then
+    # IdentitiesOnly matters more than it looks. Without it ssh offers every key
+    # in the agent before the one that was named, each offer counts against
+    # sshd's MaxAuthTries, and on a host running fail2ban a fleet scan from a
+    # workstation with several keys loaded gets that workstation banned across
+    # the estate. If the operator named a key, use that key and nothing else.
+    ssh_opts+=(-i "$REMOTE_KEY" -o IdentitiesOnly=yes)
+  fi
+
+  # ── Bastion ────────────────────────────────────────────────────────────────
+  # -J looks like the obvious way to do this and quietly does not work here.
+  # ssh does NOT pass the outer connection's options to the jump hop: not -i,
+  # not StrictHostKeyChecking, not BatchMode. So `--ssh-opt '-J admin@bastion'`
+  # alongside `--ssh-key ~/.ssh/estate` authenticates hop 2 with the named key
+  # and hop 1 with whatever the defaults happen to be, which on a machine with
+  # no agent and no known_hosts entry fails as
+  #
+  #     ssh_askpass: exec(/usr/bin/ssh-askpass): No such file or directory
+  #     Host key verification failed.
+  #
+  # ...a message about the bastion that never names the bastion. This is the
+  # normal shape of a real estate, not an edge case: private nodes with no
+  # public address, reached through one jump host, with a dedicated key.
+  #
+  # --jump therefore builds the ProxyCommand explicitly and carries the same
+  # key and the same connection options onto hop 1.
+  if [[ -n "${REMOTE_JUMP:-}" ]]; then
+    local _jhost="$REMOTE_JUMP" _jport=22
+    if [[ "$_jhost" == *:* ]]; then _jport="${_jhost##*:}"; _jhost="${_jhost%:*}"; fi
+    local _pc="ssh -W %h:%p -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes -p ${_jport}"
+    [[ -n "$REMOTE_KEY" ]] && _pc+=" -o IdentitiesOnly=yes -i $(printf '%q' "$REMOTE_KEY")"
+    _pc+=" $(printf '%q' "$_jhost")"
+    ssh_opts+=(-o "ProxyCommand=${_pc}")
+  fi
 
   # One TCP connection per host, reused for all seven operations below.
   #

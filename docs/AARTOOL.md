@@ -239,7 +239,8 @@ Audit a machine. Changes nothing.
 | `--inventory FILE` | Audit every host in an Ansible inventory |
 | `--user USER` | SSH user for a remote audit |
 | `--ssh-key FILE` | SSH private key for a remote audit |
-| `--ssh-opt OPT` | Extra `ssh` option, repeatable. See [bastions](#remote-hosts-and-bastions) |
+| `--jump USER@HOST[:PORT]` | Reach the target through a bastion. See [bastions](#remote-hosts-and-bastions) |
+| `--ssh-opt OPT` | Extra `ssh` option, repeatable |
 | `-o, --out DIR` | Write HTML and JSON reports to DIR |
 
 With no `--host`, `--host-file` or `--inventory` it audits the machine it is
@@ -345,30 +346,48 @@ half-applied hardening run is expensive.
 
 ## Remote hosts and bastions
 
-Most machines worth hardening are not directly reachable. `--ssh-opt` is passed
-through to `ssh`, repeatable:
+Most machines worth hardening are not directly reachable. Use `--jump`:
 
 ```bash
 aartool inspect \
   --host 10.0.1.31 --user admin \
   --ssh-key ~/.ssh/id_ed25519 \
-  --ssh-opt '-J admin@bastion.example.com' \
-  --ssh-opt '-o IdentitiesOnly=yes' \
+  --jump admin@bastion.example.com \
   -o ./reports
 ```
 
-Two things worth knowing before you run this against a real estate:
+Three things worth knowing before you run this against a real estate.
 
-**Always pass `-o IdentitiesOnly=yes`.** An agent with several keys loaded
-offers each one, every offer counts against `MaxAuthTries`, and you will be
-banned by `fail2ban` before you reach the right key. This costs an hour and it
-happens to everybody once.
+**Use `--jump`, not `--ssh-opt '-J ...'`.** They are not equivalent. `ssh` does
+not pass the outer connection's options to the jump hop: not `-i`, not
+`StrictHostKeyChecking`, not `BatchMode`. So `-J` alongside `--ssh-key`
+authenticates the target with your key and the bastion with whatever the
+defaults happen to be, and on a machine with no agent it fails like this:
+
+```
+ssh_askpass: exec(/usr/bin/ssh-askpass): No such file or directory
+Host key verification failed.
+```
+
+A message about the bastion that never names the bastion. `--jump` builds the
+`ProxyCommand` itself and carries the same key and connection options onto hop
+one. `--ssh-opt` still exists for anything else you need to pass through.
+
+**`--ssh-key` now implies `IdentitiesOnly=yes`.** An agent with several keys
+loaded offers each one, every offer counts against the target's `MaxAuthTries`,
+and a fleet scan from such a workstation gets that workstation banned by
+`fail2ban` across the estate. If you named a key, that key is used and nothing
+else. This costs an hour and it happens to everybody once.
 
 **The remote audit does not use `scp`.** OpenSSH 9 switched `scp` to the SFTP
 protocol, and a hardened host frequently has the `sftp` subsystem removed, which
 is exactly the kind of host you are auditing. aartool pipes the script over
 `ssh` with `cat` instead, and reuses one connection with `ControlMaster` so a
 fleet scan opens one session per host rather than one per step.
+
+All three are covered by `scripts/tests/proof-remote.sh`, which stands up a
+bastion and a private target on a Docker network, removes the `sftp` subsystem
+so `scp` genuinely cannot work, and runs the whole loop against them.
 
 ---
 
@@ -401,10 +420,11 @@ Run the command again with `-v` first. It prints the underlying `ssh` or
 | `does not look like a cyberaar audit report` | the HTML report was passed instead of the JSON | use the `.json` from the same run |
 | `couldn't resolve module ansible.posix.sysctl` | collections not installed | `ansible-galaxy collection install -r ansible-hardening/requirements.yml`, then `aartool doctor` |
 | `Please run as root` | a local audit reads `/etc/shadow`, sshd config and sysctls | `sudo aartool inspect -o ./reports` |
-| SSH banned you mid-scan | agent offered too many keys, `fail2ban` acted | add `--ssh-opt '-o IdentitiesOnly=yes'` and wait out the ban |
+| SSH banned you mid-scan | agent offered too many keys, `fail2ban` acted | pass `--ssh-key`, which now implies `IdentitiesOnly=yes`, and wait out the ban |
+| `Host key verification failed` reaching a private host | `-J` was used and does not carry the key or options to the jump hop | use `--jump USER@BASTION` instead |
 | `scp: subsystem request failed` from an old version | the host has no `sftp` subsystem | upgrade the toolkit; the transport no longer uses `scp` |
 | Ansible reports `ok` but nothing changed | `--only` named a tag no role carries | `aartool explain <ID>` prints the tag the map actually uses |
-| Container networking died after applying | `ip_forward` was turned off on a Docker host | `aartool explain NET-05`, then set `linux_ip_forwarding_enabled: true` and re-apply |
+| Container networking died after applying | `ip_forward` was turned off on a Docker host | `aartool explain NET-02`, then set `linux_ip_forwarding_enabled: true` and re-apply |
 | Rootless containers broke after applying | `restrict_userns` was enabled | `aartool explain KRN-01`; remove the drop-in line and `sysctl --system` |
 
 If a finding is what you disagree with rather than a failure, `aartool explain
@@ -508,6 +528,7 @@ bash scripts/tests/test_aartool.sh
 | `test_escaping.sh` | `</script>` in a hostname ending the block in a report you email to a client |
 | `test_distro.sh` | Picking the wrong role family on a derivative distribution |
 | aartool-build workflow | The committed bundle drifting from the sources, so editing them stops having any effect |
+| `proof-remote.sh` | The transport breaking against a real host while the fleet summary still says "1 succeeded". Needs Docker; run it before releasing a change to `scripts/src/lib/remote.sh` |
 
 Every one of these was written after the failure it describes was found in
 shipped code. If you add a guard, prove it fails: break the thing on purpose,

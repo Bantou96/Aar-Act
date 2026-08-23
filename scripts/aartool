@@ -300,12 +300,12 @@ surface_userns_key() {
 kb_ids() {
   cat <<'IDS'
 KRN-01 KRN-02 KRN-03 KRN-04 KRN-05 KRN-06 KRN-07 KRN-08 KRN-09 KRN-10 KRN-11 KRN-12
-SSH-01 SSH-02 SSH-03 SSH-09 SSH-10 SSH-11
+SSH-01 SSH-02 SSH-03 SSH-09 SSH-10 SSH-11 SSH-13
 AUTH-04 AUTH-09 AUTH-11 AUTH-15
 SYS-03 SYS-04 SYS-05 SYS-11
-NET-01 NET-05
-LOG-01 LOG-04
-FS-01 FS-05
+NET-01 NET-02 NET-05
+LOG-01 LOG-04 LOG-08
+FS-01 FS-05 FS-06
 IDS
 }
 
@@ -818,7 +818,7 @@ MORE
 E
   ;;
 
-  SSH-09) cat <<'E'
+  SSH-13) cat <<'E'
 WHAT
   The key exchange, cipher and MAC algorithms sshd will negotiate.
 
@@ -921,11 +921,18 @@ E
 
   AUTH-04) cat <<'E'
 WHAT
-  The PAM password stack: complexity, history and hashing algorithm.
+  The minimum password length pam_pwquality enforces: minlen in
+  /etc/security/pwquality.conf. The check wants 12 or more.
 
 WHY
-  Complexity rules are the least interesting part. Two things here matter far
-  more. First, the hashing algorithm: if /etc/shadow still holds md5 or a low
+  Length is the setting that actually helps, and NIST SP 800-63B now recommends
+  it over forced character classes precisely because it survives contact with
+  users. A 12-character passphrase resists offline cracking of a stolen shadow
+  file for orders of magnitude longer than an 8-character one with a digit and
+  a symbol bolted on.
+
+  Two neighbours matter as much and are separate checks. First, the hashing
+  algorithm: if /etc/shadow still holds md5 or a low
   round count, a stolen shadow file is cracked in hours rather than years.
   Second, remember=N, which stops the rotation theatre where a forced change
   becomes Password1 to Password2 and back.
@@ -1242,7 +1249,7 @@ MORE
 E
   ;;
 
-  NET-05) cat <<'E'
+  NET-02) cat <<'E'
 WHAT
   IP forwarding and the redirect and source-route sysctls: whether this host
   will route packets that are not addressed to it.
@@ -1325,7 +1332,7 @@ MORE
 E
   ;;
 
-  LOG-04) cat <<'E'
+  LOG-08) cat <<'E'
 WHAT
   Whether logs are shipped off the host, and whether local logs are persistent
   and access-restricted.
@@ -1361,7 +1368,7 @@ MORE
 E
   ;;
 
-  FS-01) cat <<'E'
+  FS-06) cat <<'E'
 WHAT
   Mount options on /tmp, /var/tmp and /dev/shm: nodev, nosuid and noexec.
 
@@ -1434,6 +1441,149 @@ MORE
 E
   ;;
 
+  SSH-09) cat <<'E'
+WHAT
+  HostbasedAuthentication in sshd_config, and the .rhosts and .shosts files it
+  reads.
+
+WHY
+  Host-based authentication trusts the client machine rather than the person on
+  it. If host A is listed as trusted, sshd accepts A's assertion that the user
+  is who A says they are: no password, no key of their own. One compromised
+  machine in the trust set therefore becomes every machine in it, and the trust
+  is transitive in practice because nobody maps it. It is a survival of the
+  rlogin era and there is almost never a reason to have it on.
+
+COST
+  None on any modern estate. The only things that use it are old cluster
+  schedulers and some HPC batch systems, which will say so loudly.
+
+BY HAND
+  sed -i 's/^#*HostbasedAuthentication.*/HostbasedAuthentication no/' /etc/ssh/sshd_config
+  sed -i 's/^#*IgnoreRhosts.*/IgnoreRhosts yes/'                     /etc/ssh/sshd_config
+  sshd -t && systemctl reload sshd
+  # and look for what is already there:
+  find /home /root -maxdepth 2 -name '.rhosts' -o -name '.shosts' 2>/dev/null
+
+WITH AARTOOL
+  aartool apply --target HOST --user USER --only ssh
+
+MORE
+  Set IgnoreRhosts yes alongside it (that is SSH-08). Turning off host-based
+  auth while leaving .rhosts readable keeps the files around for whatever reads
+  them next.
+E
+  ;;
+
+  NET-05) cat <<'E'
+WHAT
+  Whether legacy cleartext network services are installed or listening: telnet,
+  rsh, rlogin, rexec, tftp, ypserv, ftp.
+
+WHY
+  Every one of these sends credentials in cleartext, and most authenticate the
+  peer weakly or not at all. Anyone who can see the traffic has the password,
+  which on a shared or cloud network is a larger set of people than you think.
+  They are also frequently forgotten rather than chosen: pulled in by a
+  dependency, enabled by an appliance image, still listening years later. An
+  attacker port-scanning your estate finds them long before you audit for them.
+
+COST
+  None, unless something genuinely uses them, in which case the fix is to
+  replace it rather than keep it. tftp is the common real exception: PXE boot
+  and network device firmware need it. If so, bind it to the provisioning
+  network and firewall it there.
+
+BY HAND
+  ss -tulpn | grep -E ':(23|21|69|512|513|514|111)\b'
+  systemctl list-unit-files | grep -E 'telnet|rsh|rlogin|rexec|tftp|ypserv|vsftpd'
+  apt purge -y telnetd rsh-server tftpd ypserv    # Debian / Ubuntu
+  dnf remove -y telnet-server rsh-server tftp-server ypserv   # RHEL
+
+WITH AARTOOL
+  aartool apply --target HOST --user USER --only services
+
+MORE
+  Removing the package beats masking the unit. A masked service comes back the
+  next time something re-enables it, and nothing will tell you.
+E
+  ;;
+
+  FS-01) cat <<'E'
+WHAT
+  Permissions and ownership on /etc/passwd. It must be root-owned and 644.
+
+WHY
+  /etc/passwd has to be world-readable, which is fine: it holds no hashes any
+  more. What matters is that it must not be world- or group-WRITABLE. An
+  attacker who can write it does not need an exploit at all. They add a line
+  with UID 0, or blank the second field so a system account has no password, or
+  change root's shell. It is the shortest path from any write primitive to root
+  on the machine, and it is silent.
+
+COST
+  None. A correct system already looks like this, so this check failing means
+  something changed it, and finding out what changed it matters more than
+  fixing the mode.
+
+BY HAND
+  stat -c '%U %G %a' /etc/passwd      # want: root root 644
+  chown root:root /etc/passwd && chmod 644 /etc/passwd
+  # find out who did it, before you conclude it was an accident:
+  ausearch -f /etc/passwd -ts recent 2>/dev/null
+  # and check the neighbours, which are separate checks:
+  stat -c '%n %U %G %a' /etc/shadow /etc/group /etc/gshadow /etc/sudoers
+
+WITH AARTOOL
+  aartool apply --target HOST --user USER --only filesystem,permissions
+
+MORE
+  /etc/shadow (FS-02) is the one that must not be world-READABLE. The two files
+  have opposite requirements and are easy to reason about backwards.
+E
+  ;;
+
+  LOG-04) cat <<'E'
+WHAT
+  Whether auditd has rules loaded. Not whether it is running: whether it is
+  watching anything.
+
+WHY
+  This is the check that catches the most convincing false sense of security in
+  the whole report. auditd starts, systemd reports active, every service check
+  goes green, and with an empty ruleset it records essentially nothing. When you
+  need it during an incident, six months of "audit was enabled" turns out to
+  mean six months of nothing. LOG-01 asks whether the daemon runs. This asks
+  whether it does anything.
+
+COST
+  Disk and I/O, in proportion to how aggressive the rules are. Rules on execve
+  for every user on a busy machine generate gigabytes a day. Start with the
+  identity and privilege rules, which are cheap and high-signal, and add
+  syscall rules deliberately.
+
+BY HAND
+  auditctl -l | wc -l          # 0 means running and watching nothing
+  cat > /etc/audit/rules.d/50-base.rules <<'EOF'
+  -w /etc/passwd -p wa -k identity
+  -w /etc/shadow -p wa -k identity
+  -w /etc/sudoers -p wa -k scope
+  -w /etc/sudoers.d/ -p wa -k scope
+  -w /var/log/sudo.log -p wa -k actions
+  -a always,exit -F arch=b64 -S execve -F euid=0 -F auid>=1000 -F auid!=-1 -k rootcmd
+  EOF
+  augenrules --load && auditctl -l | wc -l
+
+WITH AARTOOL
+  aartool apply --target HOST --user USER --only audit
+
+MORE
+  Make the rules immutable once you are happy with them: a final "-e 2" line
+  means they cannot be changed until reboot, so an intruder cannot quietly
+  unload the rule that would have recorded them.
+E
+  ;;
+
   *) return 1 ;;
   esac
 }
@@ -1456,9 +1606,13 @@ Options:
   --inventory FILE      Audit every host in an Ansible inventory
   --user USER           SSH user for a remote audit
   --ssh-key FILE        SSH private key for a remote audit
-  --ssh-opt OPT         Extra ssh option, repeatable. For a host behind a
-                        bastion, which is most of them:
-                          --ssh-opt '-J admin@bastion.example.com'
+  --jump USER@HOST[:PORT]
+                        Reach the target through this bastion, which is how
+                        most estates are shaped. Use this rather than
+                        --ssh-opt '-J ...': ssh does not pass --ssh-key or the
+                        connection options to the jump hop, so -J fails on hop
+                        one with a host key error that never names the bastion.
+  --ssh-opt OPT         Extra ssh option, repeatable
   -o, --out DIR         Write reports to DIR (HTML and JSON)
   -h, --help            Show this help
 
@@ -1478,7 +1632,7 @@ cmd_inspect() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --host|--host-file|--inventory|--user|--ssh-key|--ssh-opt)
+      --host|--host-file|--inventory|--user|--ssh-key|--ssh-opt|--jump)
         [[ $# -ge 2 ]] || die "$1 needs a value."
         passthru+=("$1" "$2"); shift 2 ;;
       -o|--out)
@@ -1812,12 +1966,14 @@ surface_render_dropin() {
 _advise_costly() {
   case "$1" in
     KRN-01|KRN-03|KRN-05|KRN-08) return 0 ;;  # containers, io_uring users, modprobe, boot
-    SSH-02|SSH-09)               return 0 ;;  # locks out keyless users / old clients
-    NET-01|NET-05)               return 0 ;;  # firewall lockout / container networking
-    FS-01)                       return 0 ;;  # noexec /tmp breaks installers
+    SSH-02|SSH-13)               return 0 ;;  # locks out keyless users / old clients
+    NET-01)                      return 0 ;;  # firewall default-deny locks you out
+    NET-02)                      return 0 ;;  # ip_forward=0 kills container networking
+    NET-13)                      return 0 ;;  # disabling IPv6 breaks IPv6-only estates
+    FS-06|FS-09)                 return 0 ;;  # noexec /tmp breaks installers
     SYS-04)                      return 0 ;;  # MAC enforcing without a permissive pass
-    AUTH-04|AUTH-09)             return 0 ;;  # PAM edits, self-inflicted lockout
-    AUTH-11|FS-05)               return 0 ;;  # needs a human: what IS that account/binary
+    AUTH-04|AUTH-09|AUTH-14)     return 0 ;;  # PAM edits, self-inflicted lockout
+    AUTH-05|AUTH-11|FS-05)       return 0 ;;  # needs a human: what IS that account/binary
     *) return 1 ;;
   esac
 }
@@ -1827,7 +1983,7 @@ _advise_costly() {
 _advise_wave() {
   case "$1" in
     SSH-*|NET-*)               printf 1 ;;
-    KRN-*|AUTH-*|SYS-04|SYS-05|SYS-07|SYS-08|SYS-09|SYS-10|FS-01|FS-05)
+    KRN-*|AUTH-*|SYS-04|SYS-05|SYS-07|SYS-08|SYS-09|SYS-10|FS-01|FS-02|FS-03|FS-05|FS-06|FS-09)
                                printf 2 ;;
     LOG-*|INT-*|AUD-*)         printf 3 ;;
     SYS-02|SYS-03|SYS-11)      printf 1 ;;   # unpatched is reachable from the network
@@ -1920,8 +2076,13 @@ cmd_advise() {
   # Extract id/status/check from the results array without requiring jq. The
   # renderer writes one flat object per result with no nested objects, so a
   # record-per-line split on '},{' is exact rather than hopeful.
+  # The renderer writes the array on one line but pretty-prints the object
+  # around it, so the closing bracket is followed by a newline and four spaces.
+  # An earlier version of this pattern required "],\"ansible_remediation\"" with
+  # nothing between, matched the hand-built test fixture perfectly, and matched
+  # no real report at all. Hence \s* here, and a real report as the fixture.
   local records; records=$(tr -d '\n' < "$report" \
-    | grep -oP '"results":\s*\[\K.*?(?=\],"ansible_remediation")' \
+    | grep -oP '"results":\s*\[\K.*?(?=\]\s*,\s*"ansible_remediation")' \
     | sed 's/},{/}\n{/g')
   [[ -n "$records" ]] || die "Could not read any results out of $report."
 
