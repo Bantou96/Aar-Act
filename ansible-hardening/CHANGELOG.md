@@ -5,6 +5,97 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0]: 2026-08-23
+
+The release that gives the toolkit a front door. Everything here was either
+built or corrected while running the tool against a real 15-node estate, not
+against its own tests.
+
+### Added
+
+- **`aartool`**, one command in front of everything. `inspect`, `advise`,
+  `explain`, `plan`, `apply`, `surface`, `doctor`, `report`, `diff`, `install`.
+  Neither `cyberaar-baseline.sh` nor `run-hardening.sh` is replaced and both
+  stay independently usable. Two deliberate differences from what it wraps: the
+  dry run is a command (`plan`) rather than a flag, and `--target` is required,
+  because `run-hardening.sh` defaults to the group that is the entire inventory.
+- **`aartool advise`**: turns a report into waves ordered by reachability, not
+  severity. What an attacker reaches with no account, then what turns an account
+  into root, then what would have stopped you noticing. Findings whose fix has a
+  real operational cost are lifted into a separate "decide before you apply"
+  list rather than hidden.
+- **`aartool explain <ID>`**: what a check reads, the concrete path from finding
+  to compromised machine, what closing it breaks, how to fix it by hand and with
+  Ansible. 36 written entries; answers for all 109 IDs by falling back to the
+  remediation map.
+- **`aartool surface`**: the kernel attack surface as a first-class subject.
+  Unprivileged user namespaces, eBPF, io_uring, userfaultfd, kexec, module
+  loading, TTY line-discipline autoload, lockdown, BPF JIT hardening, SysRq.
+  Two tiers, and only `safe` applies by default.
+- **13 new checks**, 96 to **109**: the `KRN-01`..`KRN-12` kernel attack-surface
+  family and `SYS-11`, which detects a kernel installed but not running.
+- **`aartool report --out`**: one self-contained HTML file with the results
+  embedded, openable offline on a machine that has never heard of this toolkit.
+- **`aartool diff`**: exit `0` nothing regressed, `1` regressed, `2` not
+  comparable. Refuses to compare two different hosts.
+- **`--jump USER@HOST[:PORT]`** for auditing through a bastion, which is the
+  shape of most estates.
+- **9 kernel attack-surface toggles** in `linux_kernel_hardening_rhel9` and
+  `_ubuntu`, so every `KRN` finding has a remediation path. Six default on, the
+  three that break real workloads default off with the reason written beside
+  them.
+- **`docs/`**: `AARTOOL.md`, `ANSIBLE.md`, `BASELINE.md`, `DASHBOARD.md`,
+  `CONTAINER.md`.
+- **Guard tests**, each written after the defect it describes was found in
+  shipped code: remediation-map validity, documentation against the CLI's own
+  help, knowledge-base accuracy, distribution mapping, report escaping, version
+  consistency, and a Docker-based end-to-end proof of the remote path.
+
+### Changed
+
+- **The repository is now `cyberaar/aartool`** (was `cyberaar-toolkit`). GitHub
+  redirects the old URL permanently. The collection remains
+  `cyberaar.hardening`: the repository is the product, the collection is a
+  library it ships.
+- **The container image is `ghcr.io/cyberaar/aartool`** and now contains
+  `aartool` itself, which the `ee-hardening` image never did. The old name is
+  still pushed so existing pulls keep working.
+- `aartool inspect` writes reports to `./reports` by default and hands them back
+  to the user who invoked `sudo`. Previously it wrote nothing without `-o`, so
+  the documented two-command first run failed for every new user.
+- The root README is the workflow and nothing else; the reference material moved
+  to `docs/`.
+- Distribution detection consults `ID_LIKE` before `ID`, so derivatives inherit
+  the right role family instead of being told to switch operating system.
+
+### Fixed
+
+- **The JSON report claimed `"version": "4.0.0"` regardless of the script's real
+  version**, which had been `4.2.0`. Hardcoded in the renderer. Anything keying
+  off that field, a SIEM ingest or an auditor asking which build produced the
+  evidence, was told something untrue. Now interpolated, and guarded.
+- **The remote audit could not work on a hardened host and reported success
+  anyway.** OpenSSH 9 `scp` speaks SFTP, and removing the `sftp` subsystem is a
+  normal hardening step, so the copy failed on exactly the machines most likely
+  to be running a security tool. Replaced with an `ssh`-piped `cat`, every step
+  now checked, and connections multiplexed so a fleet scan does not look like a
+  brute-force attempt to `fail2ban`.
+- **`--ssh-opt '-J user@bastion'` never worked with `--ssh-key`.** `ssh` does not
+  pass the outer connection's options to the jump hop, so hop one authenticated
+  with whatever the defaults were. `--jump` builds the `ProxyCommand` correctly.
+- `--ssh-key` now implies `IdentitiesOnly=yes`, so a fleet scan from a
+  workstation with several keys loaded does not get that workstation banned.
+- Four knowledge-base entries described the wrong check. Existence was guarded;
+  topical accuracy was not. Both are now.
+- The HTML report shipped invalid CSS from a `${RING_COLOR}ALPHA` typo, so the
+  score ring had no glow and nothing was linting the file.
+- Every audit printed a remediation command referencing `inventory/hosts.yml`,
+  which has never existed.
+
+### Security
+
+- `agent`-side changes only. No credential handling changed in this release.
+
 ## [2.0.0]: 2026-03-12
 
 ### Added

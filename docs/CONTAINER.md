@@ -1,49 +1,101 @@
 # The container image
 
-An execution environment with Ansible and the required collections already
-present, for running the toolkit without installing anything on the control
-machine.
+`ghcr.io/cyberaar/aartool` is the whole toolkit in a container: `aartool`,
+Ansible, the 52 hardening roles and the audit script, with nothing to install on
+the control machine.
 
-Set `AARTOOL_HOME` to wherever the toolkit is mounted and `aartool` works the
-same as it does on a host.
+The collection inside is built from the same commit the image is tagged with,
+not pulled from Galaxy, so the image and the tag cannot disagree.
 
 ---
 
 ## Running it
-If you don't want to install Ansible locally, pull the pre-built Docker image:
+
+The image *is* `aartool`: it is the entrypoint, so the command reads as the
+command it is. Nothing needs installing on the control machine, not even
+Ansible.
 
 ```bash
-docker pull ghcr.io/cyberaar/ee-hardening:latest
+docker pull ghcr.io/cyberaar/aartool:latest
+docker run --rm ghcr.io/cyberaar/aartool --version
 ```
 
-**Dry-run hardening against a remote host (no changes):**
+`ghcr.io/cyberaar/ee-hardening` is still published under the same digest, so
+anything already pulling that name keeps working.
+
+**Audit a remote host.** Changes nothing.
+
+```bash
+docker run --rm \
+  -v ~/.ssh:/keys:ro \
+  -v "$(pwd)/reports:/reports" \
+  ghcr.io/cyberaar/aartool \
+  inspect --host 10.0.1.10 --user admin --ssh-key /keys/id_ed25519 -o /reports
+```
+
+**Audit a private host through a bastion**, which is how most estates are shaped:
+
+```bash
+docker run --rm \
+  -v ~/.ssh:/keys:ro -v "$(pwd)/reports:/reports" \
+  ghcr.io/cyberaar/aartool \
+  inspect --host 10.0.1.31 --user admin --ssh-key /keys/id_ed25519 \
+          --jump admin@bastion.example.com -o /reports
+```
+
+**Turn the report into a plan:**
+
+```bash
+docker run --rm -v "$(pwd)/reports:/reports" \
+  ghcr.io/cyberaar/aartool advise /reports/cyberaar-*.json --target web-01 --user admin
+```
+
+**Preview and apply hardening.** The inventory is not in the image, by design:
+it names real machines, so it is gitignored and excluded from the build. Mount
+yours.
+
+```bash
+docker run --rm \
+  -v ~/.ssh:/keys:ro \
+  -v "$(pwd)/ansible-hardening/inventory:/opt/aartool/ansible-hardening/inventory:ro" \
+  ghcr.io/cyberaar/aartool \
+  plan --target web-01 --user admin
+```
+
+**Check the image can do what you are about to ask of it:**
+
+```bash
+docker run --rm ghcr.io/cyberaar/aartool doctor
+```
+
+On a fresh image `doctor` reports the inventory as missing and prints the
+command to create one. That is correct, and the same thing a fresh clone does.
+
+### Reaching the playbooks directly
+
+The entrypoint is `aartool`; override it to run anything else in the image.
 
 ```bash
 docker run --rm -it \
-  -v ~/.ssh:/root/.ssh:ro \
-  -v $(pwd)/ansible-hardening/inventory:/inventory:ro \
-  ghcr.io/cyberaar/ee-hardening:latest \
-  ansible-playbook \
-    -i /inventory/hosts \
-    --extra-vars "target=myserver" \
-    -u admin -b --check \
-    /usr/share/cyberaar/playbooks/2_configure_hardening.yml
+  -v ~/.ssh:/keys:ro \
+  -v "$(pwd)/ansible-hardening/inventory:/inventory:ro" \
+  --entrypoint ansible-playbook \
+  ghcr.io/cyberaar/aartool \
+    -i /inventory/hosts --extra-vars "target=myserver" -u admin -b --check \
+    /opt/aartool/ansible-hardening/playbooks/2_configure_hardening.yml
 ```
 
-**Full pipeline (baseline → harden → baseline):**
+The toolkit lives at `/opt/aartool` laid out exactly as in the repository, with
+`AARTOOL_HOME` pointing at it. `aartool` locates the playbooks, the audit script
+and the dashboard by walking up from its own file, so the layout is load-bearing
+rather than cosmetic.
 
-```bash
-docker run --rm -it \
-  -v ~/.ssh:/root/.ssh:ro \
-  -v $(pwd)/ansible-hardening/inventory:/inventory:ro \
-  -v $(pwd)/reports:/reports \
-  ghcr.io/cyberaar/ee-hardening:latest \
-  ansible-playbook \
-    -i /inventory/hosts \
-    --extra-vars "target=myserver baseline_output_dir=/reports" \
-    -u admin -b \
-    /usr/share/cyberaar/playbooks/0_execute_full_pipeline.yml
-```
+### What is not in the image
+
+`ansible-hardening/inventory/hosts` and any `reports/`. Both are excluded by
+`.dockerignore`, because `docker build` does not honour `.gitignore` and a local
+build would otherwise bake the operator's own estate, hostnames and audit
+findings included, into an image they might then push.
 
 > Full reference: [`execution-environment/README.md`](../execution-environment/README.md)
 

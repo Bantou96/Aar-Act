@@ -30,7 +30,7 @@ _render_json() {
   cat > "$JSON_OUT" <<EOF
 {
   "cyberaar_baseline": {
-    "version": "4.0.0",
+    "version": "${SCRIPT_VERSION}",
     "host": "${_j_host}",
     "os": "${_j_os}",
     "date": "${DATE_VAL}",

@@ -1,19 +1,22 @@
-# CyberAar Execution Environment
+# aartool, containerised
+#
+#   docker run --rm -v ~/.ssh:/root/.ssh:ro ghcr.io/cyberaar/aartool \
+#     inspect --host 10.0.1.10 --user admin --jump admin@bastion
 #
 # Build from repo root:
 #   docker build -f execution-environment/Containerfile \
-#     --build-arg COLLECTION_VERSION=1.9.0 \
-#     -t cyberaar/ee-hardening:latest .
+#     --build-arg COLLECTION_VERSION=3.0.0 \
+#     -t ghcr.io/cyberaar/aartool:latest .
 #
 # The COLLECTION_VERSION build arg pins cyberaar.hardening to an exact release.
-# CI overrides it automatically from galaxy.yml — set it manually for local builds.
+# CI overrides it automatically from galaxy.yml. Set it by hand for local builds.
 
 FROM python:3.11-slim
 
-ARG COLLECTION_VERSION=1.9.0
+ARG COLLECTION_VERSION=3.0.0
 
-LABEL org.opencontainers.image.title="CyberAar Execution Environment"
-LABEL org.opencontainers.image.description="Ansible EE with CyberAar hardening collection (cyberaar.hardening) — CIS-aligned Linux hardening for RHEL 9 and Ubuntu/Debian"
+LABEL org.opencontainers.image.title="aartool"
+LABEL org.opencontainers.image.description="Audit a Linux host, get an ordered plan, apply the fix, prove what changed. 109 CIS checks and 52 Ansible hardening roles for RHEL 9, Ubuntu and Debian"
 LABEL org.opencontainers.image.source="https://github.com/cyberaar/aartool"
 LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
 
@@ -22,15 +25,47 @@ RUN pip install --no-cache-dir ansible-core && \
     apt-get update && apt-get install -y --no-install-recommends openssh-client && \
     rm -rf /var/lib/apt/lists/*
 
-# Install required Ansible collections
+# Third-party collections come from Galaxy. Ours does not, and that is
+# deliberate: this workflow and galaxy-publish both fire on `release: published`
+# and run in parallel, so pulling cyberaar.hardening:==${COLLECTION_VERSION}
+# from Galaxy is a race against our own publish job, which had not uploaded it
+# yet. Building the collection from the checkout removes the race and, more
+# usefully, guarantees the image contains the code at the tag it is named after
+# rather than whatever Galaxy happens to be serving.
 RUN ansible-galaxy collection install \
-    "cyberaar.hardening:==${COLLECTION_VERSION}" \
     "ansible.posix:>=1.5.4" \
     "community.general:>=8.0.0"
 
-# Copy hardening playbooks into the image
-COPY ansible-hardening/playbooks/ /usr/share/cyberaar/playbooks/
+# The toolkit is laid out exactly as it is in the repository, because aartool
+# finds the playbooks, the audit script and the dashboard by walking up from its
+# own file until it finds ansible-hardening/. Scattering the pieces across
+# /usr/local/bin and /usr/share would break that walk, which is why AARTOOL_HOME
+# is set rather than the parts being installed individually.
+WORKDIR /opt/aartool
+COPY ansible-hardening/ /opt/aartool/ansible-hardening/
 
-# Copy baseline audit script
-COPY scripts/cyberaar-baseline.sh /usr/local/bin/cyberaar-baseline
-RUN chmod 755 /usr/local/bin/cyberaar-baseline
+# Build and install our own collection from this checkout, and fail the build if
+# the version inside does not match what the image is being tagged with.
+RUN cd /opt/aartool/ansible-hardening && \
+    test "$(grep '^version:' galaxy.yml | awk '{print $2}')" = "${COLLECTION_VERSION}" && \
+    ansible-galaxy collection build --force --output-path /tmp/collection && \
+    ansible-galaxy collection install \
+      "/tmp/collection/cyberaar-hardening-${COLLECTION_VERSION}.tar.gz" && \
+    rm -rf /tmp/collection
+COPY dashboard/         /opt/aartool/dashboard/
+COPY scripts/           /opt/aartool/scripts/
+
+ENV AARTOOL_HOME=/opt/aartool
+
+# Both front doors on PATH. The image previously shipped the playbooks and the
+# audit script but not aartool itself, so the one command the documentation
+# tells people to run was the one thing missing from the container.
+RUN ln -sf /opt/aartool/scripts/aartool             /usr/local/bin/aartool && \
+    ln -sf /opt/aartool/scripts/cyberaar-baseline.sh /usr/local/bin/cyberaar-baseline && \
+    chmod 755 /opt/aartool/scripts/aartool /opt/aartool/scripts/cyberaar-baseline.sh && \
+    aartool --version
+
+# `docker run ghcr.io/cyberaar/aartool inspect --host ...` reads as the command
+# it is. Override with --entrypoint for a shell.
+ENTRYPOINT ["/usr/local/bin/aartool"]
+CMD ["--help"]

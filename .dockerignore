@@ -1,0 +1,23 @@
+# Docker COPY does not honour .gitignore. Without this file, `docker build`
+# from a working clone bakes whatever is on the operator's disk into the image,
+# including the two things that must never leave the machine:
+#
+#   inventory/hosts   is gitignored precisely because it names real servers
+#   reports/          are audit results for those servers, findings and all
+#
+# The published image is built by CI from a fresh checkout, where neither
+# exists, so this protects the local build that someone then pushes by hand.
+ansible-hardening/inventory/hosts
+ansible-hardening/reports/
+reports/
+*.json
+!ansible-hardening/**/*.json
+
+# Build and VCS noise, which also keeps the image small.
+.git/
+.github/
+node_modules/
+.venv*/
+*.tar.gz
+bantou96-tombstone/
+mnt/
