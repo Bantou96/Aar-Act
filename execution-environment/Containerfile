@@ -14,7 +14,7 @@ ARG COLLECTION_VERSION=1.9.0
 
 LABEL org.opencontainers.image.title="CyberAar Execution Environment"
 LABEL org.opencontainers.image.description="Ansible EE with CyberAar hardening collection (cyberaar.hardening) — CIS-aligned Linux hardening for RHEL 9 and Ubuntu/Debian"
-LABEL org.opencontainers.image.source="https://github.com/cyberaar/cyberaar-toolkit"
+LABEL org.opencontainers.image.source="https://github.com/cyberaar/aartool"
 LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
 
 # Install ansible-core + ssh client (needed for remote connections)

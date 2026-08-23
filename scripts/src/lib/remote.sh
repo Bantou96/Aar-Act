@@ -294,6 +294,6 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
     "$FLEET_OK" "$FLEET_FAIL" "${#FLEET_HOSTS[@]}"
   printf "  📁 Reports in: %s\n" "${OUTPUT_DIR:-current directory}"
   printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-  printf "  CyberAar — https://github.com/cyberaar/cyberaar-toolkit\n\n"
+  printf "  CyberAar — https://github.com/cyberaar/aartool\n\n"
   exit 0
 fi

@@ -44,7 +44,7 @@ resolve_paths() {
     root="$(_find_up "ansible-hardening" "$here")" \
       || die "Cannot find the toolkit. Looked for ansible-hardening/ in $here and six directories above it.
         If you copied aartool out of the repository rather than symlinking it, point it back:
-          export AARTOOL_HOME=/path/to/cyberaar-toolkit
+          export AARTOOL_HOME=/path/to/aartool
         'aartool install' creates a symlink precisely so this does not happen."
   fi
 

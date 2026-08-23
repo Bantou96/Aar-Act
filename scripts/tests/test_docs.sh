@@ -18,7 +18,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 AARTOOL="./aartool"
-DOCS=(../README.md ../docs/AARTOOL.md)
+DOCS=(../README.md ../docs/AARTOOL.md ../docs/ANSIBLE.md ../docs/BASELINE.md ../docs/DASHBOARD.md ../docs/CONTAINER.md)
 
 PASS=0 FAIL=0
 fail() { FAIL=$((FAIL+1)); printf 'FAIL  %s\n' "$*"; }
@@ -78,8 +78,10 @@ done
 
 # The dedicated manual must exist and be linked from the README, or nobody
 # finds it.
-[[ -f ../docs/AARTOOL.md ]] && ok || fail "docs/AARTOOL.md is missing"
-grep -q 'docs/AARTOOL.md' ../README.md && ok || fail "README.md does not link to docs/AARTOOL.md"
+for d in AARTOOL ANSIBLE BASELINE DASHBOARD CONTAINER; do
+  [[ -f "../docs/$d.md" ]] && ok || fail "docs/$d.md is missing"
+  grep -q "docs/$d.md" ../README.md && ok || fail "README.md does not link to docs/$d.md"
+done
 
 # No em dashes: house style, and they are a nuisance to type on the keyboard
 # this repository is written from.
