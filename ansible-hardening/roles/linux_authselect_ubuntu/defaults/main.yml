@@ -20,7 +20,16 @@ linux_authselect_even_deny_root: true
 linux_authselect_root_unlock_time: 60
 
 # Password aging (CIS 5.5.1.x)
-linux_authselect_pass_max_days: 365
+# 90, matching linux_user_management_rhel9's linux_password_max_days and the
+# AUTH-03 check, which passes at 90 or less. This was 365: the RHEL and Ubuntu
+# implementations of the same control disagreed with each other, and the Ubuntu
+# one disagreed with the audit, so applying the recommended remediation left the
+# finding failing. Every one of 15 audited Ubuntu nodes reported AUTH-03 FAIL.
+#
+# CIS Ubuntu 22.04 5.5.1.2 permits up to 365, and NIST SP 800-63B argues against
+# forced expiry altogether. If your policy says otherwise, override this; the
+# point is that the tool and its own remediation now agree on a number.
+linux_authselect_pass_max_days: 90
 linux_authselect_pass_min_days: 1
 linux_authselect_pass_warn_age: 7
 linux_authselect_pass_min_len: 14

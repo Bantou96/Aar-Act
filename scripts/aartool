@@ -305,7 +305,7 @@ AUTH-04 AUTH-09 AUTH-11 AUTH-15
 SYS-03 SYS-04 SYS-05 SYS-11
 NET-01 NET-02 NET-05
 LOG-01 LOG-04 LOG-08
-FS-01 FS-05 FS-06
+FS-01 FS-05 FS-06 FS-07
 IDS
 }
 
@@ -1404,6 +1404,45 @@ MORE
 E
   ;;
 
+  FS-07) cat <<'E'
+WHAT
+  World-writable directories that do not have the sticky bit set.
+
+WHY
+  Without the sticky bit, any user who can write to a directory can delete or
+  rename anyone else's files in it, not just their own. That is the mechanism
+  behind a whole family of symlink and rename races: an attacker swaps a file
+  another process is about to open, between the check and the open. /tmp is the
+  classic case, which is why /tmp has had the sticky bit since the 1980s.
+
+COST
+  Read the list before you act on it. On any host that runs containers, almost
+  every hit is inside the image and snapshot store, and those permissions
+  reflect the contents of the images rather than anything about this machine.
+  Mass-chmodding a snapshot tree corrupts layers and breaks the containers
+  built on them. On a real docs server all 3622 findings were under
+  /var/lib/containerd and not one of them was worth changing.
+
+BY HAND
+  # Look first, and group by where they actually live:
+  find / -xdev -type d -perm -0002 ! -perm -1000 2>/dev/null \
+    | cut -d/ -f1-4 | sort | uniq -c | sort -rn | head
+  # Then fix only what is genuinely yours:
+  find /srv /opt /home -xdev -type d -perm -0002 ! -perm -1000 \
+    -exec chmod a+t {} +
+
+WITH AARTOOL
+  aartool plan --target HOST --user USER --only filesystem,permissions
+  Read that plan rather than applying it blind. The role fixes the paths it
+  knows about; a container store is not one of them, and it should not be.
+
+MORE
+  Exclude the container root from the question instead of from the fix. If your
+  storage driver lives under /var/lib/docker or /var/lib/containerd, findings
+  there are about your images, and the place to fix them is the Dockerfile.
+E
+  ;;
+
   FS-05) cat <<'E'
 WHAT
   Unexpected setuid and setgid binaries on the filesystem.
@@ -1729,6 +1768,11 @@ Usage:
 Options:
   -t, --target HOST|GROUP   Host or inventory group. Required.
   -u, --user USER           SSH user (default: ansible)
+      --ssh-key FILE        SSH private key. inspect has always taken one;
+                            plan and apply did not, so on an estate with a
+                            dedicated key they failed with a permission error
+                            that pointed at the target rather than at the
+                            missing flag.
       --only TAGS           Limit to categories, comma separated.
                             e.g. ssh, firewall, audit, kernel, users
       --full                Run the three-step pipeline: audit, harden, audit.
@@ -1745,12 +1789,15 @@ EOF
 
 cmd_harden() {
   local mode="$1"; shift          # plan | apply
-  local target="" user="" tags="" full=false become=false assume_yes=false
+  local target="" user="" sshkey="" tags="" full=false become=false assume_yes=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -t|--target) [[ $# -ge 2 ]] || die "$1 needs a value."; target="$2"; shift 2 ;;
       -u|--user)   [[ $# -ge 2 ]] || die "$1 needs a value."; user="$2";   shift 2 ;;
+      --ssh-key)   [[ $# -ge 2 ]] || die "$1 needs a value."
+                   [[ -r "$2" ]] || die "SSH key not readable: $2"
+                   sshkey="$2"; shift 2 ;;
       --only)      [[ $# -ge 2 ]] || die "$1 needs a value."; tags="$2";   shift 2 ;;
       --full)      full=true;       shift ;;
       -K|--ask-become-pass) become=true; shift ;;
@@ -1775,6 +1822,7 @@ cmd_harden() {
 
   local -a args=(-t "$target" -s "$( [[ "$full" == true ]] && echo all || echo 2 )")
   [[ -n "$user" ]]      && args+=(-u "$user")
+  [[ -n "$sshkey" ]]    && args+=(-i "$sshkey")
   [[ -n "$tags" ]]      && args+=(-T "$tags")
   [[ "$become" == true ]] && args+=(-K)
   [[ "$mode" == plan ]] && args+=(-c)
@@ -2017,6 +2065,11 @@ _advise_costly() {
     SYS-04)                      return 0 ;;  # MAC enforcing without a permissive pass
     AUTH-04|AUTH-09|AUTH-14)     return 0 ;;  # PAM edits, self-inflicted lockout
     AUTH-05|AUTH-11|FS-05)       return 0 ;;  # needs a human: what IS that account/binary
+    # World-writable paths are overwhelmingly inside container storage on any
+    # host that runs containers, and mass-chmodding a snapshot tree corrupts
+    # image layers. Found on a real docs server where all 3622 hits were under
+    # /var/lib/containerd: the finding was true and the remediation was wrong.
+    FS-04|FS-07)                 return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -2405,10 +2458,14 @@ cmd_doctor_usage() {
 aartool doctor: check everything plan and apply depend on. Changes nothing.
 
 Usage:
-  aartool doctor [--target HOST]
+  aartool doctor [--target HOST [--user USER] [--ssh-key FILE]]
 
 Options:
-      --target HOST   Also test SSH reachability and sudo on that host
+  -t, --target HOST   Also test SSH reachability and sudo on that host
+  -u, --user USER     SSH user for that test. Without it, ansible connects as
+                      whoever you are locally, which is almost never right on
+                      a real estate.
+      --ssh-key FILE  SSH private key for that test
   -h, --help          Show this help
 
 Exits non-zero if anything is missing, so it works as a CI gate.
@@ -2416,10 +2473,12 @@ EOF
 }
 
 cmd_doctor() {
-  local target=""
+  local target="" user="" sshkey=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -t|--target) [[ $# -ge 2 ]] || die "$1 needs a value."; target="$2"; shift 2 ;;
+      -u|--user)   [[ $# -ge 2 ]] || die "$1 needs a value."; user="$2";   shift 2 ;;
+      --ssh-key)   [[ $# -ge 2 ]] || die "$1 needs a value."; sshkey="$2"; shift 2 ;;
       -h|--help)   cmd_doctor_usage; return 0 ;;
       -*) die "Unknown option for doctor: $1." ;;
       *)  die "doctor takes no positional arguments." ;;
@@ -2485,10 +2544,33 @@ cmd_doctor() {
     elif ! command -v ansible >/dev/null 2>&1; then
       _doc_warn "target $target" "skipped" "ansible not on PATH"
     else
-      if ansible -i "$INVENTORY" "$target" -m ping >/dev/null 2>&1; then
-        _doc_pass "target $target" "reachable"
+      # Without -u, ansible connects as whoever is running this, which on a
+      # real estate is never the admin account. doctor reported "unreachable"
+      # for a host that was perfectly reachable, and the fix line it printed
+      # reproduced its own mistake. plan and apply have always taken --user;
+      # the check that exists to catch connection problems did not.
+      local -a probe=(-i "$INVENTORY" "$target" -m ping)
+      [[ -n "$user"   ]] && probe+=(-u "$user")
+      [[ -n "$sshkey" ]] && probe+=(--private-key "$sshkey")
+      vlog "probe: ansible ${probe[*]}"
+      if ansible "${probe[@]}" >/dev/null 2>&1; then
+        _doc_pass "target $target" "reachable$([[ -n "$user" ]] && printf ' as %s' "$user")"
+        # Reachable is not the same as able to change anything. plan is a dry
+        # run, but apply needs root, and finding that out at apply time means
+        # finding out halfway through a hardening run.
+        if ansible -i "$INVENTORY" "$target" -m raw -a 'sudo -n true' \
+             ${user:+-u "$user"} ${sshkey:+--private-key "$sshkey"} >/dev/null 2>&1; then
+          _doc_pass "sudo on $target" "passwordless"
+        else
+          _doc_warn "sudo on $target" "needs a password" \
+            "apply will stall unless you pass -K, or grant NOPASSWD to the automation account"
+        fi
       else
-        _doc_fail "target $target" "unreachable" "ansible -i $INVENTORY $target -m ping   (check SSH user and keys)"
+        local hint="ansible -i $INVENTORY $target -m ping"
+        [[ -n "$user"   ]] && hint+=" -u $user"
+        [[ -n "$sshkey" ]] && hint+=" --private-key $sshkey"
+        [[ -z "$user"   ]] && hint+="   (no --user given, so it tried as $(id -un))"
+        _doc_fail "target $target" "unreachable" "$hint"
       fi
     fi
   fi

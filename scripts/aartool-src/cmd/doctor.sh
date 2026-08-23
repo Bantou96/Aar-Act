@@ -24,10 +24,14 @@ cmd_doctor_usage() {
 aartool doctor: check everything plan and apply depend on. Changes nothing.
 
 Usage:
-  aartool doctor [--target HOST]
+  aartool doctor [--target HOST [--user USER] [--ssh-key FILE]]
 
 Options:
-      --target HOST   Also test SSH reachability and sudo on that host
+  -t, --target HOST   Also test SSH reachability and sudo on that host
+  -u, --user USER     SSH user for that test. Without it, ansible connects as
+                      whoever you are locally, which is almost never right on
+                      a real estate.
+      --ssh-key FILE  SSH private key for that test
   -h, --help          Show this help
 
 Exits non-zero if anything is missing, so it works as a CI gate.
@@ -35,10 +39,12 @@ EOF
 }
 
 cmd_doctor() {
-  local target=""
+  local target="" user="" sshkey=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -t|--target) [[ $# -ge 2 ]] || die "$1 needs a value."; target="$2"; shift 2 ;;
+      -u|--user)   [[ $# -ge 2 ]] || die "$1 needs a value."; user="$2";   shift 2 ;;
+      --ssh-key)   [[ $# -ge 2 ]] || die "$1 needs a value."; sshkey="$2"; shift 2 ;;
       -h|--help)   cmd_doctor_usage; return 0 ;;
       -*) die "Unknown option for doctor: $1." ;;
       *)  die "doctor takes no positional arguments." ;;
@@ -104,10 +110,33 @@ cmd_doctor() {
     elif ! command -v ansible >/dev/null 2>&1; then
       _doc_warn "target $target" "skipped" "ansible not on PATH"
     else
-      if ansible -i "$INVENTORY" "$target" -m ping >/dev/null 2>&1; then
-        _doc_pass "target $target" "reachable"
+      # Without -u, ansible connects as whoever is running this, which on a
+      # real estate is never the admin account. doctor reported "unreachable"
+      # for a host that was perfectly reachable, and the fix line it printed
+      # reproduced its own mistake. plan and apply have always taken --user;
+      # the check that exists to catch connection problems did not.
+      local -a probe=(-i "$INVENTORY" "$target" -m ping)
+      [[ -n "$user"   ]] && probe+=(-u "$user")
+      [[ -n "$sshkey" ]] && probe+=(--private-key "$sshkey")
+      vlog "probe: ansible ${probe[*]}"
+      if ansible "${probe[@]}" >/dev/null 2>&1; then
+        _doc_pass "target $target" "reachable$([[ -n "$user" ]] && printf ' as %s' "$user")"
+        # Reachable is not the same as able to change anything. plan is a dry
+        # run, but apply needs root, and finding that out at apply time means
+        # finding out halfway through a hardening run.
+        if ansible -i "$INVENTORY" "$target" -m raw -a 'sudo -n true' \
+             ${user:+-u "$user"} ${sshkey:+--private-key "$sshkey"} >/dev/null 2>&1; then
+          _doc_pass "sudo on $target" "passwordless"
+        else
+          _doc_warn "sudo on $target" "needs a password" \
+            "apply will stall unless you pass -K, or grant NOPASSWD to the automation account"
+        fi
       else
-        _doc_fail "target $target" "unreachable" "ansible -i $INVENTORY $target -m ping   (check SSH user and keys)"
+        local hint="ansible -i $INVENTORY $target -m ping"
+        [[ -n "$user"   ]] && hint+=" -u $user"
+        [[ -n "$sshkey" ]] && hint+=" --private-key $sshkey"
+        [[ -z "$user"   ]] && hint+="   (no --user given, so it tried as $(id -un))"
+        _doc_fail "target $target" "unreachable" "$hint"
       fi
     fi
   fi
