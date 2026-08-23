@@ -9,7 +9,7 @@
 
 cmd_surface_usage() {
   cat <<'EOF'
-aartool surface — kernel attack surface. Assess by default; changes nothing.
+aartool surface: kernel attack surface. Assess by default; changes nothing.
 
 Usage:
   aartool surface [options]

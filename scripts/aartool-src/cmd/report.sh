@@ -14,7 +14,7 @@
 
 cmd_report_usage() {
   cat <<'EOF'
-aartool report — visualise baseline JSON reports.
+aartool report: visualise baseline JSON reports.
 
 Usage:
   aartool report [REPORT.json ...] [options]

@@ -7,7 +7,7 @@
 cmd_harden_usage() {
   local verb="$1"
   cat <<EOF
-aartool ${verb} — $( [[ "$verb" == plan ]] \
+aartool ${verb}: $( [[ "$verb" == plan ]] \
   && echo "show what hardening would change. Changes nothing." \
   || echo "apply hardening to a target." )
 
@@ -72,9 +72,9 @@ cmd_harden() {
   printf '%sScope%s    %s\n'  "$BOLD" "$RESET" "${tags:-all hardening categories}"
   printf '%sSteps%s    %s\n'  "$BOLD" "$RESET" "$( [[ "$full" == true ]] && echo "audit, harden, audit" || echo "harden" )"
   if [[ "$mode" == plan ]]; then
-    printf '%sMode%s     %spreview — nothing will be changed%s\n' "$BOLD" "$RESET" "$GREEN" "$RESET"
+    printf '%sMode%s     %spreview: nothing will be changed%s\n' "$BOLD" "$RESET" "$GREEN" "$RESET"
   else
-    printf '%sMode%s     %sAPPLY — this will change the target%s\n' "$BOLD" "$RESET" "$RED" "$RESET"
+    printf '%sMode%s     %sAPPLY: this will change the target%s\n' "$BOLD" "$RESET" "$RED" "$RESET"
   fi
   echo
 

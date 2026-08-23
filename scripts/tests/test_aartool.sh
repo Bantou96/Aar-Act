@@ -9,7 +9,7 @@
 #
 # Run: bash scripts/tests/test_aartool.sh
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 AARTOOL="./aartool"
 
 # Point at the shipped example rather than whatever inventory this machine has.
@@ -26,6 +26,19 @@ check() {
   else
     FAIL=$((FAIL + 1))
     printf 'FAIL  %s\n      want to contain: %s\n      got:             %s\n' "$label" "$want" "$got"
+  fi
+}
+# check() is a substring match, which is right for output assertions and wrong
+# for "this list must be empty": "none: ZZZ-99" contains "none:". An earlier
+# version of the knowledge-base guard used check() and passed while documenting
+# a check that did not exist. Exact comparison, for exactly that case.
+check_exact() {
+  local label="$1" got="$2" want="$3"
+  if [[ "$got" == "$want" ]]; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+    printf 'FAIL  %s\n      want exactly: [%s]\n      got:          [%s]\n' "$label" "$want" "$got"
   fi
 }
 check_rc() {
@@ -234,6 +247,89 @@ check    "doctor help"  "$($AARTOOL doctor --help 2>&1)"  "Changes nothing"
 check    "report help"  "$($AARTOOL report --help 2>&1)"  "self-contained"
 check    "diff help"    "$($AARTOOL diff --help 2>&1)"    "Exit codes"
 check    "install help" "$($AARTOOL install --help 2>&1)" "SYMLINK"
+
+check    "advise help"  "$($AARTOOL advise --help 2>&1)"  "--safe-only"
+check    "explain help" "$($AARTOOL explain --help 2>&1)" "--list"
+
+# ── explain ──────────────────────────────────────────────────────────────────
+# The point of explain is that it always answers. A help command that refuses
+# on a third of its inputs teaches people not to type it.
+ALL_IDS=$($AARTOOL explain --list 2>/dev/null | awk '{print $1}')
+check "explain --list covers the whole baseline" \
+      "$(printf '%s\n' "$ALL_IDS" | grep -c . )" "109"
+
+silent=0 empty=0
+for id in $ALL_IDS; do
+  out=$($AARTOOL explain "$id" 2>&1) || { silent=$((silent+1)); continue; }
+  # Every answer must reach at least the WHAT section. Under set -euo pipefail
+  # a grep that matches nothing used to kill the command mid-way, printing a
+  # partial page and exiting 1 with no message. That bug shipped once.
+  [[ "$out" == *"WHAT"* ]] || empty=$((empty+1))
+done
+check_exact "explain answers for every ID (no silent exit)" "$silent" "0"
+check_exact "explain reaches WHAT for every ID"             "$empty"  "0"
+
+# Written entries must name checks that exist, or the knowledge base documents
+# settings the tool does not actually look at.
+missing=""
+for id in $($AARTOOL explain --written 2>/dev/null); do
+  printf '%s\n' "$ALL_IDS" | grep -qx "$id" || missing="$missing $id"
+done
+check_exact "every written entry names a real check" "$missing" ""
+
+check    "explain rejects a bad ID"  "$($AARTOOL explain KRN-99 2>&1)" "No check called"
+check    "explain suggests the family" "$($AARTOOL explain KRN-99 2>&1)" "KRN-01"
+check_rc "explain bad ID exits 1"   1  $AARTOOL explain KRN-99
+check    "explain is case tolerant" "$($AARTOOL explain krn-04 2>&1)" "userfaultfd"
+check    "explain refuses two IDs"  "$($AARTOOL explain KRN-01 KRN-02 2>&1)" "one check ID at a time"
+
+# ── advise ───────────────────────────────────────────────────────────────────
+FIXTURE="tests/fixtures/audit-fixture.json"
+ADV=$($AARTOOL advise "$FIXTURE" --target web-01 --user ubuntu 2>&1)
+
+check "advise names the host"        "$ADV" "fixture-web-01"
+check "advise orders by reachability" "$ADV" "Wave 1"
+check "advise writes the target in"  "$ADV" "--target web-01 --user ubuntu"
+check "advise separates the costly"  "$ADV" "Decide before you apply"
+check "advise ends with an order"    "$ADV" "Order of operations"
+
+# FAIL before WARN inside a wave: an operator reads top down and stops.
+W1=$(printf '%s\n' "$ADV" | sed -n '/Wave 1/,/preview/p' | grep -oE '^   (FAIL|WARN)' | tr -d ' ')
+check "wave 1 puts FAIL first" "$(printf '%s\n' "$W1" | head -1)" "FAIL"
+check "wave 1 has no FAIL after a WARN" \
+      "$(printf '%s\n' "$W1" | uniq | tr '\n' ',')" "FAIL,WARN,"
+
+# The unpatched-kernel finding is reachable from the network, not hygiene.
+check "SYS-11 is a wave 1 item" \
+      "$(printf '%s\n' "$ADV" | sed -n '/Wave 1/,/preview/p' | grep -c 'SYS-11')" "1"
+
+# --safe-only takes the costly items out of the waves without hiding them.
+# Dropping findings silently is the failure mode this whole tool exists to
+# avoid, so assert both halves: gone from the sequence, still on the page.
+SAFE=$($AARTOOL advise "$FIXTURE" --safe-only 2>&1)
+SAFE_WAVES=$(printf '%s\n' "$SAFE" | sed -n '1,/Decide before you apply/p')
+check "safe-only drops the costly from the waves" "$(printf '%s\n' "$SAFE_WAVES" | grep -c 'KRN-01')" "0"
+check "safe-only still lists them to decide on"   "$(printf '%s\n' "$SAFE" | grep -c 'aartool explain KRN-01')" "1"
+check "safe-only keeps the safe ones"             "$(printf '%s\n' "$SAFE_WAVES" | grep -c 'KRN-02')" "1"
+
+check "wave filter shows only that wave" \
+      "$(printf '%s\n' "$($AARTOOL advise "$FIXTURE" --wave 3 2>&1)" | grep -c 'Wave 1')" "0"
+check "wave filter rejects nonsense" "$($AARTOOL advise "$FIXTURE" --wave 9 2>&1)" "1, 2, 3 or 4"
+
+# Every command advise prints must be one aartool would accept. It is generated
+# from the remediation map, and a plan telling someone to run an invalid
+# --only is the same silent no-op the map guard exists to prevent.
+for tagset in $(printf '%s\n' "$ADV" | grep -oP '\-\-only \K[a-z,]+'); do
+  for tag in ${tagset//,/ }; do
+    grep -rqs -- "$tag" ../ansible-hardening/playbooks/2_configure_hardening.yml \
+      || { FAIL=$((FAIL+1)); printf 'FAIL  advise printed --only %s, absent from the playbook\n' "$tag"; }
+  done
+  PASS=$((PASS+1))
+done
+
+check_rc "advise with no report exits 1" 1 env HOME=/nonexistent $AARTOOL advise --wave 1
+check "advise rejects a non-report" \
+      "$($AARTOOL advise ../README.md 2>&1)" "does not look like"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

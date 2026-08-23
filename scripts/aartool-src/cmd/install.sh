@@ -12,7 +12,7 @@
 
 cmd_install_usage() {
   cat <<'EOF'
-aartool install — put aartool on your PATH.
+aartool install: put aartool on your PATH.
 
 Usage:
   sudo aartool install [options]

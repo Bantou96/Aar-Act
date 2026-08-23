@@ -11,7 +11,7 @@
 #
 # Run: bash scripts/tests/test_distro.sh
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 PASS=0 FAIL=0
 expect() {                       # expect <label> <os-release body> <family> <roles yes|no>
