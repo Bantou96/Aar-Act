@@ -48,7 +48,11 @@ jobs:
           build-args: |
             COLLECTION_VERSION=${{ steps.meta.outputs.version }}
           push: ${{ github.event.inputs.dry_run != 'true' }}
+          # The image is named after the product now. ee-hardening is still
+          # pushed so anything already pulling that name keeps working.
           tags: |
+            ghcr.io/cyberaar/aartool:latest
+            ghcr.io/cyberaar/aartool:v${{ steps.meta.outputs.version }}
             ghcr.io/cyberaar/ee-hardening:latest
             ghcr.io/cyberaar/ee-hardening:v${{ steps.meta.outputs.version }}
           cache-from: type=gha
@@ -57,6 +61,8 @@ jobs:
       - name: Dry run summary
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: |
-          echo "Dry run — image built but not pushed:"
-          echo "  ghcr.io/cyberaar/ee-hardening:v${{ steps.meta.outputs.version }}"
-          echo "  ghcr.io/cyberaar/ee-hardening:latest"
+          echo "Dry run: image built but not pushed."
+          echo "  ghcr.io/cyberaar/aartool:v${{ steps.meta.outputs.version }}"
+          echo "  ghcr.io/cyberaar/aartool:latest"
+          echo "  ghcr.io/cyberaar/ee-hardening:v${{ steps.meta.outputs.version }} (compatibility)"
+          echo "  ghcr.io/cyberaar/ee-hardening:latest (compatibility)"

@@ -55,6 +55,12 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
           shellcheck -S warning scripts/aartool scripts/tests/*.sh
 
+      # The audit script was at 4.2.0 while every JSON report it wrote claimed
+      # 4.0.0, because the renderer had the number typed in as a literal.
+      # Numbers that must agree, agree here or the build fails.
+      - name: Versions agree across sources, bundles, reports and the image tag
+        run: bash scripts/tests/test_versions.sh
+
       - name: Smoke test
         run: bash scripts/tests/test_aartool.sh
 
