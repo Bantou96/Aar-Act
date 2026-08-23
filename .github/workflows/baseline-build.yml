@@ -8,6 +8,8 @@ on:
       - "scripts/src/**"
       - "scripts/build.sh"
       - "scripts/run-hardening.sh"
+      - "ansible-hardening/playbooks/**"
+      - "ansible-hardening/roles/*/defaults/**"
       - "scripts/cyberaar-baseline.sh"
       - ".github/workflows/baseline-build.yml"
   pull_request:
@@ -16,6 +18,8 @@ on:
       - "scripts/src/**"
       - "scripts/build.sh"
       - "scripts/run-hardening.sh"
+      - "ansible-hardening/playbooks/**"
+      - "ansible-hardening/roles/*/defaults/**"
       - "scripts/cyberaar-baseline.sh"
       - ".github/workflows/baseline-build.yml"
   workflow_dispatch:
@@ -70,6 +74,13 @@ jobs:
 
       - name: Distribution mapping tests
         run: bash scripts/tests/test_distro.sh
+
+      # The plan printed at the end of every audit is built from ANSIBLE_MAP.
+      # Nothing verified those tags and roles existed, so a typo produced a
+      # command that runs cleanly, matches nothing and changes nothing, while
+      # the operator believes the finding is remediated.
+      - name: Remediation map points at real tags and roles
+        run: bash scripts/tests/test_remediation_map.sh
 
       - name: Escaping regression tests
         run: bash scripts/tests/test_escaping.sh

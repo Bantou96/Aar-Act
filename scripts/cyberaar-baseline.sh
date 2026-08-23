@@ -347,6 +347,28 @@ declare -A ANSIBLE_MAP=(
   ["COMP-10"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|USB storage module blacklist"
   ["COMP-11"]="cron|linux_cron_hardening_rhel9|linux_cron_hardening_ubuntu|Cron service enabled"
   ["COMP-12"]="cron|linux_cron_hardening_rhel9|linux_cron_hardening_ubuntu|cron/at allow-list enforcement"
+
+  # ── Kernel attack surface (KRN-01..KRN-12) ─────────────────────────────────
+  # All served by the same role and the same tag, because they are all sysctls
+  # in one drop-in file. Without these entries a KRN warning appeared in the
+  # report with no way into the remediation plan: the renderer skips any id it
+  # cannot map, silently.
+  #
+  # The role applies the safe tier by default. KRN-01, KRN-03 and KRN-05 break
+  # real workloads, so their toggles default to false and the operator opts in
+  # deliberately; the description says so rather than leaving them to find out.
+  ["KRN-01"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|Unprivileged user namespaces (opt-in: linux_kernel_restrict_userns=true, breaks rootless containers)"
+  ["KRN-02"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|Unprivileged eBPF disabled"
+  ["KRN-03"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|io_uring restricted (opt-in: linux_kernel_restrict_io_uring=true)"
+  ["KRN-04"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|Unprivileged userfaultfd disabled"
+  ["KRN-05"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|Module loading lockdown (opt-in: linux_kernel_lock_modules=true, irreversible until reboot)"
+  ["KRN-06"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|kexec disabled"
+  ["KRN-07"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|TTY line discipline autoload disabled"
+  # KRN-08 lockdown is a boot parameter or Secure Boot, not a sysctl. No role.
+  ["KRN-09"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|BPF JIT hardening"
+  ["KRN-10"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|SysRq restricted"
+  ["KRN-11"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|Exotic filesystem modules blacklisted"
+  # KRN-12 is the summary of the four above it, not a setting of its own.
 )
 
 # =============================================================================

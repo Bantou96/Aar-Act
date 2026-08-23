@@ -30,3 +30,34 @@ linux_kernel_modprobe_file: "/etc/modprobe.d/99-cis-modprobe-blacklist.conf"
 
 # Whether to attempt unloading modules if loaded (requires reboot for full effect anyway)
 linux_kernel_unload_blacklisted: false
+
+# ── Attack surface reduction (KRN-01..KRN-12) ────────────────────────────────
+# These do not fix bugs. They remove the doorways that whole classes of local
+# privilege escalation walk through, which is what protects a machine in the
+# window before a patch exists, and on the machine that cannot be rebooted.
+#
+# The defaults mirror the two tiers in 'aartool surface':
+#
+#   true by default   no mainstream workload is known to depend on it
+#   false by default  it will break something real for somebody; the comment
+#                     says what, and you opt in deliberately
+#
+# Defaulting the disruptive ones to false is not timidity. A role that silently
+# breaks rootless containers gets disabled wholesale, and then none of the
+# safe settings apply either.
+
+# Safe tier — on by default.
+linux_kernel_disable_unprivileged_bpf: true    # KRN-02 eBPF verifier exploits
+linux_kernel_disable_userfaultfd: true         # KRN-04 turns races into reliable exploits
+linux_kernel_disable_kexec: true               # KRN-06 boots a kernel around Secure Boot
+linux_kernel_disable_ldisc_autoload: true      # KRN-07 old, lightly audited TTY modules
+linux_kernel_bpf_jit_harden: true              # KRN-09 JIT spraying into kernel memory
+linux_kernel_restrict_sysrq: true              # KRN-10 console memory dump
+
+# Strict tier — off by default, each with the reason.
+# Breaks rootless Docker and Podman, Chrome's sandbox, and most CI runners.
+linux_kernel_restrict_userns: false            # KRN-01
+# Breaks workloads that use it: some databases, proxies, async runtimes.
+linux_kernel_restrict_io_uring: false          # KRN-03
+# Irreversible until reboot: blocks every later modprobe, including yours.
+linux_kernel_lock_modules: false               # KRN-05
