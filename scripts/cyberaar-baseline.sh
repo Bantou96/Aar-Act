@@ -2283,6 +2283,29 @@ _render_json() {
   done
   JSON_ARR+="]"
 
+  # The tag each finding is remediated by, so a consumer of this report can
+  # build a working `aartool plan --only ...` without carrying its own copy of
+  # ANSIBLE_MAP. The dashboard did exactly that duplication and it is the same
+  # drift that has bitten this repository three times: two places that must
+  # agree, with nothing checking that they do. Only ids that appear in this
+  # report are emitted, so the object stays small.
+  local _j_tags="{" _j_first=1 _j_id _j_tag
+  local -A _j_seen=()
+  for (( i=0; i<n; i++ )); do
+    _j_id="${RESULT_ID[$i]}"
+    [[ -n "${_j_seen[$_j_id]:-}" ]] && continue
+    _j_seen[$_j_id]=1
+    _j_tag="${ANSIBLE_MAP[$_j_id]:-}"
+    [[ -z "$_j_tag" ]] && continue          # deliberately unmapped, see the map
+    _j_tag="${_j_tag%%|*}"                  # tags field
+    _j_tag="${_j_tag%%,*}"                  # the one `--only` should use
+    [[ -z "$_j_tag" ]] && continue
+    [[ $_j_first -eq 0 ]] && _j_tags+=","
+    _j_tags+="\"${_j_id}\":\"${_j_tag}\""
+    _j_first=0
+  done
+  _j_tags+="}"
+
   # Values that come from the audited machine or from the command line. A quote
   # in any of them breaks the document or injects a key.
   local _j_host _j_os _j_inv
@@ -2310,7 +2333,8 @@ _render_json() {
       "warn_ids": [$(printf '"%s",' "${WARN_IDS[@]}" | sed 's/,$//')],
       "playbook": "playbooks/2_configure_hardening.yml",
       "inventory": "${_j_inv}"
-    }
+    },
+    "remediation_tags": ${_j_tags}
   }
 }
 EOF

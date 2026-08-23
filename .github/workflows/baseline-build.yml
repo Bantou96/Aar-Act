@@ -8,6 +8,7 @@ on:
       - "scripts/src/**"
       - "scripts/build.sh"
       - "scripts/run-hardening.sh"
+      - "dashboard/**"
       - "ansible-hardening/playbooks/**"
       - "ansible-hardening/roles/*/defaults/**"
       - "scripts/cyberaar-baseline.sh"
@@ -18,6 +19,7 @@ on:
       - "scripts/src/**"
       - "scripts/build.sh"
       - "scripts/run-hardening.sh"
+      - "dashboard/**"
       - "ansible-hardening/playbooks/**"
       - "ansible-hardening/roles/*/defaults/**"
       - "scripts/cyberaar-baseline.sh"
@@ -93,6 +95,20 @@ jobs:
       # Subcommands the checks invoke are validated against the real tool's help.
       - name: Checks call subcommands that exist
         run: bash scripts/tests/test_check_commands.sh
+
+      # The dashboard mirrors advise's wave ordering because it has no shell to
+      # call, and `aartool report --out` injects into it by function name. Both
+      # are places two things must agree with nothing checking that they do.
+      # Explicit rather than relying on the runner image happening to ship node:
+      # without it the dashboard render assertion silently SKIPs, and a guard
+      # that skips is a guard that is not there.
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: "20"
+
+      - name: Dashboard matches advise, renders, and reaches no network
+        run: bash scripts/tests/test_dashboard.sh
 
       - name: Escaping regression tests
         run: bash scripts/tests/test_escaping.sh
