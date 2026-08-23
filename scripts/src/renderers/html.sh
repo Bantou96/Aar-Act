@@ -61,7 +61,6 @@ _render_html() {
 
   # Build Ansible remediation HTML
   ANSIBLE_PLAN_HTML=""
-  declare -A seen_html_tags=()
   declare -A html_plan_entries=()
   for _id in "${FAIL_IDS[@]}" "${WARN_IDS[@]}"; do
     [[ -z "${ANSIBLE_MAP[$_id]+x}" ]] && continue
@@ -267,7 +266,7 @@ header {
 .score-ring .bar   { fill: none; stroke-width: 7; stroke-linecap: round;
                      stroke-dasharray: 226; stroke-dashoffset: ${RING_OFFSET};
                      stroke: ${RING_COLOR};
-                     filter: drop-shadow(0 0 6px ${RING_COLOR}ALPHA); }
+                     filter: drop-shadow(0 0 6px ${RING_COLORALPHA}); }
 .score-ring-label {
   position: absolute;
   inset: 0;

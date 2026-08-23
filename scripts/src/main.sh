@@ -83,10 +83,12 @@ while [[ $# -gt 0 ]]; do
     --inventory)      ANSIBLE_INVENTORY="$2";shift 2 ;;
     --user)           REMOTE_USER="$2";     shift 2 ;;
     --ssh-key)        REMOTE_KEY="$2";      shift 2 ;;
-    # Repeatable, and word-split on purpose so --ssh-opt '-J host' and
-    # --ssh-opt -J --ssh-opt host both work.
-    # shellcheck disable=SC2206
-    --ssh-opt)        REMOTE_SSH_OPTS+=($2); shift 2 ;;
+    # Repeatable, and split explicitly so --ssh-opt '-J host' and
+    # --ssh-opt -J --ssh-opt host behave the same. read -ra rather than bare
+    # word splitting: it says what it means and needs no shellcheck directive,
+    # which cannot legally sit in front of a single case branch anyway.
+    --ssh-opt)        read -ra _ssh_opt_words <<< "$2"
+                      REMOTE_SSH_OPTS+=("${_ssh_opt_words[@]}"); shift 2 ;;
     --ansible-dir)    ANSIBLE_DIR="$2";     shift 2 ;;
     --json-out)   JSON_OUT="$2"; shift 2 ;;
     --output-dir) OUTPUT_DIR="$2"; shift 2 ;;
@@ -119,7 +121,7 @@ fi
 # ─── INSTALL ─────────────────────────────────────────────────────────────────
 if [[ "$DO_INSTALL" == true ]]; then
   [[ $EUID -ne 0 ]] && { echo '❌  Root required: sudo bash cyberaar-baseline.sh --install'; exit 1; }
-  INST_DEST='/usr/local/bin/cyberaar-baseline'
+  INST_DEST="/usr/local/bin/${SCRIPT_NAME}"
   cp -f "$SCRIPT_PATH" "$INST_DEST"
   chmod 755 "$INST_DEST"
   chown root:root "$INST_DEST"
@@ -130,7 +132,7 @@ fi
 
 # ─── UNINSTALL ───────────────────────────────────────────────────────────────
 if [[ "$DO_UNINSTALL" == true ]]; then
-  INST_DEST='/usr/local/bin/cyberaar-baseline'
+  INST_DEST="/usr/local/bin/${SCRIPT_NAME}"
   [[ -f "$INST_DEST" ]] && rm -f "$INST_DEST" && echo "✅  Removed $INST_DEST" || echo "⚠️   Not found: $INST_DEST"
   exit 0
 fi
