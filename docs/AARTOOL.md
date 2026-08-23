@@ -355,6 +355,28 @@ drop-in file you can delete to revert.
 | `--out FILE` | One self-contained HTML file with the results already inside |
 | `--open` | Open the dashboard in a browser |
 | `--serve PORT` | Serve it on `127.0.0.1` only |
+| `--anonymise` | Replace every hostname with `server-01`, `server-02`, ... and every IP with `ip-01`, ... consistently across all reports. Prints the mapping once and stores it nowhere |
+| `--redact PAT` | Also replace this literal string everywhere. Repeatable, for the things only you know identify you |
+
+An audit report is a list of a machine's weaknesses with its name attached.
+There are good reasons to show one to somebody: a client, a talk, a post
+explaining the tool. There is no good reason to hand over the hostnames while
+doing it.
+
+```bash
+aartool report ./reports/*.json --anonymise --out share.html
+```
+
+The substitution is literal and global, not a field rewrite, because a hostname
+does not only live in the `host` key: it turns up in evidence strings and
+remediation hints too. Renaming the key alone produces a document that looks
+anonymised and is not, which is worse than not trying.
+
+`--redact` refuses a pattern that also appears in the report's own structural
+fields. `--redact cyberaar` would rewrite every `cyberaar_baseline` key, and the
+result is a valid HTML file that opens to an empty page. aartool checks the
+finished artefact for that too, rather than trusting the transformation that
+produced it.
 
 `--serve` binds to loopback and says so, because this renders audit results for
 an entire estate and has no authentication. Reach it with
