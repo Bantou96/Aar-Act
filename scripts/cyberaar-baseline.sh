@@ -36,6 +36,8 @@ Remote / Fleet options:
   --inventory <file>     Parse an Ansible inventory file for hosts
   --user <user>          SSH user for remote scan (default: root)
   --ssh-key <keyfile>    SSH private key for remote scan
+  --ssh-opt <opt>        Extra ssh option, repeatable. For a bastion:
+                           --ssh-opt '-J admin@bastion.example.com' 
   --ansible-dir <dir>    Path to your Ansible repo (for playbook suggestions)
 
 Install options:
@@ -69,6 +71,10 @@ HELPEOF
 # ─── CLI ARGS ────────────────────────────────────────────────────────────────
 HTML_OUT=""
 JSON_OUT=""
+# Declared before the parse loop: += on an undeclared name is an error under
+# set -u, which would make the flag unusable rather than merely wrong.
+REMOTE_SSH_OPTS=()
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --html-out)       HTML_OUT="$2";        shift 2 ;;
@@ -77,6 +83,10 @@ while [[ $# -gt 0 ]]; do
     --inventory)      ANSIBLE_INVENTORY="$2";shift 2 ;;
     --user)           REMOTE_USER="$2";     shift 2 ;;
     --ssh-key)        REMOTE_KEY="$2";      shift 2 ;;
+    # Repeatable, and word-split on purpose so --ssh-opt '-J host' and
+    # --ssh-opt -J --ssh-opt host both work.
+    # shellcheck disable=SC2206
+    --ssh-opt)        REMOTE_SSH_OPTS+=($2); shift 2 ;;
     --ansible-dir)    ANSIBLE_DIR="$2";     shift 2 ;;
     --json-out)   JSON_OUT="$2"; shift 2 ;;
     --output-dir) OUTPUT_DIR="$2"; shift 2 ;;
@@ -377,7 +387,49 @@ _build_host_list() {
   printf '%s\n' "${out[@]}"
 }
 
+# Shared directory for the ssh control sockets, private to this run. Removed on
+# exit along with any master connections still persisting, so a scan leaves no
+# open sessions behind on the operator's machine.
+_CYBERAAR_SSH_CTL_DIR=""
+_cyberaar_ssh_ctl_init() {
+  _CYBERAAR_SSH_CTL_DIR="$(mktemp -d -t cyberaar-ssh-XXXXXX 2>/dev/null)" || _CYBERAAR_SSH_CTL_DIR=""
+  [[ -n "$_CYBERAAR_SSH_CTL_DIR" ]] && chmod 700 "$_CYBERAAR_SSH_CTL_DIR" 2>/dev/null || true
+}
+_cyberaar_ssh_ctl_cleanup() {
+  [[ -n "$_CYBERAAR_SSH_CTL_DIR" && -d "$_CYBERAAR_SSH_CTL_DIR" ]] || return 0
+  local sock
+  for sock in "$_CYBERAAR_SSH_CTL_DIR"/*; do
+    [[ -S "$sock" ]] && ssh -o ControlPath="$sock" -O exit placeholder &>/dev/null || true
+  done
+  rm -rf "$_CYBERAAR_SSH_CTL_DIR"
+  _CYBERAAR_SSH_CTL_DIR=""
+}
+trap _cyberaar_ssh_ctl_cleanup EXIT INT TERM
+
 # ── Run scan on a single remote host via SSH ──────────────────────────────────
+#
+# TRANSPORT: ssh with the file on stdin, not scp.
+#
+# scp in OpenSSH 9 and later speaks the SFTP protocol by default, and a hardened
+# host frequently has no sftp subsystem at all: removing it is a normal CIS and
+# STIG hardening step, and this toolkit's own ssh role is the kind of thing that
+# does it. The result was that the remote scan failed on exactly the hosts most
+# likely to be running a security tool, with
+#
+#     scp: Connection closed
+#
+# swallowed by 2>/dev/null, then "bash: /tmp/.cyberaar-baseline-xxx.sh: No such
+# file or directory" from the run that followed, and a cheerful "1 succeeded" at
+# the end. Found on a live bastion, not in review.
+#
+# Piping over an ssh session needs no subsystem, no scp binary and no sftp, so it
+# works wherever an interactive command works. `cat > file` is also the only
+# transport available when a host allows command execution but no file transfer.
+#
+# EVERY STEP IS CHECKED. The previous version returned success unless the initial
+# connectivity probe failed, so a scan that copied nothing, ran nothing and
+# fetched nothing still counted as a success in the fleet summary. A scanner that
+# cannot tell you it failed is worse than one that is simply absent.
 _remote_scan() {
   local host="$1"
   local html_out="$2"
@@ -385,49 +437,129 @@ _remote_scan() {
 
   local ssh_opts=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes)
   [[ -n "$REMOTE_KEY" ]] && ssh_opts+=(-i "$REMOTE_KEY")
+
+  # One TCP connection per host, reused for all seven operations below.
+  #
+  # A scan opens a connection to probe, to push the script, to check it landed,
+  # to run it, to fetch each report and to clean up. Without multiplexing that is
+  # seven full handshakes per host, so a fifty-host fleet performs three hundred
+  # and fifty. That is slow, it pushes against sshd's MaxStartups (10:30:100 by
+  # default, past which it refuses roughly a third of new connections at random),
+  # and on a host running fail2ban it looks like exactly the thing fail2ban is
+  # there to stop.
+  #
+  # Found the hard way: scanning one host repeatedly during development got this
+  # workstation banned by the estate's own fail2ban.
+  #
+  # %C hashes host, port, user and local host into a short filename, which keeps
+  # the socket path under the 104-byte sun_path limit that longer schemes hit.
+  if [[ -n "$_CYBERAAR_SSH_CTL_DIR" ]]; then
+    ssh_opts+=(-o ControlMaster=auto -o "ControlPath=${_CYBERAAR_SSH_CTL_DIR}/%C" -o ControlPersist=30s)
+  fi
+  # Anything the operator passed with --ssh-opt, most usefully -J for a bastion.
+  # Estates that matter put their hosts behind a jump host, and without this the
+  # scanner could only reach machines that were already reachable directly.
+  local _o
+  for _o in ${REMOTE_SSH_OPTS[@]+"${REMOTE_SSH_OPTS[@]}"}; do ssh_opts+=("$_o"); done
+
   local target="${REMOTE_USER}@${host}"
   local _rand
   _rand=$(openssl rand -hex 8 2>/dev/null || tr -dc 'a-f0-9' < /dev/urandom 2>/dev/null | head -c 16)
   local remote_script="/tmp/.cyberaar-baseline-${_rand}.sh"
+  local remote_html="/tmp/.cyberaar-report-${_rand}.html"
+  local remote_json="/tmp/.cyberaar-report-${_rand}.json"
 
   printf "\n${BOLD}${CYAN}━━━  Remote scan: %s  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n" "$host"
 
-  # Test SSH connectivity first
-  if ! ssh "${ssh_opts[@]}" "$target" "echo ok" &>/dev/null; then
+  # ── 1. Reachability ────────────────────────────────────────────────────────
+  local _probe
+  if ! _probe=$(ssh "${ssh_opts[@]}" "$target" "echo ok" 2>&1); then
     printf "  ${RED}❌  SSH connection failed: %s@%s${NC}\n" "$REMOTE_USER" "$host"
-    printf "     Check: host reachable, user exists, key/password auth works.\n"
+    printf "     %s\n" "${_probe%%$'\n'*}"
+    printf "     Check: host reachable, user exists, key auth works without a passphrase.\n"
+    printf "     Behind a bastion? Pass it through: --ssh-opt '-J user@bastion'\n"
     return 1
   fi
 
-  # Copy script to remote
-  scp "${ssh_opts[@]/#-o/-o}" -q "$SCRIPT_PATH" "${target}:${remote_script}" 2>/dev/null
-
-  # Build remote flags
-  local rflags=""
-  [[ -n "$html_out" ]] && rflags="$rflags --html-out /tmp/.cyberaar-report-${_rand}.html"
-  [[ -n "$json_out" ]] && rflags="$rflags --json-out /tmp/.cyberaar-report-${_rand}.json"
-
-  # Execute on remote (always needs root — try sudo if not root user)
-  if [[ "$REMOTE_USER" == "root" ]]; then
-    ssh "${ssh_opts[@]}" "$target" "bash '${remote_script}'${rflags:+ $rflags}" || true
-  else
-    ssh "${ssh_opts[@]}" "$target" "sudo bash '${remote_script}'${rflags:+ $rflags}" || true
+  # ── 2. Push the script ─────────────────────────────────────────────────────
+  local _err
+  if ! _err=$(ssh "${ssh_opts[@]}" "$target" \
+        "cat > '${remote_script}' && chmod 700 '${remote_script}'" < "$SCRIPT_PATH" 2>&1); then
+    printf "  ${RED}❌  Could not copy the audit script to %s${NC}\n" "$host"
+    printf "     %s\n" "${_err%%$'\n'*}"
+    printf "     The remote /tmp may be full, noexec, or read-only.\n"
+    return 1
   fi
 
-  # Retrieve reports
+  # Landed and non-empty. A truncated copy runs and produces nonsense.
+  local _size
+  _size=$(ssh "${ssh_opts[@]}" "$target" "wc -c < '${remote_script}' 2>/dev/null || echo 0" 2>/dev/null | tr -dc '0-9')
+  if [[ -z "$_size" || "$_size" -lt 1000 ]]; then
+    printf "  ${RED}❌  The audit script did not arrive intact on %s (%s bytes)${NC}\n" "$host" "${_size:-0}"
+    ssh "${ssh_opts[@]}" "$target" "rm -f '${remote_script}'" &>/dev/null || true
+    return 1
+  fi
+
+  # ── 3. Run it ──────────────────────────────────────────────────────────────
+  local rflags=""
+  [[ -n "$html_out" ]] && rflags="$rflags --html-out ${remote_html}"
+  [[ -n "$json_out" ]] && rflags="$rflags --json-out ${remote_json}"
+
+  local _rc=0
+  if [[ "$REMOTE_USER" == "root" ]]; then
+    ssh "${ssh_opts[@]}" "$target" "bash '${remote_script}'${rflags:+ $rflags}" || _rc=$?
+  else
+    # -n so the remote sudo cannot silently wait for a password nobody can type.
+    ssh "${ssh_opts[@]}" "$target" "sudo -n bash '${remote_script}'${rflags:+ $rflags}" || _rc=$?
+  fi
+  if [[ "$_rc" -ne 0 ]]; then
+    printf "  ${RED}❌  The audit did not complete on %s (exit %d)${NC}\n" "$host" "$_rc"
+    printf "     If this is a sudo prompt: %s needs passwordless sudo, or scan as root.\n" "$REMOTE_USER"
+    ssh "${ssh_opts[@]}" "$target" "rm -f '${remote_script}' '${remote_html}' '${remote_json}'" &>/dev/null || true
+    return 1
+  fi
+
+  # ── 4. Fetch the reports ───────────────────────────────────────────────────
+  # Same reasoning as the push: cat over ssh needs no sftp. An empty file counts
+  # as a failure, because a zero-byte report reads as a successful scan of a
+  # machine with no findings.
+  #
+  # Read back through sudo when the scan ran through sudo. The audit runs as root
+  # and writes its reports as root, so an unprivileged login cannot read the
+  # files it just asked for. That failed silently on a live host: the audit
+  # completed, printed its findings to the terminal, and then could not retrieve
+  # a single one of them.
+  local _cat="cat"
+  [[ "$REMOTE_USER" != "root" ]] && _cat="sudo -n cat"
+  local fetch_failed=0
   if [[ -n "$html_out" ]]; then
-    scp "${ssh_opts[@]/#-o/-o}" -q "${target}:/tmp/.cyberaar-report-${_rand}.html" "$html_out" 2>/dev/null \
-      && printf "  🌐 HTML fetched → %s\n" "$html_out" \
-      || printf "  ${YELLOW}⚠️   Could not fetch HTML report from %s${NC}\n" "$host"
+    if ssh "${ssh_opts[@]}" "$target" "$_cat '${remote_html}'" > "$html_out" 2>/dev/null && [[ -s "$html_out" ]]; then
+      printf "  🌐 HTML fetched → %s\n" "$html_out"
+    else
+      rm -f "$html_out"
+      printf "  ${YELLOW}⚠️   Could not fetch the HTML report from %s${NC}\n" "$host"
+      fetch_failed=1
+    fi
   fi
   if [[ -n "$json_out" ]]; then
-    scp "${ssh_opts[@]/#-o/-o}" -q "${target}:/tmp/.cyberaar-report-${_rand}.json" "$json_out" 2>/dev/null \
-      && printf "  📄 JSON fetched → %s\n" "$json_out" \
-      || printf "  ${YELLOW}⚠️   Could not fetch JSON report from %s${NC}\n" "$host"
+    if ssh "${ssh_opts[@]}" "$target" "$_cat '${remote_json}'" > "$json_out" 2>/dev/null && [[ -s "$json_out" ]]; then
+      printf "  📄 JSON fetched → %s\n" "$json_out"
+    else
+      rm -f "$json_out"
+      printf "  ${YELLOW}⚠️   Could not fetch the JSON report from %s${NC}\n" "$host"
+      fetch_failed=1
+    fi
   fi
 
-  # Cleanup remote temp files
-  ssh "${ssh_opts[@]}" "$target" "rm -f '${remote_script}' '/tmp/.cyberaar-report-${_rand}.html' '/tmp/.cyberaar-report-${_rand}.json'" &>/dev/null || true
+  # ── 5. Clean up after ourselves ────────────────────────────────────────────
+  # Root-owned reports need root to remove. Leaving an audit of the machine in
+  # world-readable /tmp is not acceptable housekeeping for a security tool.
+  local _rm="rm -f"
+  [[ "$REMOTE_USER" != "root" ]] && _rm="sudo -n rm -f"
+  ssh "${ssh_opts[@]}" "$target" "$_rm '${remote_script}' '${remote_html}' '${remote_json}'" &>/dev/null || true
+
+  [[ "$fetch_failed" -eq 0 ]] || return 1
+  return 0
 }
 
 # ── Fleet scan dispatcher ─────────────────────────────────────────────────────
@@ -446,6 +578,7 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
   printf "${BOLD}${CYAN}║  CyberAar Fleet Scan — %d host(s)%-27s║${NC}\n" "${#FLEET_HOSTS[@]}" ""
   printf "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}\n"
 
+  _cyberaar_ssh_ctl_init
   FLEET_OK=0; FLEET_FAIL=0
   for host in "${FLEET_HOSTS[@]}"; do
     # Build output paths for this host

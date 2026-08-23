@@ -213,6 +213,18 @@ $AARTOOL install --prefix "$_ins_prefix" --uninstall >/dev/null 2>&1
 check    "uninstall removes the link" "$([ -e "$_ins_prefix/bin/aartool" ] && printf yes || printf no)" "no"
 rm -rf "$_ins_prefix" "$(dirname "$_ins_copy")"
 
+# ── inspect forwards every remote flag the baseline documents ────────────────
+# inspect passes a WHITELIST of options through to cyberaar-baseline.sh, so a
+# flag added to the baseline is silently rejected by aartool until someone
+# remembers to widen that list. This asserts the two agree, rather than leaving
+# it to memory.
+for _flag in --host --host-file --inventory --user --ssh-key --ssh-opt; do
+  if grep -q -- "$_flag" ../scripts/src/main.sh 2>/dev/null || grep -q -- "$_flag" ./src/main.sh 2>/dev/null; then
+    check "inspect forwards $_flag" \
+          "$($AARTOOL inspect "$_flag" x --help 2>&1 | grep -c 'Unknown option')" "0"
+  fi
+done
+
 # ── Per-command help ─────────────────────────────────────────────────────────
 check    "inspect help" "$($AARTOOL inspect --help 2>&1)" "Changes nothing"
 check    "plan help"    "$($AARTOOL plan --help 2>&1)"    "--target"

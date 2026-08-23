@@ -36,6 +36,8 @@ Remote / Fleet options:
   --inventory <file>     Parse an Ansible inventory file for hosts
   --user <user>          SSH user for remote scan (default: root)
   --ssh-key <keyfile>    SSH private key for remote scan
+  --ssh-opt <opt>        Extra ssh option, repeatable. For a bastion:
+                           --ssh-opt '-J admin@bastion.example.com' 
   --ansible-dir <dir>    Path to your Ansible repo (for playbook suggestions)
 
 Install options:
@@ -69,6 +71,10 @@ HELPEOF
 # ─── CLI ARGS ────────────────────────────────────────────────────────────────
 HTML_OUT=""
 JSON_OUT=""
+# Declared before the parse loop: += on an undeclared name is an error under
+# set -u, which would make the flag unusable rather than merely wrong.
+REMOTE_SSH_OPTS=()
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --html-out)       HTML_OUT="$2";        shift 2 ;;
@@ -77,6 +83,10 @@ while [[ $# -gt 0 ]]; do
     --inventory)      ANSIBLE_INVENTORY="$2";shift 2 ;;
     --user)           REMOTE_USER="$2";     shift 2 ;;
     --ssh-key)        REMOTE_KEY="$2";      shift 2 ;;
+    # Repeatable, and word-split on purpose so --ssh-opt '-J host' and
+    # --ssh-opt -J --ssh-opt host both work.
+    # shellcheck disable=SC2206
+    --ssh-opt)        REMOTE_SSH_OPTS+=($2); shift 2 ;;
     --ansible-dir)    ANSIBLE_DIR="$2";     shift 2 ;;
     --json-out)   JSON_OUT="$2"; shift 2 ;;
     --output-dir) OUTPUT_DIR="$2"; shift 2 ;;
