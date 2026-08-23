@@ -35,8 +35,12 @@ Without root, or without installing at all:
 
 ```bash
 scripts/aartool install --prefix ~/.local   # needs ~/.local/bin on PATH
-./scripts/aartool inspect                   # or just run it from the clone
+./scripts/aartool advise                    # or just run it from the clone
 ```
+
+Auditing the machine you are on still needs root either way: it reads
+`sshd_config`, `/etc/shadow`, the audit rules and sysctls. Auditing a *remote*
+host needs no privilege locally at all.
 
 `install` creates a **symlink, not a copy**, and that matters: `aartool` finds
 the playbooks, the audit script and the dashboard by walking up from its own
@@ -54,7 +58,7 @@ are handed back to you, so the next command does not need root as well.
 ```bash
 sudo aartool inspect                                  # this machine
 aartool inspect --host 10.0.1.10 --user admin         # one remote host
-aartool inspect --inventory inventory/hosts           # a whole estate
+aartool inspect --inventory ansible-hardening/inventory/hosts   # an estate
 ```
 
 **2. Get a plan, not a list.** Forty findings in report order have no ordering:

@@ -116,7 +116,7 @@ terminal output and no files.
 ```bash
 sudo aartool inspect                                  # this machine
 aartool inspect --host 10.0.1.10 --user admin         # one remote host
-aartool inspect --inventory inventory/hosts           # a whole estate
+aartool inspect --inventory ansible-hardening/inventory/hosts   # an estate
 ```
 
 ### 2. Get a plan, not a list
