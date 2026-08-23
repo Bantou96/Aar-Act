@@ -30,6 +30,7 @@ together practitioners at home, across the diaspora and anywhere else, to build 
 - [**`aartool`, one front door**](#deliverable-0c-aartool-one-front-door) *(full manual: [docs/AARTOOL.md](docs/AARTOOL.md))*
   - [`aartool advise`](#aartool-advise-the-order-to-fix-things-in)
   - [`aartool explain`](#aartool-explain-what-the-finding-actually-means)
+  - [Remote hosts and bastions](#remote-hosts-and-the-bastion-in-front-of-them)
   - [`aartool surface`](#aartool-surface-the-window-before-the-patch)
   - [`aartool report`](#aartool-report-the-dashboard-one-command-away)
   - [`aartool diff`](#aartool-diff-drift-and-the-exit-code-that-makes-it-useful)
@@ -430,6 +431,34 @@ unmapped it says why no playbook can fix it. `SYS-11` needs a reboot, `KRN-08`
 is a boot parameter, `AUTH-11` needs a human who knows what that second UID 0
 account is for. A help command that refuses on a third of its inputs teaches
 people not to type it.
+
+### Remote hosts, and the bastion in front of them
+
+```bash
+aartool inspect --host 10.0.1.31 --user admin \
+  --ssh-key ~/.ssh/estate --jump admin@bastion.example.com -o ./reports
+```
+
+Use `--jump`, not `--ssh-opt '-J ...'`. They are not equivalent: `ssh` does not
+pass the outer connection's options to the jump hop, so `-J` alongside
+`--ssh-key` authenticates the target with your key and the bastion with
+whatever the defaults happen to be. On a machine with no agent that fails with
+`Host key verification failed`, a message about the bastion that never names
+the bastion. `--jump` builds the `ProxyCommand` itself and carries the key and
+the connection options onto hop one.
+
+`--ssh-key` now also implies `IdentitiesOnly=yes`. An agent with several keys
+offers each one, every offer counts against the target's `MaxAuthTries`, and a
+fleet scan from such a workstation gets that workstation banned by `fail2ban`
+across the estate.
+
+The transport is `ssh` with the script on stdin, not `scp`: OpenSSH 9 `scp`
+speaks SFTP, and a hardened host frequently has no `sftp` subsystem, so `scp`
+fails on exactly the machines most likely to be running a security tool.
+
+`scripts/tests/proof-remote.sh` proves all three against real hosts: it stands
+up a bastion and a private target on a Docker network, removes the `sftp`
+subsystem so `scp` genuinely cannot work, and runs the whole loop through them.
 
 ### `aartool surface`: the window before the patch
 

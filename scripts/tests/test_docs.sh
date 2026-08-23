@@ -107,5 +107,19 @@ for doc in "${DOCS[@]}"; do
   done < <(grep -oP '\b\K[0-9]+(?= (security )?checks?\b)' "$doc" | sort -u)
 done
 
+# Check IDs quoted in prose must exist. Four knowledge-base entries were once
+# written against the wrong ID, and the same mistake in a document is worse: the
+# reader cannot run it to find out.
+KNOWN_IDS=$($AARTOOL explain --list 2>/dev/null | awk '{print $1}')
+for doc in "${DOCS[@]}"; do
+  while read -r id; do
+    if printf '%s\n' "$KNOWN_IDS" | grep -qx "$id"; then
+      ok
+    else
+      fail "$(basename "$doc") refers to check $id, which does not exist"
+    fi
+  done < <(grep -oP '\b(SYS|AUTH|SSH|NET|KRN|FS|LOG|INT|COMP)-[0-9]{2}\b' "$doc" | sort -u)
+done
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
