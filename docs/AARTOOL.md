@@ -80,6 +80,23 @@ Everything works from the clone:
 ./scripts/aartool inspect
 ```
 
+### Without cloning anything
+
+Every release attaches `aartool`, `cyberaar-baseline.sh`, the collection
+tarball and a `SHA256SUMS`. Neither Ansible Galaxy nor a container registry is
+on the critical path.
+
+```bash
+curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/cyberaar-baseline.sh
+curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+chmod +x cyberaar-baseline.sh && sudo ./cyberaar-baseline.sh
+```
+
+Assets do not carry the executable bit, hence the `chmod`. The single-file audit
+script is the one to take to an air-gapped machine; `aartool` needs the rest of
+the toolkit beside it, so clone or use the container for that.
+
 ### In a container
 
 The repository ships an execution environment with Ansible and the collections
