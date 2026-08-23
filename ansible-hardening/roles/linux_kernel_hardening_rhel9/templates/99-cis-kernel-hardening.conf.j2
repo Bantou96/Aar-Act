@@ -58,3 +58,49 @@ net.ipv6.conf.default.accept_ra = 0
 
 # Additional defense-in-depth (L2)
 kernel.kptr_restrict = 2
+
+# ── Attack surface reduction (KRN-01..KRN-12) ────────────────────────────────
+# Each of these closes a class of local privilege escalation rather than a
+# single CVE, and takes effect without a reboot.
+{% if linux_kernel_disable_unprivileged_bpf | bool %}
+# KRN-02  Unprivileged eBPF: a recurring source of kernel exploits
+kernel.unprivileged_bpf_disabled = 1
+{% endif %}
+{% if linux_kernel_disable_userfaultfd | bool %}
+# KRN-04  userfaultfd: used to make kernel race conditions reliably exploitable
+vm.unprivileged_userfaultfd = 0
+{% endif %}
+{% if linux_kernel_disable_kexec | bool %}
+# KRN-06  kexec: boots an arbitrary kernel without firmware, bypassing Secure Boot
+kernel.kexec_load_disabled = 1
+{% endif %}
+{% if linux_kernel_disable_ldisc_autoload | bool %}
+# KRN-07  TTY line discipline autoload: old, lightly audited modules
+dev.tty.ldisc_autoload = 0
+{% endif %}
+{% if linux_kernel_bpf_jit_harden | bool %}
+# KRN-09  BPF JIT hardening: makes JIT spraying harder
+net.core.bpf_jit_harden = 2
+{% endif %}
+{% if linux_kernel_restrict_sysrq | bool %}
+# KRN-10  SysRq: 4 keeps the keyboard reset combination and drops the rest
+kernel.sysrq = 4
+{% endif %}
+{% if linux_kernel_restrict_userns | bool %}
+# KRN-01  Unprivileged user namespaces: the doorway most published Linux LPEs use.
+#         Breaks rootless containers and Chrome's sandbox. Opt-in.
+{% if ansible_os_family == 'Debian' %}
+kernel.unprivileged_userns_clone = 0
+{% else %}
+user.max_user_namespaces = 0
+{% endif %}
+{% endif %}
+{% if linux_kernel_restrict_io_uring | bool %}
+# KRN-03  io_uring: young, large, over-represented in recent LPEs. Opt-in.
+kernel.io_uring_disabled = 2
+{% endif %}
+{% if linux_kernel_lock_modules | bool %}
+# KRN-05  Module loading lockdown. IRREVERSIBLE until reboot, and it blocks
+#         every later modprobe including your own. Opt-in, and read that twice.
+kernel.modules_disabled = 1
+{% endif %}
