@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0]: 2026-08-23
+
+### Changed
+
+- **The dashboard is rebuilt for the person reading the audit, not the person
+  who ran it.** It was a grid of score rings with an "Ansible Remediation" box
+  offering a raw `ansible-playbook` command, and it never mentioned aartool.
+
+  Panels now follow the order an auditor asks the questions: a stat row, then
+  **Score by host** as a bar gauge sorted worst first so the first thing on
+  screen is where to start, then **Where the findings are** across the whole
+  estate, then **Fix once, help most hosts**, which ranks findings by how many
+  machines they affect. Sort, scope and search sit above the panels rather than
+  inside them.
+
+  The host drawer orders findings into `aartool advise`'s waves and pulls
+  anything whose fix carries a real operational cost into "decide before you
+  apply", out of the sequence someone is about to run.
+
+- **Remediation is expressed as aartool commands throughout**: `plan` and
+  `apply` scoped with `--only`, `inspect` and `diff` to prove the movement, and
+  `explain` on any individual finding.
+
+- The dashboard uses the CyberAar palette, the same hex values as cyberaar.io,
+  so a score colour means the same thing on the site, in the HTML report and in
+  the dashboard.
+
+### Added
+
+- **`remediation_tags` in the JSON report**: the tag each finding is remediated
+  by. A consumer can now build a working `aartool plan --only ...` without
+  carrying its own copy of `ANSIBLE_MAP`, which is exactly the duplication that
+  has caused drift in this repository three times. Reports written before this
+  field still render; they get commands without `--only` and a line saying why.
+
+- `test_dashboard.sh`: asserts the dashboard's mirrored copy of advise's wave
+  and decision tables still matches advise id for id, that the `renderAll`
+  contract `aartool report --out` injects against still exists, that the file
+  references nothing outside itself so it works on an isolated network, that the
+  palette tokens are present, and that the whole thing renders a real captured
+  report under a stub DOM without throwing. It caught drift on its first run:
+  `AUTH-14` was in advise's decision list and missing from the dashboard's.
+
 ## [3.1.0]: 2026-08-23
 
 Hardening was applied end to end to a live server for the first time: doctor,
