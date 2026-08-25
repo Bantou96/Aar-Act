@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0]: 2026-08-25
+
+### Added
+
+- **aartool installs from a package.** A `.deb` and an `.rpm` are attached to
+  this release and served from a signed repository at `pkgs.cyberaar.io`, so
+  installing is `apt install aartool` or `dnf install aartool` after adding one
+  source. Both are noarch. Ansible is a recommended dependency rather than a
+  required one: the audit half of the tool never calls it, and a tool that
+  claims to run on a constrained machine should not pull in the Ansible stack
+  before it will read your sshd_config.
+- **A banner on the human-facing paths.** A bare invocation and `--help` open
+  with the tool's name and version. Not `--version`, which is parsed by
+  scripts, and not on subcommands or error paths. A locale-chosen ASCII
+  fallback covers terminals that cannot render block glyphs, which on a serial
+  console or a rescue shell is not hypothetical.
+
+### Fixed
+
+- **LICENSE contained a placeholder rather than the licence.** The file held
+  the literal text `[... full GPL-3.0 text ...]` where the terms should have
+  been, so the project advertised GPL-3.0 while granting nothing and GitHub
+  reported it as unlicensed. It is now the canonical GPL-3.0 text.
+
+### Changed
+
+- A packaged install reads its inventory from `/etc/aartool/inventory`.
+  Everything under `/usr/share` belongs to the package manager and is replaced
+  on upgrade, so an inventory there would be destroyed by the next
+  `apt upgrade`. A git checkout is unaffected.
+
 ## [3.2.0]: 2026-08-23
 
 ### Changed

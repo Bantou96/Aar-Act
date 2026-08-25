@@ -45,16 +45,26 @@ supported by the role logic but has no Molecule image yet: treat it as untested.
 
 ## Install
 
-A `.deb` and an `.rpm` are attached to every [release](https://github.com/cyberaar/aartool/releases).
-Both are noarch and install the same payload:
+From the package repository, which is what most people want:
 
 ```bash
 # Debian, Ubuntu
-sudo apt install ./aartool_3.2.0_all.deb
+curl -fsSL https://pkgs.cyberaar.io/gpg | sudo tee /etc/apt/keyrings/aartool.asc >/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/aartool.asc] https://pkgs.cyberaar.io/deb stable main" \
+  | sudo tee /etc/apt/sources.list.d/aartool.list
+sudo apt update && sudo apt install aartool
 
 # RHEL, Rocky, AlmaLinux, Fedora
-sudo dnf install ./aartool-3.2.0-1.noarch.rpm
+sudo curl -fsSL https://pkgs.cyberaar.io/aartool.repo -o /etc/yum.repos.d/aartool.repo
+sudo dnf install aartool
 ```
+
+Both packages are signed, and so is the repository metadata. `apt upgrade` and
+`dnf upgrade` pick up new releases from then on.
+
+A `.deb` and an `.rpm` are also attached to every
+[release](https://github.com/cyberaar/aartool/releases) if you would rather
+install a file directly, on a machine that cannot reach the repository.
 
 Ansible is a recommended dependency, not a required one: the audit half of the
 tool never calls it. Your inventory belongs at `/etc/aartool/inventory`, where
