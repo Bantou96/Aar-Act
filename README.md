@@ -354,10 +354,10 @@ the failure it describes was found in shipped code.
 
 ## License
 
-**GNU General Public License v3.0**. This program is free software: you can
-redistribute it and modify it under the terms of the GPL as published by the
-Free Software Foundation, either version 3 or (at your option) any later
-version. See [LICENSE](LICENSE) for the full text.
+**GNU General Public License v3.0**. Copyright (C) 2025-2026 CyberAar Team.
+This program is free software: you can redistribute it and modify it under the
+terms of the GPL as published by the Free Software Foundation, either version 3
+or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
 
 © 2025–2026 CyberAar Team
 
