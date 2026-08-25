@@ -55,6 +55,26 @@ check_rc() {
 
 # ── Dispatch ─────────────────────────────────────────────────────────────────
 check    "version"          "$($AARTOOL --version 2>&1)"        "aartool"
+
+# The banner is for humans. --version is parsed, by scripts and by
+# test_versions.sh, so it must stay one line with a number on it.
+check_exact "version output is one line" "$($AARTOOL --version 2>&1 | wc -l)" "1"
+check    "banner on a bare invocation"   "$(LANG=C LC_ALL=C $AARTOOL 2>&1)"        "__ _  __ _ _ __"
+check    "banner on --help"              "$(LANG=C LC_ALL=C $AARTOOL --help 2>&1)" "__ _  __ _ _ __"
+check    "banner states the version"     "$($AARTOOL --help 2>&1)" "audit, plan, apply, prove"
+check    "block banner under UTF-8"      "$(LC_ALL=en_US.UTF-8 $AARTOOL --help 2>&1)" "█████"
+
+# The fallback exists for terminals that cannot render block glyphs. If any
+# non-ASCII survives on that path it defeats the whole point, and a line of
+# replacement boxes is not something you can un-print.
+_ascii_banner=$(LANG=C LC_ALL=C $AARTOOL --help 2>&1 | head -7)
+if LC_ALL=C grep -qP '[^\x00-\x7F]' <<<"$_ascii_banner"; then
+  FAIL=$((FAIL+1))
+  printf 'FAIL  the C-locale banner still contains non-ASCII, which is what it exists to avoid:\n%s\n' \
+    "$(LC_ALL=C grep -oP '[^\x00-\x7F]' <<<"$_ascii_banner" | sort -u | tr -d '\n')"
+else
+  PASS=$((PASS+1))
+fi
 check    "help lists plan"  "$($AARTOOL --help 2>&1)"           "plan"
 check_rc "no args exits 1"  1  "$AARTOOL"
 check    "unknown command"  "$($AARTOOL frobnicate 2>&1)"       "Unknown command"
