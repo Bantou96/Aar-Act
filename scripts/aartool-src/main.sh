@@ -61,10 +61,49 @@ vrun() {
   "$@"
 }
 
-usage() {
-  cat <<'EOF'
-aartool: CyberAar hardening toolkit
+# The banner prints on the human-facing paths only: a bare invocation and
+# --help. Not on --version, which is parsed by scripts and by our own tests, and
+# not on every subcommand, where it would be noise in front of the output you
+# actually asked for.
+#
+# Two versions. The block one reads at any size and is what the published
+# screenshots show; the ASCII one is for a terminal that cannot render those
+# glyphs, which on the machines this tool is pointed at is not hypothetical: a
+# serial console on a hardened box, a rescue shell, a locale set to C. The
+# fallback is chosen from the locale rather than attempted and repaired, because
+# there is no way to un-print a line of boxes.
+banner() {
+  printf '%s' "$CYAN"
+  case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+    *UTF-8*|*utf8*|*UTF8*)
+      cat <<'ART'
+ █████╗  █████╗ ██████╗ ████████╗ ██████╗  ██████╗ ██╗
+██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗██╔═══██╗██║
+███████║███████║██████╔╝   ██║   ██║   ██║██║   ██║██║
+██╔══██║██╔══██║██╔══██╗   ██║   ██║   ██║██║   ██║██║
+██║  ██║██║  ██║██║  ██║   ██║   ╚██████╔╝╚██████╔╝███████╗
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝
+ART
+      ;;
+    *)
+      cat <<'ART'
+                  _              _
+  __ _  __ _ _ __| |_ ___   ___ | |
+ / _` |/ _` | '__| __/ _ \ / _ \| |
+| (_| | (_| | |  | || (_) | (_) | |
+ \__,_|\__,_|_|   \__\___/ \___/|_|
+ART
+      ;;
+  esac
+  printf '%s' "$RESET"
+  # ASCII separator: this line prints on the fallback path too, where a
+  # middle dot would be exactly the glyph the fallback exists to avoid.
+  printf ' %sv%s%s  |  audit, plan, apply, prove\n\n' "$BOLD" "$AARTOOL_VERSION" "$RESET"
+}
 
+usage() {
+  banner
+  cat <<'EOF'
 Usage:
   aartool <command> [options]
 
