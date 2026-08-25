@@ -23,3 +23,7 @@ __pycache__/
 # Local agent context. Stays on the machine: it carries working notes and
 # paths that are not useful to a contributor and should never reach the repo.
 CLAUDE.md
+
+# Package build artifacts
+packaging/dist/
+packaging/stage/

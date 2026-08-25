@@ -1,0 +1,90 @@
+# One description of the package, built into both a .deb and an .rpm.
+#
+# Written for nfpm rather than debian/rules plus a .spec because aartool is
+# shell and Ansible: there is nothing to compile, and two hand-maintained
+# packaging trees for one noarch payload would drift apart the way every other
+# pair of literals in this project has.
+#
+# Built by packaging/build.sh, which stages the payload from `git archive` so
+# only tracked files can reach a published package. That matters more here than
+# it looks: ansible-hardening/inventory/hosts is gitignored precisely because it
+# names real machines, and it exists in most working copies.
+
+name: aartool
+arch: all
+platform: linux
+version: ${AARTOOL_VERSION}
+section: admin
+priority: optional
+maintainer: CyberAar <contact@cyberaar.io>
+description: |
+  CIS hardening for Linux estates: audit, plan, apply, prove.
+  aartool audits a host against 109 checks, orders the findings by how
+  reachable they are rather than by severity, says what closing each one
+  costs, and can apply the fixes through the Ansible roles it ships.
+  It runs against a local machine or a remote estate over SSH, including
+  through a bastion, with no agent to install.
+vendor: CyberAar
+homepage: https://cyberaar.io
+license: GPL-3.0-or-later
+
+# Ansible is NOT a hard dependency. inspect, advise, explain, surface, report
+# and diff never invoke it, and a tool whose whole claim is that it runs on a
+# constrained machine should not drag in the Ansible stack before it will tell
+# you what is wrong with your sshd_config. plan and apply check for it
+# themselves and say so, and `aartool doctor` reports it.
+depends:
+  - bash
+recommends:
+  - ansible-core
+
+overrides:
+  rpm:
+    depends:
+      - bash
+    recommends:
+      - ansible-core
+  deb:
+    depends:
+      - bash
+    recommends:
+      - ansible-core
+
+contents:
+  # The payload. Staged and pruned by build.sh.
+  - src: ./stage/scripts
+    dst: /usr/share/aartool/scripts
+  - src: ./stage/ansible-hardening
+    dst: /usr/share/aartool/ansible-hardening
+  - src: ./stage/dashboard
+    dst: /usr/share/aartool/dashboard
+
+  # The marker that tells resolve_paths this is a packaged install, so the
+  # inventory is read from /etc rather than from under /usr/share.
+  - src: ./stage/.packaged
+    dst: /usr/share/aartool/.packaged
+
+  # A SYMLINK, not a copy. aartool finds the playbooks, the baseline script and
+  # the dashboard by walking up from its own file; resolve_paths follows the
+  # symlink first, so the walk starts in /usr/share/aartool where those live.
+  # A copied binary in /usr/bin would find none of them, which is the same
+  # reason `aartool install` symlinks.
+  - src: /usr/share/aartool/scripts/aartool
+    dst: /usr/bin/aartool
+    type: symlink
+
+  - src: ./stage/LICENSE
+    dst: /usr/share/doc/aartool/LICENSE
+  - src: ./stage/README.md
+    dst: /usr/share/doc/aartool/README.md
+  - src: ./stage/docs
+    dst: /usr/share/doc/aartool/docs
+
+  # Config directory. The inventory itself is deliberately NOT shipped: an
+  # inventory that arrives prepopulated is an inventory someone runs `apply`
+  # against by accident. Absent, require_inventory prints the copy-the-example
+  # message it already prints for a fresh clone.
+  - dst: /etc/aartool
+    type: dir
+    file_info:
+      mode: 0755

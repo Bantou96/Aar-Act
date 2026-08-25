@@ -111,5 +111,23 @@ eq "aartool --version output" "$got" "$AARTOOL_SRC"
 got=$(bash cyberaar-baseline.sh --help 2>/dev/null | grep -oP 'Baseline Checker v\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 eq "cyberaar-baseline.sh --help banner" "$got" "$BASELINE_SRC"
 
+# The package takes its version from AARTOOL_VERSION at build time, so a .deb
+# that reports a version the tool itself does not is impossible by
+# construction. Keep it impossible: a literal typed in here is exactly the
+# drift this file exists to prevent, and every user would see it in
+# `apt list aartool`.
+if grep -qF 'version: ${AARTOOL_VERSION}' ../packaging/nfpm.yaml; then
+  ok
+else
+  bad "packaging/nfpm.yaml does not take its version from \${AARTOOL_VERSION}"
+fi
+strays=$(grep -nP '^\s*version:\s*[0-9]+\.[0-9]+\.[0-9]+' ../packaging/nfpm.yaml || true)
+if [[ -z "$strays" ]]; then
+  ok
+else
+  bad "packaging/nfpm.yaml hardcodes a version:"
+  printf '%s\n' "$strays" | sed 's/^/        /'
+fi
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
