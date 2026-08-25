@@ -45,6 +45,24 @@ supported by the role logic but has no Molecule image yet: treat it as untested.
 
 ## Install
 
+A `.deb` and an `.rpm` are attached to every [release](https://github.com/cyberaar/aartool/releases).
+Both are noarch and install the same payload:
+
+```bash
+# Debian, Ubuntu
+sudo apt install ./aartool_3.2.0_all.deb
+
+# RHEL, Rocky, AlmaLinux, Fedora
+sudo dnf install ./aartool-3.2.0-1.noarch.rpm
+```
+
+Ansible is a recommended dependency, not a required one: the audit half of the
+tool never calls it. Your inventory belongs at `/etc/aartool/inventory`, where
+an upgrade will not touch it. See [docs/PACKAGING.md](docs/PACKAGING.md) for the
+layout and the reasoning.
+
+From a clone, which is what you want if you intend to change anything:
+
 ```bash
 git clone https://github.com/cyberaar/aartool
 cd aartool

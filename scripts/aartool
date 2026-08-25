@@ -216,7 +216,17 @@ resolve_paths() {
   ANSIBLE_BASE="$root/ansible-hardening"
   # Overridable so a run can point at another estate's inventory, and so the
   # tests can work against a fixture instead of whatever is on the machine.
-  INVENTORY="${AARTOOL_INVENTORY:-$ANSIBLE_BASE/inventory/hosts}"
+  #
+  # A packaged install keeps its inventory in /etc instead. Everything under
+  # /usr/share belongs to the package manager and is replaced wholesale on
+  # upgrade, so an inventory written there would be silently destroyed by the
+  # next `apt upgrade`. The marker file ships only in the .deb and the .rpm, so
+  # a git checkout behaves exactly as it always has.
+  if [[ -f "$root/.packaged" ]]; then
+    INVENTORY="${AARTOOL_INVENTORY:-/etc/aartool/inventory}"
+  else
+    INVENTORY="${AARTOOL_INVENTORY:-$ANSIBLE_BASE/inventory/hosts}"
+  fi
   INVENTORY_EXAMPLE="$ANSIBLE_BASE/inventory/hosts.example"
   TOOLKIT_DASHBOARD="$root/dashboard/index.html"
   BASELINE="$root/scripts/cyberaar-baseline.sh"

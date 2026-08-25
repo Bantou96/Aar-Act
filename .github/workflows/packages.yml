@@ -1,0 +1,83 @@
+---
+name: Packages
+
+# Builds the .deb and the .rpm, then INSTALLS them in the distributions they
+# target and uses them. Building is not the interesting part: aartool finds its
+# playbooks by walking up from its own file, so the package works only while
+# /usr/bin/aartool is a symlink into /usr/share/aartool. A copy builds, installs
+# and passes any check that only reads the file list, then fails on first use.
+#
+# On a tag, the packages are attached to the release.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packaging/**"
+      - "scripts/aartool"
+      - "scripts/cyberaar-baseline.sh"
+      - "scripts/run-hardening.sh"
+      - "ansible-hardening/**"
+      - "dashboard/**"
+      - ".github/workflows/packages.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packaging/**"
+      - "scripts/aartool"
+      - "scripts/cyberaar-baseline.sh"
+      - "scripts/run-hardening.sh"
+      - "ansible-hardening/**"
+      - "dashboard/**"
+      - ".github/workflows/packages.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    name: Build and install-test
+    runs-on: ubuntu-latest
+    steps:
+      # The payload is staged with `git archive HEAD`, so the build needs real
+      # history rather than the default shallow checkout of a merge commit.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build the .deb and the .rpm
+        run: bash packaging/build.sh
+
+      - name: Install them in debian:12 and rockylinux:9 and use them
+        run: bash packaging/tests/install-test.sh
+
+      - name: Version guard
+        run: bash scripts/tests/test_versions.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aartool-packages
+          path: |
+            packaging/dist/*.deb
+            packaging/dist/*.rpm
+            packaging/dist/SHA256SUMS
+          if-no-files-found: error
+
+  release:
+    name: Attach to release
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: aartool-packages
+          path: dist
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber --repo "$GITHUB_REPOSITORY"

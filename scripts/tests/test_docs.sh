@@ -78,7 +78,7 @@ done
 
 # The dedicated manual must exist and be linked from the README, or nobody
 # finds it.
-for d in AARTOOL ANSIBLE BASELINE DASHBOARD CONTAINER; do
+for d in AARTOOL ANSIBLE BASELINE DASHBOARD CONTAINER PACKAGING; do
   [[ -f "../docs/$d.md" ]] && ok || fail "docs/$d.md is missing"
   grep -q "docs/$d.md" ../README.md && ok || fail "README.md does not link to docs/$d.md"
 done
