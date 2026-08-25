@@ -17,7 +17,7 @@
 # =============================================================================
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_VERSION="4.5.0"
+SCRIPT_VERSION="4.6.0"
 SCRIPT_NAME="cyberaar-baseline"
 
 _show_help() {
