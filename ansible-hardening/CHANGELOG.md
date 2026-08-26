@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2]: 2026-08-26
+
+### Fixed
+
+- **`plan` and `apply` did not work from a package at all.** nfpm does not carry
+  symlinks it finds inside a directory tree, so
+  `ansible-hardening/playbooks/roles`, a symlink to `../roles`, was dropped
+  silently. Every package shipped all 52 roles and no way for Ansible to reach
+  them, failing with `ERROR! the role 'linux_kernel_hardening_rhel9' was not
+  found`. Affected 3.3.0 and 3.3.1. The commands that need no Ansible all
+  worked, so the package looked healthy. The link is now declared explicitly,
+  and `run-hardening.sh` also exports `ANSIBLE_ROLES_PATH`, because the one path
+  without which nothing runs should not depend on a symlink surviving a
+  packaging step.
+
+### Added
+
+- **`plan` and `apply` check for the required Ansible collections first** and
+  print the `ansible-galaxy` command, rather than letting Ansible fail with
+  `couldn't resolve module/action 'ansible.posix.selinux'` pointed at a line
+  inside a role, which reads like a bug in the role rather than a missing
+  dependency on the machine.
+- **`doctor` reports when another aartool is ahead on PATH.** `install`
+  symlinks into `/usr/local/bin`, which precedes `/usr/bin`, so an old clone
+  install silently shadows a newer package and you run the old version with none
+  of its newer commands.
+
 ## [3.3.1]: 2026-08-26
 
 ### Fixed
