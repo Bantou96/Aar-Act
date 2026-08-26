@@ -25,6 +25,7 @@ Options:
   --ssh-opt OPT         Extra ssh option, repeatable
   -o, --out DIR         Write reports to DIR. Default: ./reports
   --no-save             Print to the terminal and write nothing
+  --hints               Print a one-line fix under each finding
   -h, --help            Show this help
 
 With no --host, --host-file or --inventory, aartool audits the machine it is
@@ -63,6 +64,10 @@ cmd_inspect() {
         [[ $# -ge 2 ]] || die "$1 needs a value."
         out_dir="$2"; save=true; shift 2 ;;
       --no-save) save=false; shift ;;
+      # Off by default: printing a fix under every non-PASS check doubled the
+      # length of a 109-check run. `aartool explain <ID>` gives the same thing
+      # in full, plus what closing the finding costs.
+      --hints)   export AARTOOL_HINTS=1; shift ;;
       -h|--help) cmd_inspect_usage; return 0 ;;
       --) shift; break ;;
       -*) die "Unknown option for inspect: $1. Try 'aartool inspect --help'." ;;

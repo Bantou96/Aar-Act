@@ -1,6 +1,7 @@
 # ─── COLORS ──────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+DIM='\033[2m'   # column headers and IDs: present, but not competing with the result
 
 # ─── GLOBALS ─────────────────────────────────────────────────────────────────
 PASS=0; WARN=0; FAIL=0
@@ -20,8 +21,19 @@ WARN_IDS=()
 
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
 
+# A fixed-width rule with a column header, so a section reads as a table rather
+# than as a stream. The old version appended a fixed-length bar to a
+# variable-length title, so every section ended at a different column.
+REPORT_WIDTH=86
 section() {
-  printf "\n${BOLD}${CYAN}━━━  %s  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n" "$1"
+  local title="$1" pad
+  # Titles are "1. SYSTEM & OS / Systeme et OS": keep the English half for the
+  # terminal, where the column header is English too.
+  title="${title%% / *}"
+  pad=$(( REPORT_WIDTH - ${#title} - 6 ))
+  (( pad < 3 )) && pad=3
+  printf "\n${BOLD}${CYAN}── %s %s${NC}\n" "$title" "$(printf '─%.0s' $(seq 1 "$pad"))"
+  printf "${DIM}  %-6s %-9s %-42s %s${NC}\n" "STATUS" "ID" "CHECK" "DETAIL"
 }
 
 # Encode special HTML characters to prevent XSS in report output
@@ -67,11 +79,23 @@ add_result() {
     FAIL) ((FAIL++)); symbol="❌"; color=$RED;    FAIL_IDS+=("$id") ;;
   esac
 
-  # Terminal — live streaming output (unchanged behaviour)
-  printf "  ${color}${symbol}  ${BOLD}[%-6s]${NC}${color} %-45s${NC} %s\n" \
-    "$status" "$name_en" "$detail"
-  if [[ "$status" != "PASS" && -n "$remediation" ]]; then
-    printf "         ${CYAN}↳ %s${NC}\n" "$remediation"
+  # Terminal: one aligned row per check, streamed as it runs.
+  #
+  # No emoji in this column. ✅ is one cell wide, ⚠️ is two plus a variation
+  # selector, and ❌ is two: mixing them means no two rows line up, which is
+  # most of why 109 results read as a wall. The status word carries the colour
+  # and aligns.
+  #
+  # The ID is printed because `aartool explain SSH-01` needs it, and until now
+  # the only place to find it was the JSON report.
+  printf "  ${color}%-6s${NC} ${DIM}%-9s${NC} %-42s %s\n" \
+    "$status" "$id" "$name_en" "$detail"
+
+  # Per-check hints are off by default: they doubled the length of every run,
+  # and `aartool explain <ID>` gives the same thing in full, plus what closing
+  # the finding costs. AARTOOL_HINTS=1, or `aartool inspect --hints`.
+  if [[ "${AARTOOL_HINTS:-0}" == "1" && "$status" != "PASS" && -n "$remediation" ]]; then
+    printf "         ${CYAN}hint: %s${NC}\n" "$remediation"
   fi
 
   # Append to parallel result arrays (renderers iterate these at end of run)

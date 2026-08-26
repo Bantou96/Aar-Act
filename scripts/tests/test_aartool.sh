@@ -86,6 +86,7 @@ check    "uninstall reaches install" "$($AARTOOL uninstall --help 2>&1)"  "aarto
 # localhost is the machine inspect just audited, and it needs no inventory.
 # Before this, hardening the obvious first target failed on a package install,
 # where there is no inventory and nowhere writable to put one.
+check    "inspect documents --hints" "$($AARTOOL inspect --help 2>&1)"     "--hints"
 check    "plan documents localhost"  "$($AARTOOL plan --help 2>&1)"       "localhost"
 check    "apply documents localhost" "$($AARTOOL apply --help 2>&1)"      "localhost"
 
@@ -398,6 +399,43 @@ done
 check_rc "advise with no report exits 1" 1 env HOME=/nonexistent $AARTOOL advise --wave 1
 check "advise rejects a non-report" \
       "$($AARTOOL advise ../README.md 2>&1)" "does not look like"
+
+# ── The shape of an inspect run ──────────────────────────────────────────────
+#
+# 109 results used to print as 327 lines with the score in the middle of them,
+# because every non-PASS check carried a fix and a 117-line remediation block
+# followed the score. Both are gone from the default output; the score is the
+# last thing before the pointer to advise.
+_core=src/lib/core.sh
+_term=src/renderers/terminal.sh
+
+# Assert the files are there before grepping them. A wrong path makes every
+# `if grep -q ... ; then bad; else ok; fi` check pass for the wrong reason,
+# which is how the first version of this block reported four false passes.
+for _f in "$_core" "$_term"; do
+  [[ -f "$_f" ]] && PASS=$((PASS+1)) \
+    || { FAIL=$((FAIL+1)); printf 'FAIL  %s not found; the checks below prove nothing\n' "$_f"; }
+done
+
+check "hints are off by default"   "$(cat $_core)"  'AARTOOL_HINTS:-0'
+check "check IDs are printed"      "$(cat $_core)"  '"$status" "$id" "$name_en"'
+check "section prints a header"    "$(cat $_core)"  'STATUS" "ID" "CHECK" "DETAIL"'
+
+# No emoji in the status column: they are one, two and two cells wide, so no two
+# rows line up, which is most of why 109 results read as a wall.
+if grep -qE '^\s*printf "  \$\{color\}\$\{symbol\}' "$_core"; then
+  FAIL=$((FAIL+1)); printf 'FAIL  the status column prints an emoji again; rows will not align\n'
+else
+  PASS=$((PASS+1))
+fi
+
+# The score must be the last thing the summary prints, not the middle.
+if grep -q '_ansible_terminal_plan$' "$_term"; then
+  FAIL=$((FAIL+1)); printf 'FAIL  _render_summary calls the remediation plan again; the score is back in the middle\n'
+else
+  PASS=$((PASS+1))
+fi
+check "summary points at advise"   "$(cat $_term)"  'aartool advise'
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

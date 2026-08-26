@@ -275,6 +275,28 @@ than in aartool.
 
 ### `inspect`
 
+Results stream as they run, one aligned row per check, grouped into the eight
+families:
+
+```
+── 3. SSH HARDENING ────────────────────────────────────────────────
+  STATUS ID        CHECK                                      DETAIL
+  FAIL   SSH-01    Root login permitted                       PermitRootLogin yes
+  PASS   SSH-02    Password authentication disabled           PasswordAuthentication no
+```
+
+The **check ID is in the second column** because `aartool explain SSH-01` needs
+it, and it used to appear only in the JSON report.
+
+The score is the **last** thing printed. It used to sit in the middle, with a
+117-line remediation block after it: `aartool advise` does that job properly,
+ordered by what an attacker reaches first and with the cost of each fix, so
+inspect points at it rather than duplicating it worse.
+
+`--hints` prints a one-line fix under each finding. It is off by default because
+it roughly doubles the length of a 109-check run, and `explain <ID>` gives the
+same thing in full plus what closing the finding breaks.
+
 Audit a machine. Changes nothing.
 
 | option | meaning |
