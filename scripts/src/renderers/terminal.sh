@@ -81,10 +81,21 @@ _render_summary() {
   if   [[ "$SCORE" -ge 80 ]]; then printf "${GREEN}${BOLD}%s%%${NC}\n" "$SCORE"
   elif [[ "$SCORE" -ge 60 ]]; then printf "${YELLOW}${BOLD}%s%%${NC}\n" "$SCORE"
   else printf "${RED}${BOLD}%s%%${NC}\n" "$SCORE"; fi
-  printf "  ✅ PASS: %-4s  ⚠️  WARN: %-4s  ❌ FAIL: %-4s  (Total: %s)\n" "$PASS" "$WARN" "$FAIL" "$TOTAL"
-  printf "  🖥  Host: %-28s  📅 %s\n" "$HOSTNAME_VAL" "$DATE_VAL"
+  printf "  ${GREEN}PASS %-4s${NC}  ${YELLOW}WARN %-4s${NC}  ${RED}FAIL %-4s${NC}  of %s checks\n" \
+    "$PASS" "$WARN" "$FAIL" "$TOTAL"
+  printf "  %s  ·  %s\n" "$HOSTNAME_VAL" "$DATE_VAL"
   printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-  printf "  CyberAar — https://github.com/cyberaar/aartool\n\n"
 
-  _ansible_terminal_plan
+  # The remediation plan used to print here, after the score, which put the one
+  # number anybody looks for in the middle of the output with 117 lines below
+  # it. `aartool advise` does that job properly: ordered by what an attacker
+  # reaches first, with the cost of each fix, rather than grouped by Ansible
+  # tag. Duplicating it worse, in the way of the score, helped nobody.
+  #
+  # _ansible_terminal_plan is still defined and still used by the HTML report.
+  printf "\n  ${CYAN}Next:${NC}  aartool advise   what to fix first, and what each fix costs\n"
+  if [[ "${AARTOOL_HINTS:-0}" != "1" ]]; then
+    printf "         ${DIM}aartool inspect --hints   to see a one-line fix under each finding${NC}\n"
+  fi
+  printf "\n"
 }
