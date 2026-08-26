@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1]: 2026-08-26
+
+### Fixed
+
+- **Every audit ended with a command the reader could not run.** The
+  remediation block printed `ansible-playbook -i inventory/hosts
+  playbooks/...`, whose paths resolve only inside a git checkout. On a package
+  install the playbooks are under `/usr/share/aartool` and that command fails
+  immediately. Both the terminal and HTML reports now print
+  `aartool apply --target <host> --only TAGS`, which is also the guarded path:
+  `apply` requires a target and makes you type its name back, while a bare
+  `ansible-playbook` with no `-l` defaults to the whole inventory.
+- **The documented apt install failed on any machine with a strict umask.**
+  `curl | sudo tee` created the keyring with the caller's umask; at `umask 027`
+  that is mode 0640, and apt verifies as the unprivileged `_apt` user, which
+  cannot read it. It failed with `Unknown error executing apt-key`, naming
+  neither permissions nor the file. The instructions now `chmod a+r` the key.
+
+### Added
+
+- **`--target localhost`** for `plan` and `apply`: harden the machine you are
+  on, with no inventory and nothing over SSH. This is the machine `inspect`
+  just audited, and until now hardening it required an inventory entry, which a
+  package install has no way to create. Both commands say up front that
+  localhost needs root, rather than failing inside Ansible with "Premature end
+  of stream waiting for become success".
+- **`aartool uninstall`**, which previously reported itself as an unknown
+  command while the same thing existed behind `install --uninstall`. On a
+  packaged install it refuses and points at `apt remove` or `dnf remove`:
+  deleting the symlink would leave the package registered and its command
+  missing, which no later `apt install` would repair.
+
 ## [3.3.0]: 2026-08-25
 
 ### Added
