@@ -22,27 +22,56 @@
     name: "ufw"
     state: "present"
 
+# check_mode: false so this actually looks, during a preview too. Without it
+# the command module is skipped under --check, _ufw_bin is never set, and the
+# ufw tasks below run against a binary that is not there.
 - name: "Verify ufw binary is available"
+  # `which`, not `command -v`: the command module does not use a shell, and
+  # `command` is a shell builtin. Probing with it always failed, which would
+  # have skipped every firewall rule on every host, silently.
   ansible.builtin.command: "which ufw"
   changed_when: false
+  check_mode: false
   register: "_ufw_bin"
-  failed_when: "_ufw_bin.rc != 0"
+  failed_when: false
+
+# A preview does not install anything, so on a host without ufw the package
+# task above reports "would install" and changes nothing. Configuring a
+# firewall that is not there then fails with "Failed to find required
+# executable ufw", which is a preview failing on exactly the host that most
+# needs the role. Say what apply would do instead.
+- name: "Preview: ufw is not installed yet"
+  ansible.builtin.debug:
+    msg: >-
+      ufw is not installed. A preview installs nothing, so the rules below
+      cannot be evaluated. 'aartool apply' installs ufw first, then applies
+      them.
+  when:
+    - ansible_check_mode
+    - _ufw_bin.rc != 0
+
+- name: "Set ufw availability fact"
+  ansible.builtin.set_fact:
+    _ufw_ready: "{{ (not ansible_check_mode) or (_ufw_bin.rc == 0) }}"
 
 # ── UFW rules ─────────────────────────────────────────────────────────────────
 - name: "Set UFW default incoming policy to deny"
   community.general.ufw:
     direction: "incoming"
     policy: "deny"
+  when: _ufw_ready | default(false)
 
 - name: "Set UFW default outgoing policy to allow"
   community.general.ufw:
     direction: "outgoing"
     policy: "allow"
+  when: _ufw_ready | default(false)
 
 - name: "Set UFW default forward policy to deny"
   community.general.ufw:
     direction: "routed"
     policy: "deny"
+  when: _ufw_ready | default(false)
 
 - name: "Allow SSH through UFW before enabling (prevent lockout)"
   community.general.ufw:
@@ -50,9 +79,12 @@
     port: "{{ linux_firewall_ssh_port }}"
     proto: "tcp"
     comment: "CyberAar: SSH access"
+  when: _ufw_ready | default(false)
 
 - name: "Apply custom UFW allow rules"
-  when: "linux_firewall_allow_rules | length > 0"
+  when:
+    - "linux_firewall_allow_rules | length > 0"
+    - "_ufw_ready | default(false)"
   community.general.ufw:
     rule: "allow"
     port: "{{ item.port }}"
@@ -62,7 +94,9 @@
   loop: "{{ linux_firewall_allow_rules }}"
 
 - name: "Apply custom UFW deny rules"
-  when: "linux_firewall_deny_rules | length > 0"
+  when:
+    - "linux_firewall_deny_rules | length > 0"
+    - "_ufw_ready | default(false)"
   community.general.ufw:
     rule: "deny"
     port: "{{ item.port }}"
@@ -75,8 +109,15 @@
     state: "enabled"
 
 # ── Service management (skipped on WSL without systemd) ───────────────────────
+  when: _ufw_ready | default(false)
+
+# The service does not exist either until the package is installed, so this
+# needs the same guard as the rules above: a preview cannot start a unit that
+# is not there.
 - name: "Enable UFW service"
-  when: "not _skip_service_mgmt"
+  when:
+    - not _skip_service_mgmt
+    - _ufw_ready | default(false)
   ansible.builtin.service:
     name: "ufw"
     state: "started"
