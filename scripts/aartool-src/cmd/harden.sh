@@ -145,6 +145,29 @@ cmd_harden() {
           aartool apply --target localhost -K"
   fi
 
+  # The roles call ansible.posix (sysctl, firewalld, selinux) and
+  # community.general (ufw). Without them Ansible fails at parse time with
+  # "couldn't resolve module/action 'ansible.posix.selinux'", pointing at a line
+  # inside a role, which reads like a bug in the role rather than a missing
+  # dependency on this machine. Say it here, with the command that fixes it.
+  #
+  # They are not vendored into the package on purpose: community.general alone
+  # is 29 MB against a 480 KB package, and this tool is aimed at machines with
+  # constrained bandwidth.
+  if command -v ansible-galaxy >/dev/null 2>&1; then
+    local _missing=() _c
+    for _c in ansible.posix community.general; do
+      ansible-galaxy collection list 2>/dev/null | grep -q "^${_c} " || _missing+=("$_c")
+    done
+    if [[ ${#_missing[@]} -gt 0 ]]; then
+      die "Missing Ansible collection(s): ${_missing[*]}
+        The hardening roles use them for sysctl, firewalld, selinux and ufw.
+        Install them:
+          ansible-galaxy collection install -r $ANSIBLE_BASE/requirements.yml
+        Then check everything at once with: aartool doctor"
+    fi
+  fi
+
   info "Running $(basename "$HARDEN")"
   bash "$HARDEN" "${args[@]}"
 }

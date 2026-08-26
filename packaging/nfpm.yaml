@@ -59,6 +59,18 @@ contents:
   - src: ./stage/dashboard
     dst: /usr/share/aartool/dashboard
 
+  # ansible-hardening/playbooks/roles is a symlink to ../roles in the repository,
+  # and it is what lets Ansible resolve the roles from a playbook one directory
+  # down. nfpm does NOT carry symlinks found inside a directory tree: it copied
+  # the four playbooks and dropped the link without a word, so every packaged
+  # install had playbooks that referenced roles nothing could find, and `plan`
+  # and `apply` failed at parse time while everything else worked.
+  #
+  # Declaring it explicitly is the only way nfpm will ship it.
+  - src: ../roles
+    dst: /usr/share/aartool/ansible-hardening/playbooks/roles
+    type: symlink
+
   # The marker that tells resolve_paths this is a packaged install, so the
   # inventory is read from /etc rather than from under /usr/share.
   - src: ./stage/.packaged
