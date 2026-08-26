@@ -392,8 +392,25 @@ or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
 ## Contributors
 
 - [@Bantou96](https://github.com/Bantou96), Founder
-- [@moustaphisene](https://github.com/moustaphisene), Contributor (CIS gap coverage: sudo, cron, wireless hardening roles)
-- [Claude](https://claude.ai) (Anthropic), AI pair programmer
+- [@moustaphisene](https://github.com/moustaphisene), CIS gap coverage: sudo, cron, wireless hardening roles
+
+## How this is built and tested
+
+Written with AI assistance ([Claude](https://claude.ai), Anthropic), and tested
+harder because of it:
+
+- **815 assertions on every commit**, plus Molecule scenarios on Rocky 9 and
+  Ubuntu 22.04.
+- **Every guard here was proven to fail on injected drift before it was
+  trusted.** A check that cannot fail is worse than no check.
+- **Run against a live 14-node estate, not only in CI.** One live hardening run
+  found 4 defects that 716 assertions had missed, which is why it is still run
+  on real machines.
+- **The check and role counts in this README are derived from the tool itself**,
+  so the documentation cannot claim a number the code does not produce.
+
+If a claim in this README is not checked by a test, treat it as a bug and open
+an issue.
 
 ---
 
