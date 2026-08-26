@@ -70,6 +70,35 @@ mistake with `apply` has always been the wrong target rather than the wrong
 intent. Absent, aartool prints the same copy-the-example message it prints for a
 fresh clone.
 
+## The keyring has to be world readable
+
+apt verifies signatures as the unprivileged `_apt` user, not as root. The
+documented install therefore ends with:
+
+```bash
+sudo chmod a+r /etc/apt/keyrings/aartool.asc
+```
+
+Without it, `curl ... | sudo tee` creates the file with the invoking user's
+umask. On a machine set to `umask 027` that is mode 0640, `_apt` cannot read it,
+and apt reports:
+
+```
+Err:6 https://pkgs.cyberaar.io/deb stable InRelease
+  Unknown error executing apt-key
+E: The repository ... is not signed.
+```
+
+which names neither permissions nor the file, and reads like a signing problem
+on our side rather than a local one.
+
+This was shipped and hit a real user. It survived testing because the container
+running the test was root with `umask 022`, so `tee` happened to produce 0644
+and the missing `chmod` never mattered. The install test now runs under
+`umask 027` for exactly this reason. It is the second time this machine's umask
+has produced a defect: the first packages built were 0640 throughout, readable
+only by root.
+
 ## Ansible is a weak dependency
 
 `Recommends:` on Debian, `Suggests:` on RPM. Not `Depends:`.
