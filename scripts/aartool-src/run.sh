@@ -27,6 +27,9 @@ main() {
     report)         shift; cmd_report "$@" ;;
     diff)           shift; cmd_diff "$@" ;;
     install)        shift; cmd_install "$@" ;;
+    # `aartool uninstall` is what people type. It used to be an unknown command,
+    # which is a poor answer when the thing they want exists behind a flag.
+    uninstall)      shift; cmd_install --uninstall "$@" ;;
     -h|--help|help) usage ;;
     -V|--version|version) printf 'aartool %s\n' "$AARTOOL_VERSION" ;;
     # Named so the error can be specific rather than "unknown command".

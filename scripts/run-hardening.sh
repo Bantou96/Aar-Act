@@ -108,7 +108,12 @@ fi
 [[ -n "$ANSIBLE_BASE" ]] \
   || die "Cannot find ansible-hardening/ (looked 6 levels up from script location)."
 
-INVENTORY="$ANSIBLE_BASE/inventory/hosts"
+# AARTOOL_INVENTORY lets a caller point the run at another inventory. aartool
+# uses it for `--target localhost`, where it writes a one-line inventory to a
+# temporary file: a packaged install has $ANSIBLE_BASE under /usr/share, which
+# is read-only and replaced on upgrade, so there is nowhere there to put one.
+# Same variable the aartool side already honours.
+INVENTORY="${AARTOOL_INVENTORY:-$ANSIBLE_BASE/inventory/hosts}"
 PLAYBOOK_1="$ANSIBLE_BASE/playbooks/1_execute_baseline_before.yml"
 PLAYBOOK_2="$ANSIBLE_BASE/playbooks/2_configure_hardening.yml"
 PLAYBOOK_3="$ANSIBLE_BASE/playbooks/3_execute_baseline_after.yml"

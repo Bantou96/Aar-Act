@@ -76,6 +76,23 @@ else
   PASS=$((PASS+1))
 fi
 check    "help lists plan"  "$($AARTOOL --help 2>&1)"           "plan"
+
+# `aartool uninstall` used to be an unknown command while the thing it names
+# existed behind `install --uninstall`. Telling someone their verb does not
+# exist, when it does, is the worst of both answers.
+check    "uninstall is a command"    "$($AARTOOL --help 2>&1)"            "uninstall"
+check    "uninstall reaches install" "$($AARTOOL uninstall --help 2>&1)"  "aartool install"
+
+# localhost is the machine inspect just audited, and it needs no inventory.
+# Before this, hardening the obvious first target failed on a package install,
+# where there is no inventory and nowhere writable to put one.
+check    "plan documents localhost"  "$($AARTOOL plan --help 2>&1)"       "localhost"
+check    "apply documents localhost" "$($AARTOOL apply --help 2>&1)"      "localhost"
+
+# A wrong target should name the escape hatch rather than only the failure.
+check    "bad target suggests localhost" \
+         "$(AARTOOL_INVENTORY=$PWD/../ansible-hardening/inventory/hosts.example $AARTOOL plan --target nope 2>&1)" \
+         "--target localhost"
 check_rc "no args exits 1"  1  "$AARTOOL"
 check    "unknown command"  "$($AARTOOL frobnicate 2>&1)"       "Unknown command"
 check    "audit points to inspect" "$($AARTOOL audit 2>&1)"     "aartool inspect"

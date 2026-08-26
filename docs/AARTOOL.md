@@ -318,12 +318,30 @@ Turn an audit into an ordered plan.
 
 | option | meaning |
 |---|---|
-| `-t, --target HOST\|GROUP` | Required. Must exist in the inventory |
+| `-t, --target HOST\|GROUP` | Required. Must exist in the inventory, or be `localhost` |
 | `-u, --user USER` | SSH user. Default `ansible` |
 | `--only TAGS` | Comma-separated role tags: `ssh`, `kernel`, `auth`, `firewall`, ... |
 | `--full` | Run the three-step pipeline: audit, harden, audit |
 | `-K, --ask-become-pass` | Prompt for the sudo password on the target |
 | `-y, --yes` | `apply` only. Skip the typed confirmation. For automation, and the flag to think about before you use it |
+
+**`--target localhost` hardens the machine you are on**, which is the machine
+`inspect` just audited:
+
+```bash
+sudo aartool plan  --target localhost      # changes nothing
+sudo aartool apply --target localhost
+```
+
+It needs no inventory and nothing goes over SSH: aartool writes a one-line
+inventory with `ansible_connection=local` for the run and removes it afterwards.
+That matters on a package install, where the playbooks live under `/usr/share`
+and there is nowhere writable to keep an inventory.
+
+Both commands need root for localhost, and both say so up front rather than
+failing inside Ansible. `plan` needs it too: it changes nothing, but it still
+reads `sshd_config`, audit rules and sysctls to work out what it *would*
+change. Use `sudo`, or `-K` to be asked for the password.
 
 ### `surface`
 
@@ -403,12 +421,26 @@ because `ansible-playbook` failing halfway with "couldn't resolve module
 ansible.posix.sysctl" tells an operator nothing about `ansible-galaxy`, and a
 half-applied hardening run is expensive.
 
-### `install`
+### `install` / `uninstall`
 
 | option | meaning |
 |---|---|
 | `--prefix DIR` | Install into `DIR/bin` instead of `/usr/local/bin` |
 | `--uninstall` | Remove the symlink |
+
+`aartool uninstall` is the same thing as `aartool install --uninstall`.
+
+On an install that came from a `.deb` or an `.rpm`, both refuse and point at the
+package manager:
+
+```bash
+sudo apt remove aartool       # Debian, Ubuntu
+sudo dnf remove aartool       # RHEL, Rocky, AlmaLinux, Fedora
+```
+
+Deleting `/usr/bin/aartool` by hand would leave the package registered as
+installed with its command missing, and no later `apt install` would repair
+that, because apt already believes the package is present.
 
 ---
 

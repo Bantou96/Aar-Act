@@ -50,6 +50,20 @@ cmd_install() {
 
   local bindir="$prefix/bin" link="$prefix/bin/aartool"
 
+  # A packaged install is owned by dpkg or rpm. Deleting /usr/bin/aartool here
+  # would leave the package registered as installed with its command missing,
+  # which no later `apt install` would repair because apt already believes the
+  # package is present. The package manager has to be the one to remove it.
+  if [[ "$uninstall" == true ]]; then
+    local _root; _root="$(_find_up "ansible-hardening" "$(_self_dir)" 2>/dev/null || true)"
+    if [[ -n "$_root" && -f "$_root/.packaged" ]]; then
+      die "aartool was installed from a package, so remove it with the package manager:
+          sudo apt remove aartool       # Debian, Ubuntu
+          sudo dnf remove aartool       # RHEL, Rocky, AlmaLinux, Fedora
+        Deleting the symlink here would leave the package installed and broken."
+    fi
+  fi
+
   if [[ "$uninstall" == true ]]; then
     if [[ -L "$link" || -e "$link" ]]; then
       rm -f "$link" || die "Cannot remove $link. Try with sudo."
