@@ -11,7 +11,7 @@
 - **Terminal output**: colour-coded PASS / WARN / FAIL results with a security score
 - **HTML report**: self-contained file suitable for sharing with management or auditors
 - **JSON report**: machine-readable output for SIEM integration or CI pipelines
-- **Ansible remediation plan**: targeted `ansible-playbook` commands for every failing check
+- **Remediation plan**: a targeted `aartool apply` command for every failing check
 
 The script requires no external dependencies beyond standard Linux utilities (`bash`, `ss`, `sysctl`, `stat`, `find`, `awk`) and runs in a single pass in under two minutes on a typical server.
 
@@ -140,31 +140,40 @@ For WARN / FAIL checks the remediation hint is shown on the next line.
 
 **Score** = `PASS / TOTAL × 100`. Colour thresholds: ≥ 80% green, ≥ 60% yellow, < 60% red.
 
-### Ansible remediation plan
+### Remediation plan
 
-After the score, the terminal prints a deduplicated list of `ansible-playbook` commands covering every FAIL and WARN check that has an Ansible mapping:
+After the score, the terminal prints a deduplicated `aartool apply` command
+covering every FAIL and WARN check that has an Ansible mapping:
 
 ```
-━━━  ANSIBLE REMEDIATION PLAN  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━  REMEDIATION  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Platform: (RHEL9 / AlmaLinux / Rocky)
-  Playbook: playbooks/2_configure_hardening.yml
 
   [01] Apply pending kernel updates          tags: updates,patching
        Role  : linux_dnf_automatic_rhel9
-       ansible-playbook -i inventory/hosts playbooks/2_configure_hardening.yml --tags updates,patching
+       aartool apply --target <host> --only updates,patching
 
   [02] Account lockout (faillock)            tags: auth,pam
        Role  : linux_authselect_rhel9
-       ansible-playbook -i inventory/hosts playbooks/2_configure_hardening.yml --tags auth,pam
+       aartool apply --target <host> --only auth,pam
 
-  ── Fix everything in one command: ───────────────────────────
-  ansible-playbook -i inventory/hosts playbooks/2_configure_hardening.yml \
-    --tags updates,patching,auth,pam,ssh,...
+  ── Everything above, in one command: ────────────────────────
+  aartool apply --target <host> --only updates,patching,auth,pam,...
 
-  💡 Add --check --diff for a dry run before applying.
-     Add -l <host_or_group> to target a specific server.
+     Preview first. It changes nothing:
+  aartool plan --target <host> --only updates,patching,auth,pam,...
+
+     <host> is a host or group in your inventory.
+     aartool advise orders these by what an attacker reaches first,
+     and says what each fix costs before you run it.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
+
+It prints `aartool` commands rather than raw `ansible-playbook` ones on purpose.
+The playbook paths only resolve inside a git checkout, so on a package install
+the old command could not run at all. `apply` also requires `--target` and makes
+you type the target name back, and a bare `ansible-playbook` with no `-l`
+defaults to the entire inventory.
 
 If `--ansible-dir` is provided, the playbook path is resolved to that directory.
 

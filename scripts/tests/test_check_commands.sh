@@ -78,5 +78,35 @@ for branch in 'dnf|dnf5|yum' 'apt-get' 'zypper'; do
   fi
 done
 
+# ── The remediation a report prints must be runnable ─────────────────────────
+#
+# The report renderers used to print
+#   ansible-playbook -i inventory/hosts playbooks/2_configure_hardening.yml ...
+# which resolves only inside a git checkout. On a package install the playbooks
+# are under /usr/share/aartool and that command cannot work, so every audit
+# ended with a remediation step the reader could not run.
+#
+# It is also the command aartool exists to replace: `apply` requires --target
+# and makes the operator type the target name back, because the dangerous
+# mistake is the wrong target, not the wrong intent. A raw ansible-playbook line
+# with no -l defaults to the whole inventory and teaches the reader around every
+# one of those guards.
+#
+# This is the second time this file has been wrong in this way: PR #94 removed
+# twelve references to a nonexistent inventory/hosts.yml, three of them here.
+for r in src/renderers/terminal.sh src/renderers/html.sh; do
+  name=$(basename "$r")
+  if grep -q 'ansible-playbook' "$r"; then
+    bad "$name prints a raw ansible-playbook command; reports must remediate through aartool"
+  else
+    ok
+  fi
+  if grep -q 'aartool apply --target' "$r"; then
+    ok
+  else
+    bad "$name no longer prints an 'aartool apply --target' command"
+  fi
+done
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
