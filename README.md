@@ -327,6 +327,8 @@ each has its own document.
 | **`cyberaar-baseline.sh`** | The audit itself: one bash file, no dependencies, `curl`-able onto an air-gapped box | [docs/BASELINE.md](docs/BASELINE.md) |
 | **Dashboard** | Single HTML file, no server, no external requests, works on an isolated network | [docs/DASHBOARD.md](docs/DASHBOARD.md) |
 | **Container image** | Ansible and the collections already present, for running without installing anything | [docs/CONTAINER.md](docs/CONTAINER.md) |
+| **Packages** | `.deb` and `.rpm`, and the signed repository they are served from | [docs/PACKAGING.md](docs/PACKAGING.md) |
+| **Media** | Regenerating the terminal graphic used in release posts | [docs/MEDIA.md](docs/MEDIA.md) |
 
 ### Layout
 
