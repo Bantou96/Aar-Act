@@ -2,7 +2,7 @@ _checks_system() {
 # =============================================================================
 #  1. SYSTEM & OS
 # =============================================================================
-section "1. SYSTEM & OS / Système et OS"
+section "1. SYSTEM & OS"
 
 # SYS-01 Distribution and what is available for it
 #
@@ -17,16 +17,16 @@ if distro_roles_available; then
 elif [[ "$_SYS_FAM" == "unknown" ]]; then
   add_result "System" "WARN" "SYS-01" "Distribution not identified" "Distribution non identifiée" \
     "$(distro_pretty) — audit still valid, hardening roles unavailable" \
-    "L'audit reste valable : il lit /proc, /etc et systemd, indépendants de la distribution. Les rôles de durcissement couvrent les familles RHEL et Debian (testés sur $(distro_roles_tested))."
+    "The audit still holds: it reads /proc, /etc and systemd, which do not depend on the distribution. The hardening roles cover the RHEL and Debian families (tested on $(distro_roles_tested))."
 else
   add_result "System" "WARN" "SYS-01" "Audit-only distribution" "Distribution en audit seul" \
     "$(distro_pretty) — family: $_SYS_FAM, audit valid, no hardening roles" \
-    "L'audit et 'aartool surface' fonctionnent normalement. Les rôles Ansible ne couvrent pas encore la famille $_SYS_FAM : les recommandations de chaque contrôle restent applicables à la main."
+    "The audit and 'aartool surface' work normally. The Ansible roles do not cover the $_SYS_FAM family yet: the recommendation on each check still applies by hand."
 fi
 
 # SYS-02 Kernel (informational — always WARN to prompt version review)
 add_result "System" "WARN" "SYS-02" "Kernel version" "Version noyau" "$(uname -r)" \
-  "Vérifiez les mises à jour noyau: 'dnf check-update kernel' ou 'apt list --upgradable | grep linux-image'."
+  "Check for kernel updates: 'dnf check-update kernel' or 'apt list --upgradable | grep linux-image'."
 
 # SYS-03 Pending updates
 #
@@ -87,7 +87,7 @@ case "$_SYS_PKG" in
       add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
     else
       add_result "System" "WARN" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s), rolling release" \
-        "Appliquez: 'pacman -Syu'. Une distribution en publication continue ne distingue pas les correctifs de sécurité."
+        "Apply: 'pacman -Syu'. A rolling-release distribution does not separate security fixes from the rest."
     fi ;;
   apk)
     PENDING=$(apk version -l '<' 2>/dev/null | grep -c '^[a-zA-Z]' || true)
@@ -101,7 +101,7 @@ case "$_SYS_PKG" in
   none)
     add_result "System" "WARN" "SYS-03" "No package manager found" "Aucun gestionnaire de paquets" \
       "checked: dnf, apt-get, zypper, pacman, apk" \
-      "Image minimale ou distribution immuable. Vérifiez les mises à jour par le mécanisme propre à cette image." ;;
+      "Minimal image or immutable distribution. Check for updates through whatever mechanism that image provides." ;;
   *)
     add_result "System" "WARN" "SYS-03" "Update status not determined" "État des mises à jour indéterminé" \
       "package manager: $_SYS_PKG (unsupported by this check)" \
@@ -126,7 +126,7 @@ KUP=$(awk '{printf "%d", $1/86400}' /proc/uptime 2>/dev/null || echo "?")
 if [[ -z "$KNEW" ]]; then
   add_result "System" "WARN" "SYS-11" "Cannot determine installed kernels" "Noyaux installés indéterminés" \
     "no /boot/vmlinuz-* found" \
-    "Comparez manuellement 'uname -r' au noyau installé le plus récent."
+    "Compare 'uname -r' by hand against the newest installed kernel."
 elif [[ "$KNEW" == "$KRUN" ]]; then
   add_result "System" "PASS" "SYS-11" "Running the newest installed kernel" "Noyau le plus récent actif" \
     "$KRUN (uptime ${KUP}j)" ""
@@ -135,11 +135,11 @@ elif [[ "$(printf '%s\n%s\n' "$KRUN" "$KNEW" | sort -V | tail -1)" == "$KRUN" ]]
   # custom or vendor kernel whose image lives outside /boot.
   add_result "System" "WARN" "SYS-11" "Running kernel not found in /boot" "Noyau actif absent de /boot" \
     "running $KRUN, newest in /boot $KNEW" \
-    "Noyau hors dépôt ou image hors /boot. Vérifiez que sa source livre bien les correctifs de sécurité."
+    "Kernel from outside the repositories, or an image outside /boot. Check that its source actually ships security fixes."
 else
   add_result "System" "FAIL" "SYS-11" "Newer kernel installed but not running" "Noyau plus récent installé mais inactif" \
     "running $KRUN, installed $KNEW, uptime ${KUP}j" \
-    "Le correctif est installé mais inactif. Redémarrez pour activer $KNEW. Sur un cluster à quorum (OpenSearch, Kafka, etcd), un nœud à la fois en vérifiant la santé entre chaque."
+    "The fix is installed but not running. Reboot to activate $KNEW. On a quorum cluster (OpenSearch, Kafka, etcd), one node at a time, checking health between each."
 fi
 
 # SYS-04 SELinux / AppArmor
@@ -148,16 +148,16 @@ if cmd_exists getenforce; then
   case "$SEMODE" in
     Enforcing) add_result "System" "PASS" "SYS-04" "SELinux Enforcing" "SELinux Enforcing" "$SEMODE" "" ;;
     Permissive) add_result "System" "WARN" "SYS-04" "SELinux Permissive" "SELinux Permissive" "$SEMODE" \
-      "Activez Enforcing: 'setenforce 1' et modifiez /etc/selinux/config." ;;
+      "Set Enforcing: 'setenforce 1' and update /etc/selinux/config." ;;
     *) add_result "System" "FAIL" "SYS-04" "SELinux Disabled" "SELinux désactivé" "$SEMODE" \
-      "Activez SELinux dans /etc/selinux/config: SELINUX=enforcing" ;;
+      "Enable SELinux in /etc/selinux/config: SELINUX=enforcing" ;;
   esac
 elif cmd_exists apparmor_status; then
   AA=$(apparmor_status 2>/dev/null | head -1 || echo "present")
   add_result "System" "PASS" "SYS-04" "AppArmor present" "AppArmor présent" "$AA" ""
 else
   add_result "System" "FAIL" "SYS-04" "No MAC framework" "Pas de contrôle d'accès MAC" "SELinux/AppArmor absent" \
-    "Installez et activez SELinux ou AppArmor."
+    "Install and enable SELinux or AppArmor."
 fi
 
 # SYS-05 Core dumps
@@ -168,7 +168,7 @@ if $CORE_RESTRICTED; then
   add_result "System" "PASS" "SYS-05" "Core dumps restricted" "Core dumps restreints" "Restricted" ""
 else
   add_result "System" "WARN" "SYS-05" "Core dumps not restricted" "Core dumps non restreints" "May expose memory" \
-    "Ajoutez '* hard core 0' dans /etc/security/limits.conf"
+    "Add '* hard core 0' to /etc/security/limits.conf"
 fi
 
 # SYS-06 Time synchronization
@@ -181,7 +181,7 @@ if [[ -n "$_TSVC" ]]; then
   add_result "System" "PASS" "SYS-06" "Time synchronization active" "Synchronisation temps active" "$_TSVC: running" ""
 else
   add_result "System" "FAIL" "SYS-06" "No time sync daemon running" "Pas de synchronisation temps" "chronyd/ntpd/timesyncd inactive" \
-    "Installez et activez: 'dnf install chrony && systemctl enable --now chronyd'"
+    "Install and enable: 'dnf install chrony && systemctl enable --now chronyd'"
 fi
 
 # SYS-07 GRUB config permissions
@@ -194,11 +194,11 @@ if [[ -n "$GRUB_CFG" ]]; then
     add_result "System" "PASS" "SYS-07" "GRUB config permissions OK" "Perms GRUB correctes" "Mode: $GRUB_PERMS ($GRUB_CFG)" ""
   else
     add_result "System" "FAIL" "SYS-07" "GRUB config perms too open" "Perms GRUB trop permissives" "Mode: ${GRUB_PERMS:-?} ($GRUB_CFG)" \
-      "Corrigez: 'chmod 600 $GRUB_CFG && chown root:root $GRUB_CFG'"
+      "Fix: 'chmod 600 $GRUB_CFG && chown root:root $GRUB_CFG'"
   fi
 else
   add_result "System" "WARN" "SYS-07" "GRUB config not found" "GRUB config introuvable" "No grub.cfg at standard paths" \
-    "Vérifiez l'emplacement de votre configuration GRUB."
+    "Check where your GRUB configuration lives."
 fi
 
 # SYS-08 Secure Boot
@@ -208,11 +208,11 @@ if cmd_exists mokutil; then
     add_result "System" "PASS" "SYS-08" "Secure Boot enabled" "Secure Boot activé" "$SB_STATE" ""
   else
     add_result "System" "WARN" "SYS-08" "Secure Boot not enabled" "Secure Boot désactivé" "${SB_STATE:-not determined}" \
-      "Activez Secure Boot dans le UEFI/BIOS. Ne peut pas être configuré par Ansible."
+      "Enable Secure Boot in the UEFI/BIOS. Cannot be configured by Ansible."
   fi
 else
   add_result "System" "WARN" "SYS-08" "Cannot check Secure Boot" "Vérif Secure Boot impossible" "mokutil absent" \
-    "Installez mokutil ('dnf install mokutil') ou vérifiez dans le UEFI/BIOS."
+    "Install mokutil ('dnf install mokutil') or check in the UEFI/BIOS."
 fi
 
 # SYS-09 /dev/shm mount hardening
@@ -226,7 +226,7 @@ if $SHM_OK; then
   add_result "System" "PASS" "SYS-09" "/dev/shm hardened" "/dev/shm sécurisé" "noexec,nosuid,nodev" ""
 else
   add_result "System" "WARN" "SYS-09" "/dev/shm missing hardening" "/dev/shm non sécurisé" "${SHM_OPTS:-not mounted or options missing}" \
-    "Ajoutez dans /etc/fstab: 'tmpfs /dev/shm tmpfs defaults,noexec,nosuid,nodev 0 0'"
+    "Add to /etc/fstab: 'tmpfs /dev/shm tmpfs defaults,noexec,nosuid,nodev 0 0'"
 fi
 
 # SYS-10 Ctrl-Alt-Delete disabled
@@ -244,6 +244,6 @@ if [[ "$CAD_STATE" == masked* ]]; then
   add_result "System" "PASS" "SYS-10" "Ctrl-Alt-Del masked" "Ctrl-Alt-Suppr désactivé" "ctrl-alt-del.target: ${CAD_STATE}" ""
 else
   add_result "System" "FAIL" "SYS-10" "Ctrl-Alt-Del not masked" "Ctrl-Alt-Suppr actif" "ctrl-alt-del.target: ${CAD_STATE:-unknown}" \
-    "Masquez: 'systemctl mask ctrl-alt-del.target && systemctl daemon-reload'"
+    "Mask it: 'systemctl mask ctrl-alt-del.target && systemctl daemon-reload'"
 fi
 }

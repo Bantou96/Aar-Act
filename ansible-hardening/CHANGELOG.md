@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.3]: 2026-08-26
+
+### Changed
+
+- **inspect output is a table, and the score is at the end of it.** 109 results
+  printed as 327 lines with the score in the middle. Each result is now one
+  aligned row: STATUS, ID, CHECK, DETAIL, under a column header per section.
+  Default output is 145 lines. Two things had been breaking the alignment: the
+  status emoji, since `PASS` is one cell wide, `WARN` two plus a variation
+  selector and `FAIL` two, so no two rows lined up; and a fixed-length section
+  rule appended to a variable-length title.
+- **The check ID is printed.** `aartool explain SSH-01` needs it, and the only
+  place it appeared was the JSON report.
+- **inspect no longer prints a remediation plan.** It used to follow the score
+  with 117 lines grouped by Ansible tag. `aartool advise` does that job ordered
+  by what an attacker reaches first, with the cost of each fix, and inspect now
+  points at it.
+- **Per-check fixes move behind `--hints`.** They printed under every non-PASS
+  result, which is what doubled the length. `aartool explain <ID>` gives the
+  same thing in full plus what closing the finding breaks.
+- **The tool speaks English only.** All 119 remediation hints were French while
+  every check name was English, so a single run mixed the two. The bilingual
+  halves of the section titles and the per-check French line in the HTML report
+  went with them, along with the report's French labels. Guarded: French text
+  in a renderer fails the suite.
+
 ## [3.3.2]: 2026-08-26
 
 ### Fixed
