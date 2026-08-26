@@ -55,6 +55,47 @@ cmd_doctor() {
   printf '\n%saartool doctor%s\n' "$BOLD" "$RESET"
   printf '%s\n' "────────────────────────────────────────────────────────────────────"
 
+  # ── Which aartool is actually running ──────────────────────────────────────
+  #
+  # `aartool install` symlinks into /usr/local/bin, which precedes /usr/bin on
+  # every default PATH. Install the package afterwards and the old symlink wins
+  # silently: you get the clone's version, with none of the newer commands, and
+  # nothing says so. The symptom is a documented flag reported as unknown, and
+  # the reasonable conclusion is that the tool is broken rather than shadowed.
+  #
+  # Reported by someone whose --target localhost failed on 3.3.1 because a
+  # 3.2.0 clone symlink was ahead of the package.
+  local _running _first _other
+  _running="$(_self_dir)/$(basename "${BASH_SOURCE[0]}")"
+  [[ -f "$_running" ]] || _running="$(_self_dir)/aartool"
+  _running="$(readlink -f "$_running" 2>/dev/null || printf '%s' "$_running")"
+
+  _first="$(command -v aartool 2>/dev/null || true)"
+  if [[ -n "$_first" ]]; then
+    _first="$(readlink -f "$_first" 2>/dev/null || printf '%s' "$_first")"
+    if [[ "$_first" != "$_running" ]]; then
+      _doc_warn "another aartool is ahead on PATH" "$(command -v aartool)" \
+        "That one runs when you type 'aartool'. This one is $_running"
+    else
+      _doc_pass "aartool on PATH" "$_first"
+    fi
+  fi
+
+  # A packaged install being shadowed is worth naming outright, because the fix
+  # is to delete one symlink and there is no way to guess that.
+  #
+  # The comparison is against what typing 'aartool' resolves to, NOT against the
+  # file currently executing. Running a checkout copy directly is normal during
+  # development and shadows nothing. Getting that wrong made this check advise
+  # `sudo rm /usr/bin/aartool`, which is the package's own binary: the one file
+  # here that must never be deleted by hand.
+  if [[ -f /usr/share/aartool/.packaged && -n "$_first" && "$_first" != /usr/share/aartool/* ]]; then
+    local _pkgver=""
+    [[ -x /usr/bin/aartool ]] && _pkgver="$(/usr/bin/aartool --version 2>/dev/null || true)"
+    _doc_warn "packaged aartool is shadowed" "${_pkgver:-installed} at /usr/bin/aartool" \
+      "Typing 'aartool' runs $(command -v aartool) instead. Remove it: sudo rm $(command -v aartool)"
+  fi
+
   # ── The toolkit itself ─────────────────────────────────────────────────────
   _doc_pass "toolkit located" "$ANSIBLE_BASE"
   [[ -r "$BASELINE" ]] && _doc_pass "cyberaar-baseline.sh" "readable" \
