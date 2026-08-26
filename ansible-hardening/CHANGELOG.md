@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.4]: 2026-08-26
+
+### Fixed
+
+- **`plan` failed on any host without a firewall package installed**, which is
+  the host that most needs the firewall role. A preview installs nothing, so
+  the package task reported "would install" and changed nothing, the binary
+  verification was skipped because command modules do not run under `--check`,
+  and the ufw module then ran against a binary that was not there:
+  `Failed to find required executable "ufw"`. Both firewall roles now probe
+  with `check_mode: false` and gate their configuration on the result, so a
+  preview reports what `apply` would do. The ufw reload handler needed the same
+  guard: handlers run at the end of the play, so it fired after every gated
+  task had correctly skipped.
+- **Five firewalld tasks lost their conditions.** They already carried a
+  `when:` before the module key, and the new guard was appended as a second
+  one; in YAML the later key wins, so conditions including
+  `_firewalld_active | bool` would have been discarded and services removed
+  regardless of them. Merged into single lists. Found by ansible-lint's
+  `key-duplicates` while fixing the above, not by the failing run.
+
+Reported by a user running `aartool plan --target localhost` on a fresh
+machine.
+
 ## [3.3.3]: 2026-08-26
 
 ### Changed
