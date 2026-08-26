@@ -99,6 +99,48 @@ and the missing `chmod` never mattered. The install test now runs under
 has produced a defect: the first packages built were 0640 throughout, readable
 only by root.
 
+## Symlinks inside a packaged directory are dropped
+
+`ansible-hardening/playbooks/roles` is a symlink to `../roles`, and it is what
+lets Ansible resolve the roles from a playbook one directory down.
+
+**nfpm does not carry symlinks it finds inside a directory tree.** It copied the
+four playbooks and dropped the link without a word, so every package shipped
+playbooks referencing roles nothing could find:
+
+```
+ERROR! the role 'linux_kernel_hardening_rhel9' was not found in
+  /usr/share/aartool/ansible-hardening/playbooks/roles:...
+```
+
+`plan` and `apply` failed at parse time in 3.3.0 and 3.3.1 while `inspect`,
+`advise` and `explain` all worked, so the package looked fine. The link is now
+declared explicitly as a `type: symlink` entry, and `run-hardening.sh` also
+exports `ANSIBLE_ROLES_PATH`, because the one path without which nothing runs
+should not depend on a symlink surviving a packaging step.
+
+The install test now runs `ansible-playbook --syntax-check` against the
+installed playbook, which is the step that was failing. Counting the shipped
+roles would not have caught it: the count was right.
+
+## The collections are not vendored
+
+The roles call `ansible.posix` (sysctl, firewalld, selinux, seboolean) and
+`community.general` (ufw). Neither is in the package:
+
+```bash
+ansible-galaxy collection install -r /usr/share/aartool/ansible-hardening/requirements.yml
+```
+
+`community.general` alone is **29 MB against a 480 KB package**, and this tool
+is aimed at machines with constrained bandwidth. Ansible itself is already only
+a recommended dependency for the same reason.
+
+`plan` and `apply` check for them before starting and print that command.
+Without the check, Ansible fails with `couldn't resolve module/action
+'ansible.posix.selinux'` pointing at a line inside a role, which reads like a
+bug in the role rather than a missing dependency on the machine.
+
 ## Ansible is a weak dependency
 
 `Recommends:` on Debian, `Suggests:` on RPM. Not `Depends:`.

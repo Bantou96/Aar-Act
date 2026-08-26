@@ -114,6 +114,12 @@ fi
 # is read-only and replaced on upgrade, so there is nowhere there to put one.
 # Same variable the aartool side already honours.
 INVENTORY="${AARTOOL_INVENTORY:-$ANSIBLE_BASE/inventory/hosts}"
+# Say where the roles are rather than relying on playbooks/roles being a symlink
+# to ../roles. That symlink is how a git checkout resolves them, and a packaging
+# step that quietly drops it leaves playbooks referencing roles nothing can find.
+# Explicit beats implicit for the one path without which nothing runs.
+export ANSIBLE_ROLES_PATH="$ANSIBLE_BASE/roles"
+
 PLAYBOOK_1="$ANSIBLE_BASE/playbooks/1_execute_baseline_before.yml"
 PLAYBOOK_2="$ANSIBLE_BASE/playbooks/2_configure_hardening.yml"
 PLAYBOOK_3="$ANSIBLE_BASE/playbooks/3_execute_baseline_after.yml"

@@ -40,6 +40,30 @@ test -f /usr/share/aartool/ansible-hardening/inventory/hosts.example \
   && echo "example inventory:  present"
 aartool inspect --no-save >/dev/null && echo "inspect:            ran to completion"
 echo "roles shipped:      $(ls /usr/share/aartool/ansible-hardening/roles | wc -l)"
+
+# Shipping the roles is not the same as Ansible being able to FIND them.
+# playbooks/roles is a symlink to ../roles in the repository, and nfpm dropped
+# it silently when packaging the directory: every package had playbooks that
+# referenced roles nothing could resolve, so plan and apply failed at parse time
+# while inspect, advise and explain all worked. Counting files would not have
+# caught it, because the count was right.
+#
+# --syntax-check resolves roles, which is exactly the step that was failing.
+test -e /usr/share/aartool/ansible-hardening/playbooks/roles && echo "roles symlink:      present"
+if command -v ansible-playbook >/dev/null 2>&1; then
+  # The documented dependency step. The roles call ansible.posix and
+  # community.general, which are deliberately not vendored: community.general
+  # alone is 29 MB against a 480 KB package.
+  ansible-galaxy collection install -r \
+    /usr/share/aartool/ansible-hardening/requirements.yml >/dev/null 2>&1
+  ansible-playbook --syntax-check \
+    -i localhost, \
+    /usr/share/aartool/ansible-hardening/playbooks/2_configure_hardening.yml >/dev/null
+  echo "playbook parses:    roles and collections resolve"
+else
+  echo "playbook parses:    SKIPPED, ansible-core not installed" >&2
+  exit 1
+fi
 test -f /usr/share/aartool/dashboard/index.html && echo "dashboard:          present"
 '
 
