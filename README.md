@@ -49,7 +49,9 @@ From the package repository, which is what most people want:
 
 ```bash
 # Debian, Ubuntu
+sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://pkgs.cyberaar.io/gpg | sudo tee /etc/apt/keyrings/aartool.asc >/dev/null
+sudo chmod a+r /etc/apt/keyrings/aartool.asc
 echo "deb [signed-by=/etc/apt/keyrings/aartool.asc] https://pkgs.cyberaar.io/deb stable main" \
   | sudo tee /etc/apt/sources.list.d/aartool.list
 sudo apt update && sudo apt install aartool
@@ -58,6 +60,11 @@ sudo apt update && sudo apt install aartool
 sudo curl -fsSL https://pkgs.cyberaar.io/aartool.repo -o /etc/yum.repos.d/aartool.repo
 sudo dnf install aartool
 ```
+
+The `chmod a+r` is not decoration. apt verifies signatures as the unprivileged
+`_apt` user, and `sudo tee` creates the file with your umask: on a machine set
+to `umask 027` that is mode 0640, `_apt` cannot read it, and apt fails with
+`Unknown error executing apt-key`, which names neither permissions nor the file.
 
 Both packages are signed, and so is the repository metadata. `apt upgrade` and
 `dnf upgrade` pick up new releases from then on.
