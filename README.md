@@ -78,6 +78,12 @@ tool never calls it. Your inventory belongs at `/etc/aartool/inventory`, where
 an upgrade will not touch it. See [docs/PACKAGING.md](docs/PACKAGING.md) for the
 layout and the reasoning.
 
+To remove it:
+
+```bash
+sudo apt remove aartool       # or: sudo dnf remove aartool
+```
+
 From a clone, which is what you want if you intend to change anything:
 
 ```bash
@@ -85,6 +91,7 @@ git clone https://github.com/cyberaar/aartool
 cd aartool
 sudo scripts/aartool install              # symlink into /usr/local/bin
 aartool doctor                            # is everything it needs actually here?
+sudo aartool uninstall                    # removes the symlink, keeps the clone
 ```
 
 Without root, or without installing at all:
@@ -188,6 +195,14 @@ aartool plan  --target web-01 --user ubuntu --only ssh
 aartool apply --target web-01 --user ubuntu --only ssh
 ```
 
+To harden the machine you are on, which is the machine step 1 just audited, use
+`localhost`. It needs no inventory and nothing goes over SSH:
+
+```bash
+sudo aartool plan  --target localhost --only ssh   # changes nothing
+sudo aartool apply --target localhost --only ssh
+```
+
 `apply` asks you to type the target name back. `--target` is required and is
 checked against the inventory first: the dangerous mistake is not "did I mean
 to run this", it is "did I mean this host or that group".
@@ -220,6 +235,7 @@ to filter the mail.
 | `report` | Bake reports into one self-contained HTML file, or serve the dashboard. |
 | `diff` | What changed between two audits. |
 | `install` | Put `aartool` on your PATH. |
+| `uninstall` | Remove it again. On a packaged install it points you at `apt remove` instead. |
 
 Add `-v` to any command to see what it is shelling out to. That is the flag
 that helps when the failure is in `ssh` or `ansible` rather than in `aartool`.
