@@ -4,6 +4,34 @@
     name: "firewalld"
     state: "present"
 
+# check_mode: false so this looks during a preview too, where the package task
+# above installs nothing. Without the guard, configuring firewalld on a host
+# that does not have it yet fails with "Failed to find required executable
+# firewall-offline-cmd": a preview failing on exactly the host that most needs
+# the role. Same defect as the ufw role.
+- name: "Verify the firewalld binary is available"
+  # `which`, not `command -v`: see the ufw role. The command module runs no
+  # shell, so a builtin can never be found.
+  ansible.builtin.command: "which firewall-cmd"
+  changed_when: false
+  check_mode: false
+  register: "_fwd_bin"
+  failed_when: false
+
+- name: "Preview: firewalld is not installed yet"
+  ansible.builtin.debug:
+    msg: >-
+      firewalld is not installed. A preview installs nothing, so the rules
+      below cannot be evaluated. 'aartool apply' installs firewalld first, then
+      applies them.
+  when:
+    - ansible_check_mode
+    - _fwd_bin.rc != 0
+
+- name: "Set firewalld availability fact"
+  ansible.builtin.set_fact:
+    _fwd_ready: "{{ (not ansible_check_mode) or (_fwd_bin.rc == 0) }}"
+
 - name: "Enable and start firewalld service"
   ansible.builtin.service:
     name: "firewalld"
@@ -46,7 +74,9 @@
   changed_when: true
 
 - name: "Allow required services in default zone"
-  when: "linux_firewalld_enabled | bool"
+  when:
+    - "linux_firewalld_enabled | bool"
+    - "_fwd_ready | default(false)"
   ansible.posix.firewalld:
     service: "{{ item }}"
     zone: "{{ linux_firewalld_default_zone }}"
@@ -56,7 +86,9 @@
   loop: "{{ linux_firewalld_allowed_services }}"
 
 - name: "Allow additional ports in default zone"
-  when: "linux_firewalld_enabled | bool"
+  when:
+    - "linux_firewalld_enabled | bool"
+    - "_fwd_ready | default(false)"
   ansible.posix.firewalld:
     port: "{{ item }}"
     zone: "{{ linux_firewalld_default_zone }}"
@@ -67,6 +99,7 @@
 
 - name: "Restrict SSH to specific source addresses (rich rules)"
   when:
+    - "_fwd_ready | default(false)"
     - "linux_firewalld_enabled | bool"
     - "linux_firewalld_ssh_sources | length > 0"
   ansible.posix.firewalld:
@@ -79,6 +112,7 @@
 
 - name: "Apply SSH rate limiting (rich rule)"
   when:
+    - "_fwd_ready | default(false)"
     - "linux_firewalld_enabled | bool"
     - "linux_firewalld_ssh_rate_limit != ''"
   ansible.posix.firewalld:
@@ -113,6 +147,7 @@
 
 - name: "Remove unexpected services from default zone"
   when:
+    - "_fwd_ready | default(false)"
     - "linux_firewalld_enabled | bool"
     - "_firewalld_active | bool"
     - "fw_info.firewalld_zones[linux_firewalld_default_zone].services | default([]) | difference(linux_firewalld_allowed_services) | length > 0"

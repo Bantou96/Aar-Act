@@ -1,4 +1,9 @@
 ---
+# Gated like the tasks that notify it. Handlers run at the end of the play, so
+# during a preview on a host without ufw this fired after every task had been
+# correctly skipped, and failed with "Failed to find required executable ufw".
+# A guard on the tasks alone does not cover the handler they notify.
 - name: "Reload ufw"
   community.general.ufw:
     state: "reloaded"
+  when: _ufw_ready | default(false)
