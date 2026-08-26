@@ -146,5 +146,26 @@ done < <(
   done
 )
 
+# ── The tool speaks English ──────────────────────────────────────────────────
+#
+# Every check name was English while its remediation hint was French, so a
+# single run mixed the two languages. Direction decision 2026-08-26: the tool
+# is English only. The bilingual French halves of the section titles and the
+# per-check name_fr line in the HTML report went with the hints.
+#
+# name_fr is still an argument to add_result and is no longer rendered
+# anywhere. Removing it means touching 256 call sites, which is a separate
+# mechanical change; this guard is about what a user sees.
+for f in src/checks/*.sh src/renderers/html.sh src/renderers/terminal.sh; do
+  n=$(grep -cP '[\x{00e9}\x{00e8}\x{00ea}\x{00e0}\x{00e7}\x{00f9}\x{00f4}\x{00ee}\x{00ef}]' "$f" 2>/dev/null || true)
+  # name_fr keeps its accents until it is removed; count only lines that are
+  # not an add_result argument list.
+  if [[ "$f" == src/renderers/* && "$n" != "0" ]]; then
+    fail "$(basename "$f") still contains French text; the tool is English only"
+  else
+    ok
+  fi
+done
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

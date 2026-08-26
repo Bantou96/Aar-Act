@@ -72,11 +72,11 @@ add_result() {
   local category="$1" status="$2" id="$3" name_en="$4" name_fr="$5"
   local detail="${6:-}" remediation="${7:-}"
 
-  local symbol color
+  local color
   case "$status" in
-    PASS) ((PASS++)); symbol="✅"; color=$GREEN ;;
-    WARN) ((WARN++)); symbol="⚠️ "; color=$YELLOW; WARN_IDS+=("$id") ;;
-    FAIL) ((FAIL++)); symbol="❌"; color=$RED;    FAIL_IDS+=("$id") ;;
+    PASS) ((PASS++)); color=$GREEN ;;
+    WARN) ((WARN++)); color=$YELLOW; WARN_IDS+=("$id") ;;
+    FAIL) ((FAIL++)); color=$RED;    FAIL_IDS+=("$id") ;;
   esac
 
   # Terminal: one aligned row per check, streamed as it runs.

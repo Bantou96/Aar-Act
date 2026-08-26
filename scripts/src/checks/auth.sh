@@ -2,7 +2,7 @@ _checks_auth() {
 # =============================================================================
 #  2. AUTHENTICATION & ACCESS
 # =============================================================================
-section "2. AUTHENTICATION & ACCESS / Authentification et Accès"
+section "2. AUTHENTICATION & ACCESS"
 
 # AUTH-01 Root account locked
 ROOT_STATUS=$(passwd -S root 2>/dev/null | awk '{print $2}' || echo "")
@@ -19,7 +19,7 @@ if [[ -z "$EMPTY_PASS" ]]; then
   add_result "Auth" "PASS" "AUTH-02" "No empty password accounts" "Aucun compte sans mdp" "All accounts secured" ""
 else
   add_result "Auth" "FAIL" "AUTH-02" "Empty password accounts" "Comptes sans mot de passe" "$EMPTY_PASS" \
-    "Définissez un mdp ou verrouillez: 'passwd -l <user>'"
+    "Set a password, or lock the account: 'passwd -l <user>'"
 fi
 
 # AUTH-03 Password max age
@@ -28,7 +28,7 @@ if [[ -n "$PASSMAX" && "$PASSMAX" -le 90 ]]; then
   add_result "Auth" "PASS" "AUTH-03" "Password max age <= 90 days" "Expiration mdp ≤ 90j" "PASS_MAX_DAYS=$PASSMAX" ""
 else
   add_result "Auth" "FAIL" "AUTH-03" "Password max age too long" "Expiration mdp trop longue" "PASS_MAX_DAYS=${PASSMAX:-not set}" \
-    "Définissez PASS_MAX_DAYS=90 dans /etc/login.defs"
+    "Set PASS_MAX_DAYS=90 in /etc/login.defs"
 fi
 
 # AUTH-04 Password min length (pwquality preferred, fallback to login.defs)
@@ -43,13 +43,13 @@ if [[ -n "$PASSMINLEN" && "$PASSMINLEN" -ge 12 ]]; then
   add_result "Auth" "PASS" "AUTH-04" "Password min length >= 12" "Longueur mdp ≥ 12" "minlen=$PASSMINLEN" ""
 else
   add_result "Auth" "WARN" "AUTH-04" "Password min length too short" "Longueur mdp insuffisante" "minlen=${PASSMINLEN:-not set}" \
-    "Définissez 'minlen = 14' dans /etc/security/pwquality.conf"
+    "Set 'minlen = 14' in /etc/security/pwquality.conf"
 fi
 
 # AUTH-05 No NOPASSWD ALL in sudo
 if grep -rE '^\s*[^#].*NOPASSWD\s*:\s*ALL' /etc/sudoers /etc/sudoers.d/ 2>/dev/null | grep -qv "^#"; then
   add_result "Auth" "FAIL" "AUTH-05" "Passwordless sudo ALL found" "Sudo sans mdp (ALL) détecté" "NOPASSWD:ALL present" \
-    "Révisez /etc/sudoers — n'accordez NOPASSWD que sur des commandes précises."
+    "Review /etc/sudoers: grant NOPASSWD only on specific commands."
 else
   add_result "Auth" "PASS" "AUTH-05" "No unrestricted passwordless sudo" "Sudo sans mdp (ALL) absent" "sudoers OK" ""
 fi
@@ -62,7 +62,7 @@ if [[ -z "$INACTIVE" ]]; then
   add_result "Auth" "PASS" "AUTH-06" "No stale never-logged accounts" "Pas de comptes inutilisés" "OK" ""
 else
   add_result "Auth" "WARN" "AUTH-06" "Never-logged-in accounts found" "Comptes jamais utilisés" "${INACTIVE:0:80}" \
-    "Vérifiez et supprimez: 'userdel <user>'"
+    "Check and remove: 'userdel <user>'"
 fi
 
 # AUTH-07 Password minimum age (PASS_MIN_DAYS)
@@ -71,7 +71,7 @@ if [[ -n "$PASSMIN_DAYS" && "$PASSMIN_DAYS" -ge 1 ]]; then
   add_result "Auth" "PASS" "AUTH-07" "Password min age >= 1 day" "Âge min mdp ≥ 1j" "PASS_MIN_DAYS=$PASSMIN_DAYS" ""
 else
   add_result "Auth" "WARN" "AUTH-07" "Password min age not set" "Âge min mdp non défini" "PASS_MIN_DAYS=${PASSMIN_DAYS:-0}" \
-    "Définissez PASS_MIN_DAYS=7 dans /etc/login.defs"
+    "Set PASS_MIN_DAYS=7 in /etc/login.defs"
 fi
 
 # AUTH-08 Password warning age (PASS_WARN_AGE)
@@ -80,7 +80,7 @@ if [[ -n "$PASS_WARN" && "$PASS_WARN" -ge 7 ]]; then
   add_result "Auth" "PASS" "AUTH-08" "Password warning age >= 7 days" "Alerte expiration mdp ≥ 7j" "PASS_WARN_AGE=$PASS_WARN" ""
 else
   add_result "Auth" "WARN" "AUTH-08" "Password warning age too low" "Alerte expiration mdp insuffisante" "PASS_WARN_AGE=${PASS_WARN:-not set}" \
-    "Définissez PASS_WARN_AGE=14 dans /etc/login.defs"
+    "Set PASS_WARN_AGE=14 in /etc/login.defs"
 fi
 
 # AUTH-09 Account lockout policy (faillock / pam_tally2)
@@ -95,7 +95,7 @@ if $LOCKOUT_OK; then
   add_result "Auth" "PASS" "AUTH-09" "Account lockout configured" "Verrouillage compte configuré" "faillock/pam_tally2 active" ""
 else
   add_result "Auth" "FAIL" "AUTH-09" "No account lockout policy" "Aucune politique de verrouillage" "faillock unconfigured" \
-    "Configurez faillock: 'deny=5, unlock_time=900' dans /etc/security/faillock.conf"
+    "Configure faillock: 'deny=5, unlock_time=900' in /etc/security/faillock.conf"
 fi
 
 # AUTH-10 Shell timeout (TMOUT)
@@ -105,7 +105,7 @@ if [[ -n "$TMOUT_VAL" && "$TMOUT_VAL" -le 900 && "$TMOUT_VAL" -gt 0 ]]; then
   add_result "Auth" "PASS" "AUTH-10" "Shell timeout configured" "Délai session shell configuré" "TMOUT=${TMOUT_VAL}s" ""
 else
   add_result "Auth" "WARN" "AUTH-10" "Shell timeout not configured" "Délai session shell absent" "TMOUT=${TMOUT_VAL:-not set}" \
-    "Ajoutez dans /etc/profile.d/timeout.sh: 'readonly TMOUT=600; export TMOUT'"
+    "Add to /etc/profile.d/timeout.sh: 'readonly TMOUT=600; export TMOUT'"
 fi
 
 # AUTH-11 No extra UID 0 accounts (besides root)
@@ -115,7 +115,7 @@ if [[ -z "$UID0_ACCOUNTS" ]]; then
   add_result "Auth" "PASS" "AUTH-11" "No extra UID 0 accounts" "Aucun compte UID 0 illégitime" "root only" ""
 else
   add_result "Auth" "FAIL" "AUTH-11" "Extra UID 0 accounts found" "Comptes UID 0 supplémentaires" "$UID0_ACCOUNTS" \
-    "Supprimez ou modifiez ces comptes — seul root doit avoir UID 0."
+    "Remove or change these accounts: only root should have UID 0."
 fi
 
 # AUTH-12 /etc/group permissions
@@ -124,7 +124,7 @@ if [[ "$GRP_PERMS" == "644" ]]; then
   add_result "Auth" "PASS" "AUTH-12" "/etc/group perms 644" "Perms /etc/group correctes" "Mode: 644" ""
 else
   add_result "Auth" "FAIL" "AUTH-12" "/etc/group perms wrong" "Perms /etc/group incorrectes" "Mode: ${GRP_PERMS:-?}" \
-    "Corrigez: 'chmod 644 /etc/group'"
+    "Fix: 'chmod 644 /etc/group'"
 fi
 
 # AUTH-13 /etc/gshadow permissions
@@ -133,7 +133,7 @@ if [[ "$GSHADOW_PERMS" =~ ^(640|600|000|400)$ ]]; then
   add_result "Auth" "PASS" "AUTH-13" "/etc/gshadow perms correct" "Perms /etc/gshadow correctes" "Mode: $GSHADOW_PERMS" ""
 else
   add_result "Auth" "FAIL" "AUTH-13" "/etc/gshadow perms wrong" "Perms /etc/gshadow incorrectes" "Mode: ${GSHADOW_PERMS:-?}" \
-    "Corrigez: 'chmod 640 /etc/gshadow && chown root:shadow /etc/gshadow'"
+    "Fix: 'chmod 640 /etc/gshadow && chown root:shadow /etc/gshadow'"
 fi
 
 # AUTH-14 Password complexity (pwquality)
@@ -147,7 +147,7 @@ if $PWQUAL_OK; then
   add_result "Auth" "PASS" "AUTH-14" "Password complexity configured" "Complexité mdp configurée" "pwquality: minlen=${PWQUAL_MINLEN}" ""
 else
   add_result "Auth" "WARN" "AUTH-14" "Password complexity not enforced" "Complexité mdp non configurée" "pwquality.conf absent or weak" \
-    "Configurez /etc/security/pwquality.conf: minlen=14, dcredit=-1, ucredit=-1, ocredit=-1"
+    "Configure /etc/security/pwquality.conf: minlen=14, dcredit=-1, ucredit=-1, ocredit=-1"
 fi
 
 # AUTH-15 sudo use_pty enforced (CIS 1.3.2)
@@ -155,7 +155,7 @@ if grep -rqsE "^\s*Defaults\s+.*use_pty" /etc/sudoers /etc/sudoers.d/ 2>/dev/nul
   add_result "Auth" "PASS" "AUTH-15" "sudo use_pty enforced" "sudo use_pty activé" "Defaults use_pty found" ""
 else
   add_result "Auth" "WARN" "AUTH-15" "sudo use_pty not enforced" "sudo use_pty absent" "Defaults use_pty not found in sudoers" \
-    "Ajoutez 'Defaults use_pty' dans /etc/sudoers.d/99-cis-hardening (CIS 1.3.2)"
+    "Add 'Defaults use_pty' to /etc/sudoers.d/99-cis-hardening (CIS 1.3.2)"
 fi
 
 # AUTH-16 sudo logfile configured (CIS 1.3.3)
@@ -165,6 +165,6 @@ if [[ -n "$SUDO_LOGFILE" ]]; then
   add_result "Auth" "PASS" "AUTH-16" "sudo logfile configured" "Journal sudo configuré" "$SUDO_LOGFILE" ""
 else
   add_result "Auth" "WARN" "AUTH-16" "sudo logfile not configured" "Journal sudo absent" "No logfile= in sudoers" \
-    "Ajoutez 'Defaults logfile=/var/log/sudo.log' dans /etc/sudoers.d/99-cis-hardening (CIS 1.3.3)"
+    "Add 'Defaults logfile=/var/log/sudo.log' to /etc/sudoers.d/99-cis-hardening (CIS 1.3.3)"
 fi
 }

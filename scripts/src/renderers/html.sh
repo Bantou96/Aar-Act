@@ -32,7 +32,7 @@ _render_html() {
     HTML_ROWS+="<tr>"
     HTML_ROWS+="<td class='col-id'><span class='cat-label'>${RESULT_ID[$_i]}</span></td>"
     HTML_ROWS+="<td class='col-status'>${_badge}</td>"
-    HTML_ROWS+="<td class='col-check'><div class='check-name'>${_h_name_en}</div><div class='check-fr'>${_h_name_fr}</div></td>"
+    HTML_ROWS+="<td class='col-check'><div class='check-name'>${_h_name_en}</div></td>"
     HTML_ROWS+="<td class='col-detail'><span class='detail-val'>${_h_detail}</span>${_rem_html}</td>"
     HTML_ROWS+="</tr>"
   done
@@ -600,7 +600,7 @@ footer {
   </div>
   <div class="header-title">
     <h1>Security Baseline Report</h1>
-    <div class="subtitle">Rapport de Sécurité de Base — CyberAar Checker</div>
+    <div class="subtitle">Security Baseline Report, CyberAar Checker</div>
   </div>
   <div class="header-meta">
     <div><strong>${_h_host}</strong></div>
@@ -621,9 +621,9 @@ footer {
     </div>
   </div>
   <div class="score-hero-text">
-    <h2>Score de Sécurité: <span>${SCORE}%</span></h2>
-    <p>Analyse complète — <strong>${TOTAL}</strong> contrôles effectués sur ${_h_host}.
-      Consultez les recommandations ci-dessous pour améliorer votre posture de sécurité.</p>
+    <h2>Security Score: <span>${SCORE}%</span></h2>
+    <p>Full audit, <strong>${TOTAL}</strong> checks run on ${_h_host}.
+      The findings below are ordered by section; run 'aartool advise' for them in the order an attacker would reach them.</p>
   </div>
   <div class="score-stats">
     <div class="stat-pill"><span class="dot" style="background:var(--pass)"></span><span class="cnt">${PASS}</span> PASSED</div>
@@ -634,21 +634,21 @@ footer {
 
 <div class="progress-wrap">
   <div class="progress-label">
-    <span>Posture de sécurité globale</span>
+    <span>Overall security posture</span>
     <span>${SCORE}% / 100%</span>
   </div>
   <div class="progress"><div class="progress-bar"></div></div>
 </div>
 
-<div class="section-title">Résultats des Contrôles / Check Results</div>
+<div class="section-title">Check Results</div>
 
 <table class="results-table">
 <thead>
   <tr>
     <th class="col-id">ID</th>
     <th class="col-status">Statut</th>
-    <th class="col-check">Contrôle / Check</th>
-    <th class="col-detail">Détail &amp; Remédiation</th>
+    <th class="col-check">Check</th>
+    <th class="col-detail">Detail &amp; Remediation</th>
   </tr>
 </thead>
 <tbody>
@@ -657,16 +657,16 @@ ${HTML_ROWS}
 </table>
 
 <div class="ansible-section">
-  <div class="section-title">🛠️ Plan de Remédiation Ansible / Ansible Remediation Plan</div>
+  <div class="section-title">Remediation Plan</div>
   <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem;">
-    Commandes ciblées pour chaque contrôle en échec/avertissement.
+    A targeted command for each failing or warning check.
     Ajoutez <code style="color:var(--ca-teal)">--check --diff</code> pour simuler.
   </p>
   <table class="plan-table">
     <thead>
       <tr>
-        <th>Catégorie / Issue</th>
-        <th>Rôle Ansible</th>
+        <th>Issue</th>
+        <th>Ansible Role</th>
         <th>Tags</th>
         <th>Commande aartool</th>
       </tr>
