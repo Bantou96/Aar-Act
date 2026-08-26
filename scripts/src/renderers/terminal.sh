@@ -26,10 +26,11 @@ _ansible_terminal_plan() {
     return
   fi
 
-  local _inv="-i inventory/hosts"
-  [[ -n "$ANSIBLE_INVENTORY" ]] && _inv="-i ${ANSIBLE_INVENTORY}"
-  local _pb="playbooks/2_configure_hardening.yml"
-  [[ -n "$ANSIBLE_DIR" ]] && _pb="${ANSIBLE_DIR}/playbooks/2_configure_hardening.yml"
+  # The target is not known here: this script audits a machine, it does not read
+  # an inventory. A placeholder is honest; a path relative to a git checkout is
+  # not, and that is what used to be printed.
+  local _tgt="<host>"
+  [[ -n "$AARTOOL_TARGET" ]] && _tgt="$AARTOOL_TARGET"
 
   # Detect OS family for role name hint
   local _os_hint="(RHEL9 / Ubuntu — auto-detected per host)"
@@ -38,9 +39,8 @@ _ansible_terminal_plan() {
   grep -qi 'ubuntu\|debian' /etc/os-release 2>/dev/null && \
     _os_hint="(Ubuntu / Debian)"
 
-  printf "\n${BOLD}${CYAN}━━━  ANSIBLE REMEDIATION PLAN  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-  printf "  Platform: ${BOLD}%s${NC}\n" "$_os_hint"
-  printf "  Playbook: ${BOLD}%s${NC}\n\n" "$_pb"
+  printf "\n${BOLD}${CYAN}━━━  REMEDIATION  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "  Platform: ${BOLD}%s${NC}\n\n" "$_os_hint"
 
   local _idx=1
   local _all_tags=""
@@ -53,8 +53,8 @@ _ansible_terminal_plan() {
     printf "  ${YELLOW}[%02d]${NC} ${BOLD}%-42s${NC}  tags: ${CYAN}%s${NC}\n" \
       "$_idx" "$_desc" "$_tags"
     printf "       Role  : %s\n" "$_role_hint"
-    printf "       ${GREEN}ansible-playbook %s %s --tags %s${NC}\n\n" \
-      "$_inv" "$_pb" "$_tags"
+    printf "       ${GREEN}aartool apply --target %s --only %s${NC}\n\n" \
+      "$_tgt" "$_tags"
     # collect unique tags
     IFS=',' read -ra _t <<< "$_tags"
     for t in "${_t[@]}"; do
@@ -63,11 +63,15 @@ _ansible_terminal_plan() {
     (( _idx++ ))
   done
 
-  printf "  ${BOLD}── Fix everything in one command: ───────────────────────────────────────────${NC}\n"
-  printf "  ${GREEN}ansible-playbook %s %s --tags %s${NC}\n" \
-    "$_inv" "$_pb" "$_all_tags"
-  printf "\n  ${CYAN}💡 Add --check --diff for a dry run before applying.${NC}\n"
-  printf "  ${CYAN}   Add -l <host_or_group> to target a specific server.${NC}\n"
+  printf "  ${BOLD}── Everything above, in one command: ────────────────────────────────────────${NC}\n"
+  printf "  ${GREEN}aartool apply --target %s --only %s${NC}\n" \
+    "$_tgt" "$_all_tags"
+  printf "\n  ${CYAN}   Preview first. It changes nothing:${NC}\n"
+  printf "  ${GREEN}aartool plan --target %s --only %s${NC}\n" \
+    "$_tgt" "$_all_tags"
+  printf "\n  ${CYAN}   %s is a host or group in your inventory.${NC}\n" "$_tgt"
+  printf "  ${CYAN}   aartool advise orders these by what an attacker reaches first,${NC}\n"
+  printf "  ${CYAN}   and says what each fix costs before you run it.${NC}\n"
   printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n\n"
 }
 

@@ -2202,10 +2202,11 @@ _ansible_terminal_plan() {
     return
   fi
 
-  local _inv="-i inventory/hosts"
-  [[ -n "$ANSIBLE_INVENTORY" ]] && _inv="-i ${ANSIBLE_INVENTORY}"
-  local _pb="playbooks/2_configure_hardening.yml"
-  [[ -n "$ANSIBLE_DIR" ]] && _pb="${ANSIBLE_DIR}/playbooks/2_configure_hardening.yml"
+  # The target is not known here: this script audits a machine, it does not read
+  # an inventory. A placeholder is honest; a path relative to a git checkout is
+  # not, and that is what used to be printed.
+  local _tgt="<host>"
+  [[ -n "$AARTOOL_TARGET" ]] && _tgt="$AARTOOL_TARGET"
 
   # Detect OS family for role name hint
   local _os_hint="(RHEL9 / Ubuntu — auto-detected per host)"
@@ -2214,9 +2215,8 @@ _ansible_terminal_plan() {
   grep -qi 'ubuntu\|debian' /etc/os-release 2>/dev/null && \
     _os_hint="(Ubuntu / Debian)"
 
-  printf "\n${BOLD}${CYAN}━━━  ANSIBLE REMEDIATION PLAN  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-  printf "  Platform: ${BOLD}%s${NC}\n" "$_os_hint"
-  printf "  Playbook: ${BOLD}%s${NC}\n\n" "$_pb"
+  printf "\n${BOLD}${CYAN}━━━  REMEDIATION  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "  Platform: ${BOLD}%s${NC}\n\n" "$_os_hint"
 
   local _idx=1
   local _all_tags=""
@@ -2229,8 +2229,8 @@ _ansible_terminal_plan() {
     printf "  ${YELLOW}[%02d]${NC} ${BOLD}%-42s${NC}  tags: ${CYAN}%s${NC}\n" \
       "$_idx" "$_desc" "$_tags"
     printf "       Role  : %s\n" "$_role_hint"
-    printf "       ${GREEN}ansible-playbook %s %s --tags %s${NC}\n\n" \
-      "$_inv" "$_pb" "$_tags"
+    printf "       ${GREEN}aartool apply --target %s --only %s${NC}\n\n" \
+      "$_tgt" "$_tags"
     # collect unique tags
     IFS=',' read -ra _t <<< "$_tags"
     for t in "${_t[@]}"; do
@@ -2239,11 +2239,15 @@ _ansible_terminal_plan() {
     (( _idx++ ))
   done
 
-  printf "  ${BOLD}── Fix everything in one command: ───────────────────────────────────────────${NC}\n"
-  printf "  ${GREEN}ansible-playbook %s %s --tags %s${NC}\n" \
-    "$_inv" "$_pb" "$_all_tags"
-  printf "\n  ${CYAN}💡 Add --check --diff for a dry run before applying.${NC}\n"
-  printf "  ${CYAN}   Add -l <host_or_group> to target a specific server.${NC}\n"
+  printf "  ${BOLD}── Everything above, in one command: ────────────────────────────────────────${NC}\n"
+  printf "  ${GREEN}aartool apply --target %s --only %s${NC}\n" \
+    "$_tgt" "$_all_tags"
+  printf "\n  ${CYAN}   Preview first. It changes nothing:${NC}\n"
+  printf "  ${GREEN}aartool plan --target %s --only %s${NC}\n" \
+    "$_tgt" "$_all_tags"
+  printf "\n  ${CYAN}   %s is a host or group in your inventory.${NC}\n" "$_tgt"
+  printf "  ${CYAN}   aartool advise orders these by what an attacker reaches first,${NC}\n"
+  printf "  ${CYAN}   and says what each fix costs before you run it.${NC}\n"
   printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n\n"
 }
 
@@ -2414,10 +2418,11 @@ _render_html() {
     html_plan_entries["$_tkey"]="$_entry"
   done
 
-  _inv_flag="inventory/hosts"
-  [[ -n "$ANSIBLE_INVENTORY" ]] && _inv_flag=$(html_escape "$ANSIBLE_INVENTORY")
-  _pb="playbooks/2_configure_hardening.yml"
-  [[ -n "$ANSIBLE_DIR" ]] && _pb="${ANSIBLE_DIR}/playbooks/2_configure_hardening.yml"
+  # See the note in terminal.sh: this script audits a machine and has no
+  # inventory, so the target is a placeholder rather than a path that only
+  # resolves inside a git checkout.
+  _tgt="&lt;host&gt;"
+  [[ -n "$AARTOOL_TARGET" ]] && _tgt=$(html_escape "$AARTOOL_TARGET")
 
   _all_tags_html=""
   for _tkey in $(echo "${!html_plan_entries[@]}" | tr ' ' '\n' | sort); do
@@ -2427,11 +2432,11 @@ _render_html() {
     ANSIBLE_PLAN_HTML+="<td class='plan-desc'><strong>$_desc</strong></td>"
     ANSIBLE_PLAN_HTML+="<td class='plan-role'><code>$_role_r</code><br><small>Ubuntu: <code>$_role_u</code></small></td>"
     ANSIBLE_PLAN_HTML+="<td class='plan-tags'><span class='tag-badge'>--tags $_tags</span></td>"
-    ANSIBLE_PLAN_HTML+="<td class='plan-cmd'><code>ansible-playbook -i $_inv_flag $_pb --tags $_tags</code></td>"
+    ANSIBLE_PLAN_HTML+="<td class='plan-cmd'><code>aartool apply --target $_tgt --only $_tags</code></td>"
     ANSIBLE_PLAN_HTML+="</tr>"
   done
   _all_tags_html=$(echo "$_all_tags_html" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
-  ANSIBLE_CONSOLIDATED_CMD="ansible-playbook -i ${_inv_flag} ${_pb} --tags ${_all_tags_html}"
+  ANSIBLE_CONSOLIDATED_CMD="aartool apply --target ${_tgt} --only ${_all_tags_html}"
 
 # Values that come from the audited machine, not from this script. hostname and
 # PRETTY_NAME in /etc/os-release are both settable by root on the target, so on
@@ -3011,7 +3016,7 @@ ${HTML_ROWS}
         <th>Catégorie / Issue</th>
         <th>Rôle Ansible</th>
         <th>Tags</th>
-        <th>Commande ansible-playbook</th>
+        <th>Commande aartool</th>
       </tr>
     </thead>
     <tbody>

@@ -70,10 +70,11 @@ _render_html() {
     html_plan_entries["$_tkey"]="$_entry"
   done
 
-  _inv_flag="inventory/hosts"
-  [[ -n "$ANSIBLE_INVENTORY" ]] && _inv_flag=$(html_escape "$ANSIBLE_INVENTORY")
-  _pb="playbooks/2_configure_hardening.yml"
-  [[ -n "$ANSIBLE_DIR" ]] && _pb="${ANSIBLE_DIR}/playbooks/2_configure_hardening.yml"
+  # See the note in terminal.sh: this script audits a machine and has no
+  # inventory, so the target is a placeholder rather than a path that only
+  # resolves inside a git checkout.
+  _tgt="&lt;host&gt;"
+  [[ -n "$AARTOOL_TARGET" ]] && _tgt=$(html_escape "$AARTOOL_TARGET")
 
   _all_tags_html=""
   for _tkey in $(echo "${!html_plan_entries[@]}" | tr ' ' '\n' | sort); do
@@ -83,11 +84,11 @@ _render_html() {
     ANSIBLE_PLAN_HTML+="<td class='plan-desc'><strong>$_desc</strong></td>"
     ANSIBLE_PLAN_HTML+="<td class='plan-role'><code>$_role_r</code><br><small>Ubuntu: <code>$_role_u</code></small></td>"
     ANSIBLE_PLAN_HTML+="<td class='plan-tags'><span class='tag-badge'>--tags $_tags</span></td>"
-    ANSIBLE_PLAN_HTML+="<td class='plan-cmd'><code>ansible-playbook -i $_inv_flag $_pb --tags $_tags</code></td>"
+    ANSIBLE_PLAN_HTML+="<td class='plan-cmd'><code>aartool apply --target $_tgt --only $_tags</code></td>"
     ANSIBLE_PLAN_HTML+="</tr>"
   done
   _all_tags_html=$(echo "$_all_tags_html" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
-  ANSIBLE_CONSOLIDATED_CMD="ansible-playbook -i ${_inv_flag} ${_pb} --tags ${_all_tags_html}"
+  ANSIBLE_CONSOLIDATED_CMD="aartool apply --target ${_tgt} --only ${_all_tags_html}"
 
 # Values that come from the audited machine, not from this script. hostname and
 # PRETTY_NAME in /etc/os-release are both settable by root on the target, so on
@@ -667,7 +668,7 @@ ${HTML_ROWS}
         <th>Catégorie / Issue</th>
         <th>Rôle Ansible</th>
         <th>Tags</th>
-        <th>Commande ansible-playbook</th>
+        <th>Commande aartool</th>
       </tr>
     </thead>
     <tbody>
