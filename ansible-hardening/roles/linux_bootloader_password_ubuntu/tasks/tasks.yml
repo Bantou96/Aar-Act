@@ -17,19 +17,21 @@
       WSL boots via the Windows bootloader; grub-mkpasswd-pbkdf2 is not applicable.
 
 # ── All remaining tasks skipped on WSL ───────────────────────────────────────
-- name: "Fail if GRUB password is not provided via environment variable"
+- name: "Note: GRUB password role skipped, no password provided"
   when:
     - "not _is_wsl"
     - "linux_bootloader_password is undefined or linux_bootloader_password == ''"
-  ansible.builtin.fail:
-    msg: >
-      GRUB bootloader password is not defined.
-      Set it before running:
+  ansible.builtin.debug:
+    msg: >-
+      No GRUB bootloader password provided, so this role is skipped. Everything
+      else still runs. To set one, without putting it on the command line where
+      shell history would keep it in clear:
         read -sr LINUX_BOOTLOADER_PASSWORD ; export LINUX_BOOTLOADER_PASSWORD
-  no_log: "{{ linux_bootloader_disable_nolog | default(false) | ternary(false, true) }}"
 
 - name: "Ensure grub2-common package is installed"
-  when: "not _is_wsl"
+  when:
+    - "not _is_wsl"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.package:
     name:
       - "grub2-common"
@@ -37,7 +39,9 @@
     state: "present"
 
 - name: "Generate PBKDF2 hashed password for GRUB"
-  when: "not _is_wsl"
+  when:
+    - "not _is_wsl"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.command: grub-mkpasswd-pbkdf2
   args:
     stdin: "{{ linux_bootloader_password }}\n{{ linux_bootloader_password }}\n"
@@ -46,13 +50,17 @@
   no_log: "{{ linux_bootloader_disable_nolog | default(false) | ternary(false, true) }}"
 
 - name: "Parse the generated GRUB PBKDF2 hash"
-  when: "not _is_wsl"
+  when:
+    - "not _is_wsl"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.set_fact:
     grub_pbkdf2_hash: "{{ grub_pbkdf2_output.stdout | regex_search('(grub\\.pbkdf2\\.sha512\\.[^\\s]+)') }}"
   no_log: "{{ linux_bootloader_disable_nolog | default(false) | ternary(false, true) }}"
 
 - name: "Deploy GRUB password configuration file (/etc/grub.d/01_users)"
-  when: "not _is_wsl"
+  when:
+    - "not _is_wsl"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.template:
     src: "01_users.j2"
     dest: "/etc/grub.d/01_users"
@@ -64,7 +72,9 @@
   notify: "Rebuild GRUB config"
 
 - name: "Ensure GRUB config file has strict permissions"
-  when: "not _is_wsl"
+  when:
+    - "not _is_wsl"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.file:
     path: "{{ linux_bootloader_grub_cfg_path }}"
     mode: "0600"
@@ -74,6 +84,7 @@
 
 - name: "Debug GRUB password application status (verbosity >=1)"
   when:
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
     - "not _is_wsl"
     - "ansible_verbosity >= 1"
   ansible.builtin.debug:
