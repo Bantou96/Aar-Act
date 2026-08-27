@@ -29,6 +29,7 @@
   changed_when: "banner_result.changed"
 
 - name: "Enable and start sshd service"
+  when: "not ansible_check_mode or 'sshd.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "sshd"
     state: "started"

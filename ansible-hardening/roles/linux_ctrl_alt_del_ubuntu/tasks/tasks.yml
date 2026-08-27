@@ -1,5 +1,6 @@
 ---
 - name: "Mask ctrl-alt-del.target to prevent accidental reboot (CIS 1.6.1)"
+  when: "not ansible_check_mode or 'ctrl-alt-del.target' in (aartool_units | default(''))"
   ansible.builtin.systemd:
     name: "ctrl-alt-del.target"
     masked: true

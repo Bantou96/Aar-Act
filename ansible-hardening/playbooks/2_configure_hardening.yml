@@ -105,6 +105,32 @@
           ( {{ ansible_os_family }} family) — applying appropriate role set.
       tags: [always]
 
+    # Which units exist on this host, gathered once and shared by every role.
+    #
+    # A preview installs nothing, so a role that installs a package and then
+    # starts its service fails under --check with "Could not find the requested
+    # service ssh". That is a preview failing on exactly the host the role is
+    # for. Service tasks are guarded on this fact so a preview reports what
+    # apply would do instead.
+    #
+    # check_mode: false because a command module is skipped under --check, and
+    # a probe that does not run tells you nothing. It only reads.
+    # The systemd module MANAGES a unit, it does not enumerate unit files, and
+    # service_facts lists services only: dnf-automatic.timer and tmp.mount are
+    # both guarded on this and would be missing from it.
+    - name: "CyberAar | Inventory the systemd units present" # noqa: command-instead-of-module
+      ansible.builtin.command: "systemctl list-unit-files --no-legend --no-pager"
+      register: "_aartool_unit_files"
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      tags: [always]
+
+    - name: "CyberAar | Share the unit inventory with the roles"
+      ansible.builtin.set_fact:
+        aartool_units: "{{ _aartool_unit_files.stdout | default('') }}"
+      tags: [always]
+
     - name: "CyberAar | Hardening start notification"
       ansible.builtin.debug:
         msg:

@@ -1,5 +1,6 @@
 ---
 - name: "Disable systemd-timesyncd before installing chrony (prevents conflict)"
+  when: "not ansible_check_mode or 'systemd-timesyncd.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "systemd-timesyncd"
     state: "stopped"
@@ -23,7 +24,9 @@
   notify: "Restart chrony"
 
 - name: "Enable and start chrony service"
-  when: "not ansible_check_mode"
+  when:
+    - "not ansible_check_mode"
+    - "not ansible_check_mode or 'chrony.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "chrony"
     state: "started"

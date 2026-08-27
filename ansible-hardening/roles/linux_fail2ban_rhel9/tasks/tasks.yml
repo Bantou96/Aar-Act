@@ -34,11 +34,13 @@
   notify: "Restart fail2ban"
 
 - name: "Enable fail2ban service at boot"
+  when: "not ansible_check_mode or 'fail2ban.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "fail2ban"
     enabled: true
 
 - name: "Start fail2ban service"
+  when: "not ansible_check_mode or 'fail2ban.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "fail2ban"
     state: "started"

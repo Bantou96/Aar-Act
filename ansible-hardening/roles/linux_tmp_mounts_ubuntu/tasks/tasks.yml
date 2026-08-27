@@ -17,6 +17,7 @@
   notify: "Reload and restart tmp.mount"
 
 - name: "Enable tmp.mount to start at boot"
+  when: "not ansible_check_mode or 'tmp.mount' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "tmp.mount"
     enabled: true

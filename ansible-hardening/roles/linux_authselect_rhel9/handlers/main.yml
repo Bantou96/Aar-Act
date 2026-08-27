@@ -7,4 +7,6 @@
   ansible.builtin.service:
     name: "sssd"
     state: "restarted"
-  when: "ansible_facts.services['sssd.service'] is defined and ansible_facts.services['sssd.service'].state == 'running'"
+  when:
+    - "ansible_facts.services['sssd.service'] is defined and ansible_facts.services['sssd.service'].state == 'running'"
+    - "not ansible_check_mode or 'sssd.service' in (aartool_units | default(''))"

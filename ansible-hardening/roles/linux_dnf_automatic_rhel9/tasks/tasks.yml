@@ -16,6 +16,7 @@
   notify: "Restart dnf-automatic timer"
 
 - name: "Enable and start dnf-automatic timer (daily)"
+  when: "not ansible_check_mode or 'dnf-automatic.timer' in (aartool_units | default(''))"
   ansible.builtin.systemd:
     name: "dnf-automatic.timer"
     state: "started"

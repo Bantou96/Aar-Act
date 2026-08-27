@@ -1,5 +1,6 @@
 ---
 - name: "Restart journald"
+  when: "not ansible_check_mode or 'systemd-journald.service' in (aartool_units | default(''))"
   ansible.builtin.systemd:
     name: "systemd-journald"
     state: "restarted"

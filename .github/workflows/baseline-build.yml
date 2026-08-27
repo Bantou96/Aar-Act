@@ -96,6 +96,13 @@ jobs:
       - name: Checks call subcommands that exist
         run: bash scripts/tests/test_check_commands.sh
 
+      # `aartool plan` runs the playbook with --check, which installs nothing,
+      # so a role that installs a package and then starts its service hits a
+      # unit that is not there. Reported twice by users, for ufw and for ssh,
+      # with 40 unguarded service tasks at the time.
+      - name: Service tasks survive check mode
+        run: bash scripts/tests/test_service_guards.sh
+
       # The dashboard mirrors advise's wave ordering because it has no shell to
       # call, and `aartool report --out` injects into it by function name. Both
       # are places two things must agree with nothing checking that they do.

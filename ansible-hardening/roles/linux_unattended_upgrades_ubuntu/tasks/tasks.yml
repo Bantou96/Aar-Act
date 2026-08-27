@@ -28,6 +28,7 @@
   register: "auto_upgrades_result"
 
 - name: "Enable and start unattended-upgrades service"
+  when: "not ansible_check_mode or 'unattended-upgrades.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "unattended-upgrades"
     state: "started"

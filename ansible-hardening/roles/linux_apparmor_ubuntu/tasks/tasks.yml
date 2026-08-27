@@ -55,13 +55,16 @@
 
 # ── AppArmor service ──────────────────────────────────────────────────────────
 - name: "Enable AppArmor service at boot"
+  when: "not ansible_check_mode or 'apparmor.service' in (aartool_units | default(''))"
   ansible.builtin.systemd:
     name: "apparmor"
     enabled: true
     daemon_reload: false
 
 - name: "Start AppArmor service (best-effort — oneshot service loads profiles)"
-  when: "not ansible_check_mode"
+  when:
+    - "not ansible_check_mode"
+    - "not ansible_check_mode or 'apparmor.service' in (aartool_units | default(''))"
   ansible.builtin.systemd:
     name: "apparmor"
     state: "started"

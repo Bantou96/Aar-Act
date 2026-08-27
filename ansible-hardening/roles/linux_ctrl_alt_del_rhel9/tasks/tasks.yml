@@ -1,6 +1,8 @@
 ---
 - name: "Mask Ctrl+Alt+Del target to prevent reboot"
-  when: "linux_ctrl_alt_del_enabled | bool"
+  when:
+    - "linux_ctrl_alt_del_enabled | bool"
+    - "not ansible_check_mode or 'ctrl-alt-del.target' in (aartool_units | default(''))"
   ansible.builtin.systemd:
     name: "ctrl-alt-del.target"
     masked: true

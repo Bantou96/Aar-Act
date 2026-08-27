@@ -34,6 +34,7 @@
 # Ubuntu 22.04+ uses auditd but requires it to be started via service wrapper
 # as systemd may manage it under a different unit on some installs.
 - name: "Enable and start auditd service"
+  when: "not ansible_check_mode or 'auditd.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "auditd"
     state: "started"
@@ -139,6 +140,7 @@
     state: "present"
 
 - name: "Enable and start rsyslog service"
+  when: "not ansible_check_mode or 'rsyslog.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "rsyslog"
     state: "started"

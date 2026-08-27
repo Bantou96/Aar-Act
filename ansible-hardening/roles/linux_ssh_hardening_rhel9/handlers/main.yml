@@ -1,5 +1,6 @@
 ---
 - name: "Restart sshd"
+  when: "not ansible_check_mode or 'sshd.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "sshd"
     state: "restarted"
