@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.7]: 2026-08-27
+
+### Fixed
+
+- **`aartool report` with no arguments wrote an empty dashboard.** `advise`
+  with no argument reads the most recent report; `report` did the opposite, so
+  someone who had just run `inspect` and typed
+  `aartool report --out audit.html` got a 190K file with nothing in it. The
+  only warning was a parenthetical in the success line. It now uses the newest
+  report from the same three locations `advise` searches, and says which one it
+  picked.
+
+  The empty dashboard is still available as `--empty`, because dragging reports
+  onto it is a real workflow, just not the one you get by typing nothing.
+
+Found while recording a demo, where the obvious command produced an empty
+deliverable.
+
 ## [3.3.6]: 2026-08-27
 
 **`aartool plan` now runs to completion on a fresh host.** Previously it stopped
