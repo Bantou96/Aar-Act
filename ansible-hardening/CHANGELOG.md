@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.6]: 2026-08-27
+
+**`aartool plan` now runs to completion on a fresh host.** Previously it stopped
+at whichever of these came first.
+
+### Fixed
+
+- **AIDE initialisation used async, which Ansible refuses under `--check`**:
+  "check mode and async cannot be used on same task". A validation error,
+  raised before the task would have been skipped for being a command, so the
+  run died rather than previewing. Guarded on `ansible_check_mode`, with a note
+  saying what apply would do. It is the only async task in the codebase.
+- **The GRUB bootloader role failed the whole run when
+  `LINUX_BOOTLOADER_PASSWORD` was unset**, while `run-hardening.sh` printed
+  "bootloader_password role will be skipped" three lines earlier. The wrapper's
+  promise and the role's behaviour contradicted each other and the role won, so
+  a first preview on an ordinary server died on a variable the user had just
+  been told was optional. Only WSL escaped it, because the role skips itself
+  there for unrelated reasons. Both bootloader roles now skip with an
+  explanation and gate their remaining tasks on the password being set.
+
+  **Behaviour change:** asking for a GRUB password without providing one no
+  longer aborts the run.
+
+- `test_service_guards.sh` also rejects an async task with no check-mode guard.
+
+A full `aartool plan --target localhost` on a fresh Ubuntu host now reports
+ok=128, changed=74, failed=0.
+
 ## [3.3.5]: 2026-08-27
 
 ### Fixed
