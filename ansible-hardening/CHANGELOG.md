@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.5]: 2026-08-27
+
+### Fixed
+
+- **40 service tasks could not survive a preview.** `aartool plan` runs the
+  playbook with `--check`, which installs nothing, so a role that installs a
+  package and then starts its service met a unit that was not there:
+  `Could not find the requested service ssh`. The ssh task was already guarded,
+  but on `_skip_service_mgmt`, which covers WSL *without* systemd; modern WSL
+  has systemd, so the guard passed and the unit was still absent. A `when:` on
+  a service task does not mean it is guarded against the unit not existing,
+  which is why the ufw fix in 3.3.4 did not prevent this.
+
+  The playbook now inventories the systemd units once, in a pre_task with
+  `check_mode: false`, and shares it as `aartool_units`. Every service task
+  with a literal name is guarded on it in check mode only, so behaviour outside
+  a preview is unchanged. Of the 48 service tasks in the roles, the 8 left
+  alone were already safe: six name no service (daemon-reload), two use
+  templated names guarded on `ansible_facts.services`, and one tolerates
+  failure.
+
+- `test_service_guards.sh` enforces this for every future service task and runs
+  in CI, so the class cannot come back one role at a time.
+
+Reported by a user running `aartool plan` on WSL. Both this and the 3.3.4
+firewall bug came from testers on a platform that is not the target, which is
+exactly why they found them: a real server already has ufw, ssh and systemd
+present, so the whole class was invisible there.
+
 ## [3.3.4]: 2026-08-26
 
 ### Fixed
