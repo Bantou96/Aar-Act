@@ -87,6 +87,13 @@ check    "uninstall reaches install" "$($AARTOOL uninstall --help 2>&1)"  "aarto
 # Before this, hardening the obvious first target failed on a package install,
 # where there is no inventory and nowhere writable to put one.
 check    "inspect documents --hints" "$($AARTOOL inspect --help 2>&1)"     "--hints"
+
+# `report` with no argument used to write an EMPTY dashboard while `advise`
+# with no argument read the newest report: two commands, the same absent
+# argument, opposite meanings. Someone who had just run inspect got a file with
+# nothing in it.
+check    "report defaults to newest"  "$($AARTOOL report --help 2>&1)" "most recent report"
+check    "report documents --empty"   "$($AARTOOL report --help 2>&1)" "--empty"
 check    "plan documents localhost"  "$($AARTOOL plan --help 2>&1)"       "localhost"
 check    "apply documents localhost" "$($AARTOOL apply --help 2>&1)"      "localhost"
 
