@@ -1,20 +1,21 @@
 ---
-- name: "Fail if GRUB password is not provided via environment variable"
+- name: "Note: GRUB password role skipped, no password provided"
   when: "linux_bootloader_password is undefined or linux_bootloader_password == ''"
-  ansible.builtin.fail:
-    msg: >
-      GRUB bootloader password is not defined.
-      Set it before running, without putting it on the command line where
+  ansible.builtin.debug:
+    msg: >-
+      No GRUB bootloader password provided, so this role is skipped. Everything
+      else still runs. To set one, without putting it on the command line where
       shell history would keep it in clear:
         read -sr LINUX_BOOTLOADER_PASSWORD ; export LINUX_BOOTLOADER_PASSWORD
-  no_log: "{{ linux_bootloader_disable_nolog | default(false) | ternary(false, true) }}"
 
 - name: "Ensure grub2-tools are installed (needed for mkpasswd-pbkdf2)"
+  when: "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.package:
     name: "grub2-tools"
     state: "present"
 
 - name: "Generate PBKDF2 hashed password for GRUB"
+  when: "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.command: >-
     grub2-mkpasswd-pbkdf2 --iteration-count=100000
   args:
@@ -24,11 +25,13 @@
   no_log: "{{ linux_bootloader_disable_nolog | default(false) | ternary(false, true) }}"
 
 - name: "Parse the generated GRUB PBKDF2 hash"
+  when: "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.set_fact:
     grub_pbkdf2_hash: "{{ grub_pbkdf2_output.stdout | regex_search('grub\\.pbkdf2\\.sha512\\.\\S+') }}"
   no_log: "{{ linux_bootloader_disable_nolog | default(false) | ternary(false, true) }}"
 
 - name: "Deploy GRUB password configuration file (/etc/grub.d/01_users)"
+  when: "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.template:
     src: "01_users.j2"
     dest: "/etc/grub.d/01_users"
@@ -39,6 +42,7 @@
   register: "grub_users_result"
 
 - name: "Check if EFI grub.cfg exists"
+  when: "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.stat:
     path: "/boot/efi/EFI/{{ ansible_distribution | lower }}/grub.cfg"
   register: "grub_efi_cfg_check"
@@ -46,6 +50,7 @@
 
 - name: "Rebuild GRUB config after password deploy (EFI path)"
   when:
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
     - "grub_users_result.changed"
     - "grub_efi_cfg_check.stat.exists | default(false)"
   ansible.builtin.command: >-
@@ -56,6 +61,7 @@
 
 - name: "Rebuild GRUB config after password deploy (BIOS path)"
   when:
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
     - "grub_users_result.changed"
     - "not (grub_efi_cfg_check.stat.exists | default(false))"
   ansible.builtin.command: "grub2-mkconfig -o /boot/grub2/grub.cfg"
@@ -64,6 +70,7 @@
   notify: "GRUB config updated - reboot recommended"
 
 - name: "Ensure GRUB config file has strict permissions"
+  when: "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.file:
     path: "/boot/grub2/grub.cfg"
     mode: "0600"
@@ -73,6 +80,7 @@
 
 - name: "Remove legacy / obsolete GRUB user.cfg in EFI path (if exists)"
   when:
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
     - ansible_distribution == 'RedHat' or ansible_distribution in ['AlmaLinux', 'Rocky']
     - ansible_distribution_major_version == '9'
     - ansible_facts['mounts'] | selectattr('mount', 'equalto', '/boot/efi') | list | length > 0 # only if EFI present
@@ -84,7 +92,9 @@
   failed_when: false
 
 - name: "Debug GRUB password application status"
-  when: "ansible_verbosity >= 1"
+  when:
+    - "ansible_verbosity >= 1"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.debug:
     msg:
       - "GRUB password protection applied: {{ 'yes' if grub_users_result.changed else 'already present' }}"
@@ -96,7 +106,9 @@
 # every systemd package update and would silently revert the change.
 
 - name: "Create rescue.service.d drop-in directory (CIS 1.5.3)"
-  when: "linux_single_user_auth | bool"
+  when:
+    - "linux_single_user_auth | bool"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.file:
     path: "/etc/systemd/system/rescue.service.d"
     state: directory
@@ -105,7 +117,9 @@
     mode: "0755"
 
 - name: "Create emergency.service.d drop-in directory (CIS 1.5.3)"
-  when: "linux_single_user_auth | bool"
+  when:
+    - "linux_single_user_auth | bool"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.file:
     path: "/etc/systemd/system/emergency.service.d"
     state: directory
@@ -114,7 +128,9 @@
     mode: "0755"
 
 - name: "Deploy rescue.service override — require root authentication (CIS 1.5.3)"
-  when: "linux_single_user_auth | bool"
+  when:
+    - "linux_single_user_auth | bool"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.copy:
     dest: "/etc/systemd/system/rescue.service.d/99-cis-auth.conf"
     content: |
@@ -128,7 +144,9 @@
   notify: "Reload systemd daemon"
 
 - name: "Deploy emergency.service override — require root authentication (CIS 1.5.3)"
-  when: "linux_single_user_auth | bool"
+  when:
+    - "linux_single_user_auth | bool"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.copy:
     dest: "/etc/systemd/system/emergency.service.d/99-cis-auth.conf"
     content: |
@@ -142,7 +160,9 @@
   notify: "Reload systemd daemon"
 
 - name: "Debug single user mode auth status (verbosity >=1)"
-  when: "ansible_verbosity >= 1"
+  when:
+    - "ansible_verbosity >= 1"
+    - "linux_bootloader_password is defined and linux_bootloader_password != ''"
   ansible.builtin.debug:
     msg:
       - "rescue.service auth applied: {{ rescue_service_result.changed | default(false) }}"

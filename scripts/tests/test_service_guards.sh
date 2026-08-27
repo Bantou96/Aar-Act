@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Every service task must survive check mode on a host that does not have the
-# unit yet.
+# Every task must survive check mode: `aartool plan` runs the whole hardening
+# playbook with --check.
+#
+# Two hazards are covered here, both reported by users rather than found by
+# reading: a service task whose unit does not exist yet, and a task using async.
 #
 # `aartool plan` runs the hardening playbook with --check. A preview installs
 # nothing, so a role that installs a package and then starts its service hits a
@@ -75,6 +78,32 @@ for f in files:
         else:
             print(f"FAIL  {role}: '{name}' manages '{svc}' with no guard; a preview "
                   f"on a host without that unit will fail")
+            FAIL += 1
+
+# ── async ────────────────────────────────────────────────────────────────────
+#
+# Ansible refuses async under --check with "check mode and async cannot be used
+# on same task". It is a validation error, raised before the task would be
+# skipped for being a command, so the whole run dies rather than previewing.
+# Reported on the AIDE database initialisation.
+for f in files:
+    try:
+        doc = yaml.safe_load(io.open(f, encoding="utf-8"))
+    except Exception:
+        continue
+    if not isinstance(doc, list):
+        continue
+    for t in doc:
+        if not isinstance(t, dict) or "async" not in t:
+            continue
+        when = str(t.get("when", ""))
+        name = str(t.get("name", "?"))[:48]
+        role = f.split("/")[3]
+        if "ansible_check_mode" in when:
+            PASS += 1
+        else:
+            print(f"FAIL  {role}: '{name}' uses async with no check-mode guard; "
+                  f"a preview will die on it, not skip it")
             FAIL += 1
 
 print(f"\n{PASS} passed, {FAIL} failed")

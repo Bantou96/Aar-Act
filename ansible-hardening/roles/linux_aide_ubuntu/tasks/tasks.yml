@@ -47,6 +47,12 @@
   when:
     - "not aide_db_stat.stat.exists or aide_conf_result.changed"
     - "not aide_db_new_stat.stat.exists"
+    # Ansible refuses async under --check: "check mode and async cannot be used
+    # on same task". It is a validation error, raised before the task would
+    # have been skipped for being a command, so the run dies rather than
+    # previewing. A command task changes nothing in check mode anyway, so there
+    # is nothing to preview here beyond saying it would run.
+    - "not ansible_check_mode"
   ansible.builtin.command: "aide --config /etc/aide/aide.conf --init"
   register: "aide_init"
   # rc=0: success  rc=14: db init ok but warnings  both are fine
@@ -54,6 +60,17 @@
   changed_when: "aide_init.rc in [0, 14]"
   async: 600 # AIDE init can take several minutes on a full filesystem
   poll: 15
+
+- name: "Preview: the AIDE database would be initialised"
+  when:
+    - "ansible_check_mode"
+    - "not aide_db_stat.stat.exists or aide_conf_result.changed"
+    - "not aide_db_new_stat.stat.exists"
+  ansible.builtin.debug:
+    msg: >-
+      aide --init would run here and build the baseline database. It is not run
+      in a preview: it takes minutes on a full filesystem and writes
+      /var/lib/aide/aide.db.new.
 
 - name: "Activate the newly initialized AIDE database" # noqa: no-handler
   when: "aide_init.changed | default(false)"
