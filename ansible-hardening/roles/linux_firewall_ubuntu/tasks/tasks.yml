@@ -116,6 +116,7 @@
 # is not there.
 - name: "Enable UFW service"
   when:
+    - "not ansible_check_mode or 'ufw.service' in (aartool_units | default(''))"
     - not _skip_service_mgmt
     - _ufw_ready | default(false)
   ansible.builtin.service:

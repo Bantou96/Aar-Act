@@ -33,6 +33,7 @@
     _fwd_ready: "{{ (not ansible_check_mode) or (_fwd_bin.rc == 0) }}"
 
 - name: "Enable and start firewalld service"
+  when: "not ansible_check_mode or 'firewalld.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "firewalld"
     state: "started"

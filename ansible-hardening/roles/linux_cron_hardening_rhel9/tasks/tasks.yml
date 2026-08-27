@@ -5,7 +5,9 @@
     name: "crond"
     state: "started"
     enabled: true
-  when: "linux_cron_enabled | bool"
+  when:
+    - "linux_cron_enabled | bool"
+    - "not ansible_check_mode or 'crond.service' in (aartool_units | default(''))"
 
 # CIS 5.1.2–5.1.7 — Strict permissions on cron directories and files
 - name: "Set ownership root:root on cron paths (CIS 5.1.2–5.1.7)"

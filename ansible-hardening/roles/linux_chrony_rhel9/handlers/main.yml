@@ -1,5 +1,6 @@
 ---
 - name: "Restart chronyd"
+  when: "not ansible_check_mode or 'chronyd.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "chronyd"
     state: "restarted"

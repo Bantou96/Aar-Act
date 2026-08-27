@@ -16,6 +16,7 @@
   notify: "Restart chronyd"
 
 - name: "Enable and start chronyd service"
+  when: "not ansible_check_mode or 'chronyd.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "chronyd"
     state: "started"

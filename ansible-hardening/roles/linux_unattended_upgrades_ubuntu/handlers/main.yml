@@ -1,5 +1,6 @@
 ---
 - name: "Restart unattended-upgrades"
+  when: "not ansible_check_mode or 'unattended-upgrades.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "unattended-upgrades"
     state: "restarted"

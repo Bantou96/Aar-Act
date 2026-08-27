@@ -1,5 +1,6 @@
 ---
 - name: "Reload and restart tmp.mount"
+  when: "not ansible_check_mode or 'tmp.mount' in (aartool_units | default(''))"
   ansible.builtin.systemd:
     name: "tmp.mount"
     state: "restarted"

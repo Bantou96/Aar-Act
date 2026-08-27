@@ -1,5 +1,6 @@
 ---
 - name: "Restart chrony"
+  when: "not ansible_check_mode or 'chrony.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "chrony"
     state: "restarted"

@@ -1,5 +1,6 @@
 ---
 - name: "Restart dnf-automatic timer"
+  when: "not ansible_check_mode or 'dnf-automatic.timer' in (aartool_units | default(''))"
   ansible.builtin.systemd:
     name: "dnf-automatic.timer"
     state: "restarted"

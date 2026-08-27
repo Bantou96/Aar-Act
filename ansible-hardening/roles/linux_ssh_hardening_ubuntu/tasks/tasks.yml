@@ -49,7 +49,9 @@
 
 # ── Service management (skipped on WSL without systemd) ───────────────────────
 - name: "Enable and start ssh service"
-  when: "not _skip_service_mgmt"
+  when:
+    - "not _skip_service_mgmt"
+    - "not ansible_check_mode or 'ssh.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "ssh"
     state: "started"

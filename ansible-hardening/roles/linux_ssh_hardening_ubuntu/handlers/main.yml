@@ -1,6 +1,7 @@
 ---
 # Ubuntu/Debian SSH service is "ssh" (not "sshd" as on RHEL)
 - name: "Restart ssh"
+  when: "not ansible_check_mode or 'ssh.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "ssh"
     state: "restarted"

@@ -1,5 +1,6 @@
 ---
 - name: "Restart auditd"
+  when: "not ansible_check_mode or 'auditd.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "auditd"
     state: "restarted"
@@ -7,6 +8,7 @@
   listen: "Restart auditd" # allows multiple notifies to same handler
 
 - name: "Restart rsyslog"
+  when: "not ansible_check_mode or 'rsyslog.service' in (aartool_units | default(''))"
   ansible.builtin.service:
     name: "rsyslog"
     state: "restarted"
