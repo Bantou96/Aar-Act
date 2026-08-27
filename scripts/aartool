@@ -2775,6 +2775,7 @@ Options:
                     server: run it there, then tunnel with
                       ssh -L PORT:127.0.0.1:PORT user@host
       --open        Try to open the result in a browser
+      --empty       The dashboard with no reports in it. Drag them on yourself
       --anonymise   Replace every hostname with server-01, server-02, ... and
                     every IP address with ip-01, ip-02, ... consistently across
                     all reports, so the file can be shared outside the estate
@@ -2784,7 +2785,9 @@ Options:
                     a project codename, an admin account.
   -h, --help        Show this help
 
-With no arguments it opens the empty dashboard, where you can drag reports in
+With no arguments it uses the most recent report it can find in the current
+directory, ./reports/ and /var/log/cyberaar/, the same places advise looks.
+Pass --empty for the dashboard with nothing in it, to drag reports onto
 yourself.
 
   sudo aartool inspect --out /tmp/audit
@@ -2915,8 +2918,17 @@ _report_anon_warn() {
   fi
 }
 
+# The same three locations advise looks in, newest first.
+_report_find_newest() {
+  local f
+  f=$(find . ./reports /var/log/cyberaar -maxdepth 1 -name 'cyberaar-*.json' -type f -print0 2>/dev/null \
+      | xargs -0 -r ls -t 2>/dev/null | head -1) || true
+  [[ -n "$f" ]] && printf '%s' "$f"
+  return 0
+}
+
 cmd_report() {
-  local out="" serve="" do_open=false anon=false
+  local out="" serve="" do_open=false anon=false want_empty=false
   local -a files=() redact=()
 
   while [[ $# -gt 0 ]]; do
@@ -2924,6 +2936,7 @@ cmd_report() {
       -o|--out)  [[ $# -ge 2 ]] || die "$1 needs a file path."; out="$2"; shift 2 ;;
       --serve)   [[ $# -ge 2 ]] || die "--serve needs a port."; serve="$2"; shift 2 ;;
       --open)    do_open=true; shift ;;
+      --empty)   want_empty=true; shift ;;
       --anonymise|--anonymize) anon=true; shift ;;
       --redact)  [[ $# -ge 2 ]] || die "--redact needs a string."; redact+=("$2"); shift 2 ;;
       -h|--help) cmd_report_usage; return 0 ;;
@@ -2954,6 +2967,21 @@ cmd_report() {
     info "Ctrl-C to stop."
     ( cd "$dir" && exec python3 -m http.server "$serve" --bind 127.0.0.1 )
     return 0
+  fi
+
+  # ── no reports named: use the newest one, as advise does ───────────────────
+  #
+  # `advise` with no argument reads the most recent report. `report` used to
+  # write an EMPTY dashboard instead, so someone who had just run inspect and
+  # typed `aartool report --out audit.html` got a file with nothing in it, and
+  # nothing said so plainly. Two commands, the same absent argument, opposite
+  # meanings. The empty dashboard is still available, now as --empty.
+  if [[ "${#files[@]}" -eq 0 && "$want_empty" == false ]]; then
+    local newest; newest="$(_report_find_newest || true)"
+    if [[ -n "$newest" ]]; then
+      info "Using the most recent report found: $newest"
+      files=("$newest")
+    fi
   fi
 
   # ── no reports: just the dashboard as it ships ─────────────────────────────
