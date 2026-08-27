@@ -115,7 +115,10 @@
     #
     # check_mode: false because a command module is skipped under --check, and
     # a probe that does not run tells you nothing. It only reads.
-    - name: "CyberAar | Inventory the systemd units present"
+    # The systemd module MANAGES a unit, it does not enumerate unit files, and
+    # service_facts lists services only: dnf-automatic.timer and tmp.mount are
+    # both guarded on this and would be missing from it.
+    - name: "CyberAar | Inventory the systemd units present" # noqa: command-instead-of-module
       ansible.builtin.command: "systemctl list-unit-files --no-legend --no-pager"
       register: "_aartool_unit_files"
       changed_when: false
