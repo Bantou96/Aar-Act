@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **One name in the output: `aartool`.** The tool called itself four things.
+  The terminal said "CyberAar Security Score", `--help` said "CyberAar Security
+  Baseline Checker", the HTML said "CyberAar Baseline Checker" in the footer and
+  plain "Security Score" in the body, and only the dashboard said `aartool`.
+  CyberAar is the company; aartool is the product. Every user-facing string now
+  names the product.
+- **`cyberaar-baseline.sh` is now `aartool-baseline.sh`**, and reports are
+  written as `aartool-<host>-<date>.{html,json}`. Report discovery still matches
+  the old `cyberaar-*.json` filenames, so `advise` and `report` keep finding
+  audits taken before this release.
+- **The JSON root key is `aartool`**, was `cyberaar_baseline`. Every reader in
+  the toolkit accepts both, so existing reports still load in the dashboard, in
+  `diff` and in `report`. External parsers should read `aartool` with the old
+  key as a fallback.
+- **A warning now counts as half a failure in the score**, where it used to
+  count as a whole one. `score = (PASS + WARN/2) / TOTAL`. A stock Ubuntu box
+  with 8 failures and 57 warnings scored 40% in red and now scores 67%. Many
+  warnings mean "could not be verified here" (no `/boot`, no `mokutil`, no
+  systemd in a container) rather than "is wrong", and scoring those exactly like
+  `PermitRootLogin=yes` made the headline number untrustworthy.
+  **Scores are not comparable across this change**; `aartool diff` now says so
+  when the two reports come from different engine versions.
+- The terminal summary leads with failures rather than passes, and states the
+  weighting under the score.
+
+### Fixed
+
+- **Kernel checks printed above the first section header, with no header of
+  their own.** `checks/kernel.sh` was the only check family with no wrapping
+  function, so its twelve `KRN-*` results ran at bundle-load time, before
+  `run.sh` had called anything. They now run as "1b. KERNEL ATTACK SURFACE",
+  in the position the build order already implied.
+- **Reports were unreadable by the person who ran them.** The standalone script
+  must run as root, so it wrote `root:root` mode 600 and left the invoking user
+  unable to open the file it had just printed a path to; `aartool report` and
+  `aartool diff` both failed on it. `aartool inspect` already handed reports
+  back to `SUDO_UID`, the standalone script did not, and the standalone script
+  is the path the README advertises as the fastest way to try the tool.
+- The HTML report subtitle repeated the `<h1>` verbatim.
+- **INT-07 duplicated INT-01.** With AIDE absent both emitted the identical
+  title "AIDE not installed", so one missing package read as two problems and
+  was counted twice.
+
 ## [3.3.7]: 2026-08-27
 
 ### Fixed

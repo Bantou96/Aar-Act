@@ -52,7 +52,7 @@ _render_json() {
 
   cat > "$JSON_OUT" <<EOF
 {
-  "cyberaar_baseline": {
+  "aartool": {
     "version": "${SCRIPT_VERSION}",
     "host": "${_j_host}",
     "os": "${_j_os}",

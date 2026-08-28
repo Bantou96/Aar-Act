@@ -236,7 +236,7 @@ PYEOF
 fi
 
 echo '{"not":"a report"}' > /tmp/aartool-notreport.$$.json
-check    "diff rejects a non-report" "$($AARTOOL diff /tmp/aartool-notreport.$$.json /tmp/aartool-notreport.$$.json 2>&1)" "not a cyberaar-baseline report"
+check    "diff rejects a non-report" "$($AARTOOL diff /tmp/aartool-notreport.$$.json /tmp/aartool-notreport.$$.json 2>&1)" "not a aartool-baseline report"
 rm -f /tmp/aartool-notreport.$$.json
 check    "diff needs two arguments" "$($AARTOOL diff one.json 2>&1)" "exactly two reports"
 
@@ -272,7 +272,7 @@ check    "uninstall removes the link" "$([ -e "$_ins_prefix/bin/aartool" ] && pr
 rm -rf "$_ins_prefix" "$(dirname "$_ins_copy")"
 
 # ── inspect forwards every remote flag the baseline documents ────────────────
-# inspect passes a WHITELIST of options through to cyberaar-baseline.sh, so a
+# inspect passes a WHITELIST of options through to aartool-baseline.sh, so a
 # flag added to the baseline is silently rejected by aartool until someone
 # remembers to widen that list. This asserts the two agree, rather than leaving
 # it to memory.

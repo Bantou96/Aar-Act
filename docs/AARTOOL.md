@@ -49,11 +49,11 @@ as untested rather than as a claim.
 ## Why it exists
 
 The toolkit grew two entry points with two conventions for one workflow.
-`cyberaar-baseline.sh` took `--host` and `--user`. `run-hardening.sh` took `-t`
+`aartool-baseline.sh` took `--host` and `--user`. `run-hardening.sh` took `-t`
 and `-u`, and used `-T` for tags: one shift key away from `-t` for the target,
 on a tool that rewrites `sshd_config`, PAM and firewall rules.
 
-`aartool` wraps both. Neither is replaced and neither changed. `cyberaar-baseline.sh`
+`aartool` wraps both. Neither is replaced and neither changed. `aartool-baseline.sh`
 keeps the single-file portability that lets you `curl` it onto an air-gapped box.
 
 Two things it does differently from what it wraps, both on purpose:
@@ -106,15 +106,15 @@ Everything works from the clone:
 
 ### Without cloning anything
 
-Every release attaches `aartool`, `cyberaar-baseline.sh`, the collection
+Every release attaches `aartool`, `aartool-baseline.sh`, the collection
 tarball and a `SHA256SUMS`. Neither Ansible Galaxy nor a container registry is
 on the critical path.
 
 ```bash
-curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/cyberaar-baseline.sh
+curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/aartool-baseline.sh
 curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing
-chmod +x cyberaar-baseline.sh && sudo ./cyberaar-baseline.sh
+chmod +x aartool-baseline.sh && sudo ./aartool-baseline.sh
 ```
 
 Assets do not carry the executable bit, hence the `chmod`. The single-file audit
@@ -615,7 +615,7 @@ directions, and a test asserts they cannot drift apart.
 ## Extending it
 
 `aartool` is built from `scripts/aartool-src/` by `scripts/build-aartool.sh`,
-the same way `cyberaar-baseline.sh` is built from `scripts/src/`. **Edit the
+the same way `aartool-baseline.sh` is built from `scripts/src/`. **Edit the
 sources, not the bundle.** CI fails the build if the two drift.
 
 ```bash

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  CyberAar Security Baseline Checker
-#  Vérificateur de Sécurité de Base CyberAar
+#  aartool-baseline: the audit engine behind `aartool inspect`
+#  aartool-baseline : moteur d'audit derrière `aartool inspect`
 #
 #  Version   : see SCRIPT_VERSION below, which is the only place it is written
 #  Author    : CyberAar (https://github.com/cyberaar/aartool)
@@ -9,22 +9,22 @@
 #  Target    : RHEL/CentOS/Ubuntu/Debian (Linux Government Servers)
 #
 #  Usage:
-#    sudo bash cyberaar-baseline.sh
-#    sudo bash cyberaar-baseline.sh --html-out /tmp/report.html
-#    sudo bash cyberaar-baseline.sh --json-out /tmp/report.json
-#    sudo bash cyberaar-baseline.sh --html-out /tmp/report.html --json-out /tmp/report.json
-#    sudo cyberaar-baseline [same options] (after --install)
+#    sudo bash aartool-baseline.sh
+#    sudo bash aartool-baseline.sh --html-out /tmp/report.html
+#    sudo bash aartool-baseline.sh --json-out /tmp/report.json
+#    sudo bash aartool-baseline.sh --html-out /tmp/report.html --json-out /tmp/report.json
+#    sudo aartool-baseline [same options] (after --install)
 # =============================================================================
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_VERSION="4.6.7"
-SCRIPT_NAME="cyberaar-baseline"
+SCRIPT_VERSION="4.7.0"
+SCRIPT_NAME="aartool-baseline"
 
 _show_help() {
   cat <<HELPEOF
-CyberAar Security Baseline Checker v${SCRIPT_VERSION}
+aartool-baseline v${SCRIPT_VERSION}   (audit engine; `aartool --version` is the toolkit)
 
-Usage: cyberaar-baseline [OPTIONS]
+Usage: aartool-baseline [OPTIONS]
 
   --html-out <file>      Write HTML report to <file>
   --json-out <file>      Write JSON report to <file>
@@ -45,30 +45,30 @@ Remote / Fleet options:
   --ansible-dir <dir>    Path to your Ansible repo (for playbook suggestions)
 
 Install options:
-  --install              Install to /usr/local/bin/cyberaar-baseline
-  --uninstall            Remove from /usr/local/bin/cyberaar-baseline
+  --install              Install to /usr/local/bin/aartool-baseline
+  --uninstall            Remove from /usr/local/bin/aartool-baseline
   --version              Print version and exit
   --help, -h             Show this help
 
 Examples:
   # Local scan
-  sudo cyberaar-baseline --html-out /tmp/report.html
-  sudo cyberaar-baseline --output-dir /var/log/cyberaar
+  sudo aartool-baseline --html-out /tmp/report.html
+  sudo aartool-baseline --output-dir /var/log/cyberaar
 
   # Remote single host
-  cyberaar-baseline --host 10.0.1.10 --user admin --html-out /tmp/report-10.0.1.10.html
+  aartool-baseline --host 10.0.1.10 --user admin --html-out /tmp/report-10.0.1.10.html
 
   # Fleet scan from file
-  cyberaar-baseline --host-file /etc/cyberaar/hosts.txt --user admin --output-dir /var/log/cyberaar
+  aartool-baseline --host-file /etc/cyberaar/hosts.txt --user admin --output-dir /var/log/cyberaar
 
   # Fleet scan from Ansible inventory
-  cyberaar-baseline --inventory inventory/hosts --user admin --output-dir /var/log/cyberaar
+  aartool-baseline --inventory inventory/hosts --user admin --output-dir /var/log/cyberaar
 
   # With Ansible remediation suggestions
-  cyberaar-baseline --host 10.0.1.10 --ansible-dir ~/aartool/ansible-hardening
+  aartool-baseline --host 10.0.1.10 --ansible-dir ~/aartool/ansible-hardening
 
   # Install
-  sudo bash cyberaar-baseline.sh --install
+  sudo bash aartool-baseline.sh --install
 HELPEOF
 }
 
@@ -99,7 +99,7 @@ while [[ $# -gt 0 ]]; do
     --output-dir) OUTPUT_DIR="$2"; shift 2 ;;
     --install)    DO_INSTALL=true; shift ;;
     --uninstall)  DO_UNINSTALL=true; shift ;;
-    --version)    echo "cyberaar-baseline v${SCRIPT_VERSION}"; exit 0 ;;
+    --version)    echo "aartool-baseline v${SCRIPT_VERSION}"; exit 0 ;;
     --help|-h)    _show_help; exit 0 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
@@ -116,23 +116,25 @@ REMOTE_JUMP="${REMOTE_JUMP:-}"
 ANSIBLE_INVENTORY="${ANSIBLE_INVENTORY:-}"
 ANSIBLE_DIR="${ANSIBLE_DIR:-}"
 
+OUTPUT_DIR_CREATED=false
 if [[ -n "$OUTPUT_DIR" ]]; then
+  [[ -d "$OUTPUT_DIR" ]] || OUTPUT_DIR_CREATED=true
   mkdir -p "$OUTPUT_DIR"
   DATESTR=$(date '+%Y%m%d-%H%M%S')
   HOST_SLUG=$(hostname -s 2>/dev/null | tr -cd 'a-zA-Z0-9-')
-  [[ -z "$HTML_OUT" ]] && HTML_OUT="${OUTPUT_DIR}/cyberaar-${HOST_SLUG}-${DATESTR}.html"
-  [[ -z "$JSON_OUT" ]] && JSON_OUT="${OUTPUT_DIR}/cyberaar-${HOST_SLUG}-${DATESTR}.json"
+  [[ -z "$HTML_OUT" ]] && HTML_OUT="${OUTPUT_DIR}/aartool-${HOST_SLUG}-${DATESTR}.html"
+  [[ -z "$JSON_OUT" ]] && JSON_OUT="${OUTPUT_DIR}/aartool-${HOST_SLUG}-${DATESTR}.json"
 fi
 
 # ─── INSTALL ─────────────────────────────────────────────────────────────────
 if [[ "$DO_INSTALL" == true ]]; then
-  [[ $EUID -ne 0 ]] && { echo '❌  Root required: sudo bash cyberaar-baseline.sh --install'; exit 1; }
+  [[ $EUID -ne 0 ]] && { echo '❌  Root required: sudo bash aartool-baseline.sh --install'; exit 1; }
   INST_DEST="/usr/local/bin/${SCRIPT_NAME}"
   cp -f "$SCRIPT_PATH" "$INST_DEST"
   chmod 755 "$INST_DEST"
   chown root:root "$INST_DEST"
   echo "✅  Installed → $INST_DEST"
-  echo "    Try: sudo cyberaar-baseline --help"
+  echo "    Try: sudo aartool-baseline --help"
   exit 0
 fi
 
@@ -425,7 +427,7 @@ _build_host_list() {
 # open sessions behind on the operator's machine.
 _CYBERAAR_SSH_CTL_DIR=""
 _cyberaar_ssh_ctl_init() {
-  _CYBERAAR_SSH_CTL_DIR="$(mktemp -d -t cyberaar-ssh-XXXXXX 2>/dev/null)" || _CYBERAAR_SSH_CTL_DIR=""
+  _CYBERAAR_SSH_CTL_DIR="$(mktemp -d -t aartool-ssh-XXXXXX 2>/dev/null)" || _CYBERAAR_SSH_CTL_DIR=""
   [[ -n "$_CYBERAAR_SSH_CTL_DIR" ]] && chmod 700 "$_CYBERAAR_SSH_CTL_DIR" 2>/dev/null || true
 }
 _cyberaar_ssh_ctl_cleanup() {
@@ -451,7 +453,7 @@ trap _cyberaar_ssh_ctl_cleanup EXIT INT TERM
 #
 #     scp: Connection closed
 #
-# swallowed by 2>/dev/null, then "bash: /tmp/.cyberaar-baseline-xxx.sh: No such
+# swallowed by 2>/dev/null, then "bash: /tmp/.aartool-baseline-xxx.sh: No such
 # file or directory" from the run that followed, and a cheerful "1 succeeded" at
 # the end. Found on a live bastion, not in review.
 #
@@ -531,9 +533,9 @@ _remote_scan() {
   local target="${REMOTE_USER}@${host}"
   local _rand
   _rand=$(openssl rand -hex 8 2>/dev/null || tr -dc 'a-f0-9' < /dev/urandom 2>/dev/null | head -c 16)
-  local remote_script="/tmp/.cyberaar-baseline-${_rand}.sh"
-  local remote_html="/tmp/.cyberaar-report-${_rand}.html"
-  local remote_json="/tmp/.cyberaar-report-${_rand}.json"
+  local remote_script="/tmp/.aartool-baseline-${_rand}.sh"
+  local remote_html="/tmp/.aartool-report-${_rand}.html"
+  local remote_json="/tmp/.aartool-report-${_rand}.json"
 
   printf "\n${BOLD}${CYAN}━━━  Remote scan: %s  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n" "$host"
 
@@ -641,7 +643,7 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
   fi
 
   printf "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}\n"
-  printf "${BOLD}${CYAN}║  CyberAar Fleet Scan — %d host(s)%-27s║${NC}\n" "${#FLEET_HOSTS[@]}" ""
+  printf "${BOLD}${CYAN}║  aartool fleet scan: %d host(s)%-28s║${NC}\n" "${#FLEET_HOSTS[@]}" ""
   printf "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}\n"
 
   _cyberaar_ssh_ctl_init
@@ -653,8 +655,8 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
     DATESTR=$(date '+%Y%m%d-%H%M%S')
 
     if [[ -n "$OUTPUT_DIR" ]]; then
-      local_html="${OUTPUT_DIR}/cyberaar-${HOST_SLUG}-${DATESTR}.html"
-      local_json="${OUTPUT_DIR}/cyberaar-${HOST_SLUG}-${DATESTR}.json"
+      local_html="${OUTPUT_DIR}/aartool-${HOST_SLUG}-${DATESTR}.html"
+      local_json="${OUTPUT_DIR}/aartool-${HOST_SLUG}-${DATESTR}.json"
     elif [[ -n "$HTML_OUT" ]]; then
       local_html="${HTML_OUT%.html}-${HOST_SLUG}.html"
     elif [[ -n "$JSON_OUT" ]]; then
@@ -673,7 +675,7 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
     "$FLEET_OK" "$FLEET_FAIL" "${#FLEET_HOSTS[@]}"
   printf "  📁 Reports in: %s\n" "${OUTPUT_DIR:-current directory}"
   printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-  printf "  CyberAar — https://github.com/cyberaar/aartool\n\n"
+  printf "  aartool  https://github.com/cyberaar/aartool\n\n"
   exit 0
 fi
 
@@ -1082,188 +1084,194 @@ _krn_door() {           # _krn_door open|closed|na
     closed) _KRN_DOORS_KNOWN=$((_KRN_DOORS_KNOWN+1)) ;;
   esac
 }
+_checks_kernel() {
+# =============================================================================
+#  1b. KERNEL ATTACK SURFACE
+# =============================================================================
+section "1b. KERNEL ATTACK SURFACE"
 
-# ── KRN-01  Unprivileged user namespaces ─────────────────────────────────────
-# The single highest-value setting in this family.
-_KRN_USERNS="?"
-if [[ -r /proc/sys/kernel/unprivileged_userns_clone ]]; then
-  _KRN_USERNS="$(_krn_sysctl kernel.unprivileged_userns_clone)"   # Debian/Ubuntu
-  if [[ "$_KRN_USERNS" == "0" ]]; then
-    add_result "Kernel" "PASS" "KRN-01" "Unprivileged user namespaces disabled" \
-      "Espaces de noms utilisateur non privilégiés désactivés" "unprivileged_userns_clone=0" ""
+  # ── KRN-01  Unprivileged user namespaces ─────────────────────────────────────
+  # The single highest-value setting in this family.
+  _KRN_USERNS="?"
+  if [[ -r /proc/sys/kernel/unprivileged_userns_clone ]]; then
+    _KRN_USERNS="$(_krn_sysctl kernel.unprivileged_userns_clone)"   # Debian/Ubuntu
+    if [[ "$_KRN_USERNS" == "0" ]]; then
+      add_result "Kernel" "PASS" "KRN-01" "Unprivileged user namespaces disabled" \
+        "Espaces de noms utilisateur non privilégiés désactivés" "unprivileged_userns_clone=0" ""
+      _krn_door closed
+    else
+      add_result "Kernel" "WARN" "KRN-01" "Unprivileged user namespaces allowed" \
+        "Espaces de noms utilisateur non privilégiés autorisés" "unprivileged_userns_clone=$_KRN_USERNS" \
+        "A doorway for many local privilege escalations. 'sysctl -w kernel.unprivileged_userns_clone=0'. Breaks rootless Docker/Podman and the Chrome sandbox."
+      _krn_door open
+    fi
+  else
+    _KRN_USERNS="$(_krn_sysctl user.max_user_namespaces)"            # RHEL family
+    if [[ "$_KRN_USERNS" == "0" ]]; then
+      add_result "Kernel" "PASS" "KRN-01" "Unprivileged user namespaces disabled" \
+        "Espaces de noms utilisateur non privilégiés désactivés" "user.max_user_namespaces=0" ""
+      _krn_door closed
+    elif [[ "$_KRN_USERNS" == "?" ]]; then
+      add_result "Kernel" "WARN" "KRN-01" "Cannot determine user namespace policy" \
+        "Politique des espaces de noms indéterminée" "no unprivileged_userns_clone or max_user_namespaces" ""
+      _krn_door na
+    else
+      add_result "Kernel" "WARN" "KRN-01" "Unprivileged user namespaces allowed" \
+        "Espaces de noms utilisateur non privilégiés autorisés" "user.max_user_namespaces=$_KRN_USERNS" \
+        "A doorway for many local privilege escalations. 'sysctl -w user.max_user_namespaces=0'. Breaks rootless containers."
+      _krn_door open
+    fi
+  fi
+
+  # ── KRN-02  Unprivileged eBPF ────────────────────────────────────────────────
+  _KRN_BPF="$(_krn_sysctl kernel.unprivileged_bpf_disabled)"
+  case "$_KRN_BPF" in
+    1|2) add_result "Kernel" "PASS" "KRN-02" "Unprivileged eBPF disabled" \
+           "eBPF non privilégié désactivé" "unprivileged_bpf_disabled=$_KRN_BPF" ""
+         _krn_door closed ;;
+    "?") add_result "Kernel" "WARN" "KRN-02" "eBPF policy not readable" \
+           "Politique eBPF illisible" "kernel.unprivileged_bpf_disabled absent" ""
+         _krn_door na ;;
+    *)   add_result "Kernel" "WARN" "KRN-02" "Unprivileged eBPF allowed" \
+           "eBPF non privilégié autorisé" "unprivileged_bpf_disabled=$_KRN_BPF" \
+           "The eBPF verifier is a recurring exploitation surface. 'sysctl -w kernel.unprivileged_bpf_disabled=1'"
+         _krn_door open ;;
+  esac
+
+  # ── KRN-03  io_uring ─────────────────────────────────────────────────────────
+  # Young, large and fast-moving: a disproportionate share of recent LPEs.
+  _KRN_URING="$(_krn_sysctl kernel.io_uring_disabled)"
+  if [[ "$_KRN_URING" == "?" ]]; then
+    add_result "Kernel" "PASS" "KRN-03" "io_uring control not present" \
+      "Contrôle io_uring absent" "kernel.io_uring_disabled unsupported on this kernel" ""
+    _krn_door na
+  elif [[ "$_KRN_URING" == "2" ]]; then
+    add_result "Kernel" "PASS" "KRN-03" "io_uring disabled" "io_uring désactivé" "io_uring_disabled=2" ""
     _krn_door closed
   else
-    add_result "Kernel" "WARN" "KRN-01" "Unprivileged user namespaces allowed" \
-      "Espaces de noms utilisateur non privilégiés autorisés" "unprivileged_userns_clone=$_KRN_USERNS" \
-      "A doorway for many local privilege escalations. 'sysctl -w kernel.unprivileged_userns_clone=0'. Breaks rootless Docker/Podman and the Chrome sandbox."
+    add_result "Kernel" "WARN" "KRN-03" "io_uring available to unprivileged users" \
+      "io_uring accessible sans privilège" "io_uring_disabled=$_KRN_URING" \
+      "A young and heavily exposed subsystem. 'sysctl -w kernel.io_uring_disabled=2' (1 = restricted to io_uring_group). May affect some databases and proxies."
     _krn_door open
   fi
-else
-  _KRN_USERNS="$(_krn_sysctl user.max_user_namespaces)"            # RHEL family
-  if [[ "$_KRN_USERNS" == "0" ]]; then
-    add_result "Kernel" "PASS" "KRN-01" "Unprivileged user namespaces disabled" \
-      "Espaces de noms utilisateur non privilégiés désactivés" "user.max_user_namespaces=0" ""
+
+  # ── KRN-04  userfaultfd ──────────────────────────────────────────────────────
+  # Not itself a bug, but what turns a race into a reliable exploit.
+  _KRN_UFFD="$(_krn_sysctl vm.unprivileged_userfaultfd)"
+  if [[ "$_KRN_UFFD" == "0" ]]; then
+    add_result "Kernel" "PASS" "KRN-04" "Unprivileged userfaultfd disabled" \
+      "userfaultfd non privilégié désactivé" "vm.unprivileged_userfaultfd=0" ""
     _krn_door closed
-  elif [[ "$_KRN_USERNS" == "?" ]]; then
-    add_result "Kernel" "WARN" "KRN-01" "Cannot determine user namespace policy" \
-      "Politique des espaces de noms indéterminée" "no unprivileged_userns_clone or max_user_namespaces" ""
+  elif [[ "$_KRN_UFFD" == "?" ]]; then
+    add_result "Kernel" "PASS" "KRN-04" "userfaultfd control not present" \
+      "Contrôle userfaultfd absent" "vm.unprivileged_userfaultfd unsupported" ""
     _krn_door na
   else
-    add_result "Kernel" "WARN" "KRN-01" "Unprivileged user namespaces allowed" \
-      "Espaces de noms utilisateur non privilégiés autorisés" "user.max_user_namespaces=$_KRN_USERNS" \
-      "A doorway for many local privilege escalations. 'sysctl -w user.max_user_namespaces=0'. Breaks rootless containers."
+    add_result "Kernel" "WARN" "KRN-04" "Unprivileged userfaultfd allowed" \
+      "userfaultfd non privilégié autorisé" "vm.unprivileged_userfaultfd=$_KRN_UFFD" \
+      "Used to make kernel race conditions reliably exploitable. 'sysctl -w vm.unprivileged_userfaultfd=0'"
     _krn_door open
   fi
-fi
 
-# ── KRN-02  Unprivileged eBPF ────────────────────────────────────────────────
-_KRN_BPF="$(_krn_sysctl kernel.unprivileged_bpf_disabled)"
-case "$_KRN_BPF" in
-  1|2) add_result "Kernel" "PASS" "KRN-02" "Unprivileged eBPF disabled" \
-         "eBPF non privilégié désactivé" "unprivileged_bpf_disabled=$_KRN_BPF" ""
-       _krn_door closed ;;
-  "?") add_result "Kernel" "WARN" "KRN-02" "eBPF policy not readable" \
-         "Politique eBPF illisible" "kernel.unprivileged_bpf_disabled absent" ""
-       _krn_door na ;;
-  *)   add_result "Kernel" "WARN" "KRN-02" "Unprivileged eBPF allowed" \
-         "eBPF non privilégié autorisé" "unprivileged_bpf_disabled=$_KRN_BPF" \
-         "The eBPF verifier is a recurring exploitation surface. 'sysctl -w kernel.unprivileged_bpf_disabled=1'"
-       _krn_door open ;;
-esac
+  # ── KRN-05  Kernel module loading ────────────────────────────────────────────
+  _KRN_MODLOCK="$(_krn_sysctl kernel.modules_disabled)"
+  if [[ "$_KRN_MODLOCK" == "1" ]]; then
+    add_result "Kernel" "PASS" "KRN-05" "Module loading locked" "Chargement de modules verrouillé" "kernel.modules_disabled=1" ""
+  else
+    add_result "Kernel" "WARN" "KRN-05" "Module loading open" "Chargement de modules ouvert" "kernel.modules_disabled=${_KRN_MODLOCK/\?/0}" \
+      "Locking after boot stops a rootkit being loaded as a module. 'sysctl -w kernel.modules_disabled=1' once the machine has settled. Irreversible until reboot."
+  fi
 
-# ── KRN-03  io_uring ─────────────────────────────────────────────────────────
-# Young, large and fast-moving: a disproportionate share of recent LPEs.
-_KRN_URING="$(_krn_sysctl kernel.io_uring_disabled)"
-if [[ "$_KRN_URING" == "?" ]]; then
-  add_result "Kernel" "PASS" "KRN-03" "io_uring control not present" \
-    "Contrôle io_uring absent" "kernel.io_uring_disabled unsupported on this kernel" ""
-  _krn_door na
-elif [[ "$_KRN_URING" == "2" ]]; then
-  add_result "Kernel" "PASS" "KRN-03" "io_uring disabled" "io_uring désactivé" "io_uring_disabled=2" ""
-  _krn_door closed
-else
-  add_result "Kernel" "WARN" "KRN-03" "io_uring available to unprivileged users" \
-    "io_uring accessible sans privilège" "io_uring_disabled=$_KRN_URING" \
-    "A young and heavily exposed subsystem. 'sysctl -w kernel.io_uring_disabled=2' (1 = restricted to io_uring_group). May affect some databases and proxies."
-  _krn_door open
-fi
+  # ── KRN-06  kexec ────────────────────────────────────────────────────────────
+  _KRN_KEXEC="$(_krn_sysctl kernel.kexec_load_disabled)"
+  if [[ "$_KRN_KEXEC" == "1" ]]; then
+    add_result "Kernel" "PASS" "KRN-06" "kexec disabled" "kexec désactivé" "kexec_load_disabled=1" ""
+  else
+    add_result "Kernel" "WARN" "KRN-06" "kexec allowed" "kexec autorisé" "kexec_load_disabled=${_KRN_KEXEC/\?/0}" \
+      "kexec boots an arbitrary kernel without going through the firmware, bypassing Secure Boot. 'sysctl -w kernel.kexec_load_disabled=1'"
+  fi
 
-# ── KRN-04  userfaultfd ──────────────────────────────────────────────────────
-# Not itself a bug, but what turns a race into a reliable exploit.
-_KRN_UFFD="$(_krn_sysctl vm.unprivileged_userfaultfd)"
-if [[ "$_KRN_UFFD" == "0" ]]; then
-  add_result "Kernel" "PASS" "KRN-04" "Unprivileged userfaultfd disabled" \
-    "userfaultfd non privilégié désactivé" "vm.unprivileged_userfaultfd=0" ""
-  _krn_door closed
-elif [[ "$_KRN_UFFD" == "?" ]]; then
-  add_result "Kernel" "PASS" "KRN-04" "userfaultfd control not present" \
-    "Contrôle userfaultfd absent" "vm.unprivileged_userfaultfd unsupported" ""
-  _krn_door na
-else
-  add_result "Kernel" "WARN" "KRN-04" "Unprivileged userfaultfd allowed" \
-    "userfaultfd non privilégié autorisé" "vm.unprivileged_userfaultfd=$_KRN_UFFD" \
-    "Used to make kernel race conditions reliably exploitable. 'sysctl -w vm.unprivileged_userfaultfd=0'"
-  _krn_door open
-fi
+  # ── KRN-07  TTY line discipline autoload ─────────────────────────────────────
+  _KRN_LDISC="$(_krn_sysctl dev.tty.ldisc_autoload)"
+  if [[ "$_KRN_LDISC" == "0" ]]; then
+    add_result "Kernel" "PASS" "KRN-07" "TTY line discipline autoload disabled" \
+      "Chargement auto des disciplines TTY désactivé" "dev.tty.ldisc_autoload=0" ""
+  elif [[ "$_KRN_LDISC" == "?" ]]; then
+    add_result "Kernel" "PASS" "KRN-07" "ldisc autoload control not present" \
+      "Contrôle ldisc absent" "dev.tty.ldisc_autoload unsupported" ""
+  else
+    add_result "Kernel" "WARN" "KRN-07" "TTY line discipline autoload enabled" \
+      "Chargement auto des disciplines TTY activé" "dev.tty.ldisc_autoload=$_KRN_LDISC" \
+      "Lets an unprivileged user load old, lightly audited TTY modules. 'sysctl -w dev.tty.ldisc_autoload=0'"
+  fi
 
-# ── KRN-05  Kernel module loading ────────────────────────────────────────────
-_KRN_MODLOCK="$(_krn_sysctl kernel.modules_disabled)"
-if [[ "$_KRN_MODLOCK" == "1" ]]; then
-  add_result "Kernel" "PASS" "KRN-05" "Module loading locked" "Chargement de modules verrouillé" "kernel.modules_disabled=1" ""
-else
-  add_result "Kernel" "WARN" "KRN-05" "Module loading open" "Chargement de modules ouvert" "kernel.modules_disabled=${_KRN_MODLOCK/\?/0}" \
-    "Locking after boot stops a rootkit being loaded as a module. 'sysctl -w kernel.modules_disabled=1' once the machine has settled. Irreversible until reboot."
-fi
+  # ── KRN-08  Kernel lockdown ──────────────────────────────────────────────────
+  if [[ -r /sys/kernel/security/lockdown ]]; then
+    _KRN_LOCKDOWN="$(sed -n 's/.*\[\([a-z]*\)\].*/\1/p' /sys/kernel/security/lockdown 2>/dev/null)"
+    case "$_KRN_LOCKDOWN" in
+      integrity|confidentiality)
+        add_result "Kernel" "PASS" "KRN-08" "Kernel lockdown active" "Verrouillage noyau actif" "lockdown=$_KRN_LOCKDOWN" "" ;;
+      *)
+        add_result "Kernel" "WARN" "KRN-08" "Kernel lockdown off" "Verrouillage noyau inactif" "lockdown=${_KRN_LOCKDOWN:-none}" \
+          "Stops even root from changing the running kernel. Enabled through Secure Boot, or 'lockdown=integrity' on the kernel command line." ;;
+    esac
+  else
+    add_result "Kernel" "WARN" "KRN-08" "Kernel lockdown not available" "Verrouillage noyau indisponible" \
+      "/sys/kernel/security/lockdown absent" "Requires a kernel built with CONFIG_SECURITY_LOCKDOWN_LSM."
+  fi
 
-# ── KRN-06  kexec ────────────────────────────────────────────────────────────
-_KRN_KEXEC="$(_krn_sysctl kernel.kexec_load_disabled)"
-if [[ "$_KRN_KEXEC" == "1" ]]; then
-  add_result "Kernel" "PASS" "KRN-06" "kexec disabled" "kexec désactivé" "kexec_load_disabled=1" ""
-else
-  add_result "Kernel" "WARN" "KRN-06" "kexec allowed" "kexec autorisé" "kexec_load_disabled=${_KRN_KEXEC/\?/0}" \
-    "kexec boots an arbitrary kernel without going through the firmware, bypassing Secure Boot. 'sysctl -w kernel.kexec_load_disabled=1'"
-fi
+  # ── KRN-09  BPF JIT hardening ────────────────────────────────────────────────
+  _KRN_JIT="$(_krn_sysctl net.core.bpf_jit_harden)"
+  if [[ "$_KRN_JIT" =~ ^[12]$ ]]; then
+    add_result "Kernel" "PASS" "KRN-09" "BPF JIT hardening on" "Durcissement JIT BPF actif" "bpf_jit_harden=$_KRN_JIT" ""
+  elif [[ "$_KRN_JIT" == "?" ]]; then
+    add_result "Kernel" "PASS" "KRN-09" "BPF JIT control not present" "Contrôle JIT BPF absent" "net.core.bpf_jit_harden unsupported" ""
+  else
+    add_result "Kernel" "WARN" "KRN-09" "BPF JIT hardening off" "Durcissement JIT BPF inactif" "bpf_jit_harden=$_KRN_JIT" \
+      "Without hardening, the JIT makes spraying code into kernel memory easier. 'sysctl -w net.core.bpf_jit_harden=2'"
+  fi
 
-# ── KRN-07  TTY line discipline autoload ─────────────────────────────────────
-_KRN_LDISC="$(_krn_sysctl dev.tty.ldisc_autoload)"
-if [[ "$_KRN_LDISC" == "0" ]]; then
-  add_result "Kernel" "PASS" "KRN-07" "TTY line discipline autoload disabled" \
-    "Chargement auto des disciplines TTY désactivé" "dev.tty.ldisc_autoload=0" ""
-elif [[ "$_KRN_LDISC" == "?" ]]; then
-  add_result "Kernel" "PASS" "KRN-07" "ldisc autoload control not present" \
-    "Contrôle ldisc absent" "dev.tty.ldisc_autoload unsupported" ""
-else
-  add_result "Kernel" "WARN" "KRN-07" "TTY line discipline autoload enabled" \
-    "Chargement auto des disciplines TTY activé" "dev.tty.ldisc_autoload=$_KRN_LDISC" \
-    "Lets an unprivileged user load old, lightly audited TTY modules. 'sysctl -w dev.tty.ldisc_autoload=0'"
-fi
+  # ── KRN-10  SysRq ────────────────────────────────────────────────────────────
+  _KRN_SYSRQ="$(_krn_sysctl kernel.sysrq)"
+  if [[ "$_KRN_SYSRQ" == "0" || "$_KRN_SYSRQ" == "4" ]]; then
+    add_result "Kernel" "PASS" "KRN-10" "SysRq restricted" "SysRq restreint" "kernel.sysrq=$_KRN_SYSRQ" ""
+  else
+    add_result "Kernel" "WARN" "KRN-10" "SysRq permissive" "SysRq permissif" "kernel.sysrq=${_KRN_SYSRQ/\?/unknown}" \
+      "SysRq exposes kernel operations from the physical console, including a memory dump. 'sysctl -w kernel.sysrq=0' (4 keeps only the keyboard reset)."
+  fi
 
-# ── KRN-08  Kernel lockdown ──────────────────────────────────────────────────
-if [[ -r /sys/kernel/security/lockdown ]]; then
-  _KRN_LOCKDOWN="$(sed -n 's/.*\[\([a-z]*\)\].*/\1/p' /sys/kernel/security/lockdown 2>/dev/null)"
-  case "$_KRN_LOCKDOWN" in
-    integrity|confidentiality)
-      add_result "Kernel" "PASS" "KRN-08" "Kernel lockdown active" "Verrouillage noyau actif" "lockdown=$_KRN_LOCKDOWN" "" ;;
-    *)
-      add_result "Kernel" "WARN" "KRN-08" "Kernel lockdown off" "Verrouillage noyau inactif" "lockdown=${_KRN_LOCKDOWN:-none}" \
-        "Stops even root from changing the running kernel. Enabled through Secure Boot, or 'lockdown=integrity' on the kernel command line." ;;
-  esac
-else
-  add_result "Kernel" "WARN" "KRN-08" "Kernel lockdown not available" "Verrouillage noyau indisponible" \
-    "/sys/kernel/security/lockdown absent" "Requires a kernel built with CONFIG_SECURITY_LOCKDOWN_LSM."
-fi
+  # ── KRN-11  Exotic filesystem modules ────────────────────────────────────────
+  # Rarely used, rarely audited, historically a steady source of CVEs. Reached by
+  # anyone who can plug in a USB stick or mount an image.
+  _KRN_FS_LOADED=""
+  for _m in cramfs freevxfs jffs2 hfs hfsplus squashfs udf ksmbd; do
+    lsmod 2>/dev/null | awk '{print $1}' | grep -qx "$_m" && _KRN_FS_LOADED+="$_m "
+  done
+  if [[ -z "$_KRN_FS_LOADED" ]]; then
+    add_result "Kernel" "PASS" "KRN-11" "No exotic filesystem modules loaded" \
+      "Aucun module de système de fichiers exotique chargé" "cramfs/freevxfs/jffs2/hfs/hfsplus/udf/ksmbd absent" ""
+  else
+    add_result "Kernel" "WARN" "KRN-11" "Exotic filesystem modules loaded" \
+      "Modules de systèmes de fichiers exotiques chargés" "loaded: ${_KRN_FS_LOADED% }" \
+      "Rarely used, rarely audited, a regular source of CVEs. Add 'install <module> /bin/true' to /etc/modprobe.d/ for any you do not need."
+  fi
 
-# ── KRN-09  BPF JIT hardening ────────────────────────────────────────────────
-_KRN_JIT="$(_krn_sysctl net.core.bpf_jit_harden)"
-if [[ "$_KRN_JIT" =~ ^[12]$ ]]; then
-  add_result "Kernel" "PASS" "KRN-09" "BPF JIT hardening on" "Durcissement JIT BPF actif" "bpf_jit_harden=$_KRN_JIT" ""
-elif [[ "$_KRN_JIT" == "?" ]]; then
-  add_result "Kernel" "PASS" "KRN-09" "BPF JIT control not present" "Contrôle JIT BPF absent" "net.core.bpf_jit_harden unsupported" ""
-else
-  add_result "Kernel" "WARN" "KRN-09" "BPF JIT hardening off" "Durcissement JIT BPF inactif" "bpf_jit_harden=$_KRN_JIT" \
-    "Without hardening, the JIT makes spraying code into kernel memory easier. 'sysctl -w net.core.bpf_jit_harden=2'"
-fi
-
-# ── KRN-10  SysRq ────────────────────────────────────────────────────────────
-_KRN_SYSRQ="$(_krn_sysctl kernel.sysrq)"
-if [[ "$_KRN_SYSRQ" == "0" || "$_KRN_SYSRQ" == "4" ]]; then
-  add_result "Kernel" "PASS" "KRN-10" "SysRq restricted" "SysRq restreint" "kernel.sysrq=$_KRN_SYSRQ" ""
-else
-  add_result "Kernel" "WARN" "KRN-10" "SysRq permissive" "SysRq permissif" "kernel.sysrq=${_KRN_SYSRQ/\?/unknown}" \
-    "SysRq exposes kernel operations from the physical console, including a memory dump. 'sysctl -w kernel.sysrq=0' (4 keeps only the keyboard reset)."
-fi
-
-# ── KRN-11  Exotic filesystem modules ────────────────────────────────────────
-# Rarely used, rarely audited, historically a steady source of CVEs. Reached by
-# anyone who can plug in a USB stick or mount an image.
-_KRN_FS_LOADED=""
-for _m in cramfs freevxfs jffs2 hfs hfsplus squashfs udf ksmbd; do
-  lsmod 2>/dev/null | awk '{print $1}' | grep -qx "$_m" && _KRN_FS_LOADED+="$_m "
-done
-if [[ -z "$_KRN_FS_LOADED" ]]; then
-  add_result "Kernel" "PASS" "KRN-11" "No exotic filesystem modules loaded" \
-    "Aucun module de système de fichiers exotique chargé" "cramfs/freevxfs/jffs2/hfs/hfsplus/udf/ksmbd absent" ""
-else
-  add_result "Kernel" "WARN" "KRN-11" "Exotic filesystem modules loaded" \
-    "Modules de systèmes de fichiers exotiques chargés" "loaded: ${_KRN_FS_LOADED% }" \
-    "Rarely used, rarely audited, a regular source of CVEs. Add 'install <module> /bin/true' to /etc/modprobe.d/ for any you do not need."
-fi
-
-# ── KRN-12  Exposure summary ─────────────────────────────────────────────────
-# The point of the family, stated once: how many doorways are still open.
-# Counts the verdicts recorded above; it does not re-read a single sysctl.
-if [[ "$_KRN_DOORS_KNOWN" -eq 0 ]]; then
-  add_result "Kernel" "WARN" "KRN-12" "LPE doorway status unknown" \
-    "État des portes d'élévation inconnu" "no doorway control readable on this kernel" ""
-elif [[ "$_KRN_DOORS_OPEN" -eq 0 ]]; then
-  add_result "Kernel" "PASS" "KRN-12" "Primary LPE doorways closed" \
-    "Principales portes d'élévation fermées" "$_KRN_DOORS_KNOWN of $_KRN_DOORS_KNOWN closed" ""
-else
-  add_result "Kernel" "WARN" "KRN-12" "Primary LPE doorways open" \
-    "Principales portes d'élévation ouvertes" \
-    "$_KRN_DOORS_OPEN of $_KRN_DOORS_KNOWN open (userns, eBPF, io_uring, userfaultfd)" \
-    "These settings neutralise whole classes of exploit, with no patch and no reboot. See 'aartool surface'."
-fi
+  # ── KRN-12  Exposure summary ─────────────────────────────────────────────────
+  # The point of the family, stated once: how many doorways are still open.
+  # Counts the verdicts recorded above; it does not re-read a single sysctl.
+  if [[ "$_KRN_DOORS_KNOWN" -eq 0 ]]; then
+    add_result "Kernel" "WARN" "KRN-12" "LPE doorway status unknown" \
+      "État des portes d'élévation inconnu" "no doorway control readable on this kernel" ""
+  elif [[ "$_KRN_DOORS_OPEN" -eq 0 ]]; then
+    add_result "Kernel" "PASS" "KRN-12" "Primary LPE doorways closed" \
+      "Principales portes d'élévation fermées" "$_KRN_DOORS_KNOWN of $_KRN_DOORS_KNOWN closed" ""
+  else
+    add_result "Kernel" "WARN" "KRN-12" "Primary LPE doorways open" \
+      "Principales portes d'élévation ouvertes" \
+      "$_KRN_DOORS_OPEN of $_KRN_DOORS_KNOWN open (userns, eBPF, io_uring, userfaultfd)" \
+      "These settings neutralise whole classes of exploit, with no patch and no reboot. See 'aartool surface'."
+  fi
+}
 
 _checks_auth() {
 # =============================================================================
@@ -1887,7 +1895,7 @@ if cmd_exists auditctl; then
     add_result "Logging" "PASS" "LOG-04" "Audit rules configured" "Règles d'audit présentes" "$AUDIT_RULES rules found" ""
   else
     add_result "Logging" "WARN" "LOG-04" "Few audit rules" "Peu de règles d'audit" "$AUDIT_RULES rule(s)" \
-      "Add rules under /etc/audit/rules.d/ (see the CyberAar Ansible roles)."
+      "Add rules under /etc/audit/rules.d/ (see the cyberaar.hardening Ansible roles)."
   fi
 else
   add_result "Logging" "WARN" "LOG-04" "auditctl not available" "auditctl indisponible" "Cannot check rules" \
@@ -2036,8 +2044,15 @@ elif cmd_exists aide || cmd_exists aide2; then
   add_result "Integrity" "FAIL" "INT-07" "AIDE installed but DB missing" "AIDE installé sans base de données" "aide.db not found" \
     "Initialisez: 'aide --init && cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz'"
 else
-  add_result "Integrity" "WARN" "INT-07" "AIDE not installed" "AIDE non installé" "No integrity DB" \
-    "Install AIDE: 'dnf install aide && aide --init'"
+  # Do not restate INT-01 here. When AIDE is absent both checks used to emit
+  # the identical title "AIDE not installed", so one missing package produced
+  # two warnings that read as two problems, and a reader counting findings
+  # counted it twice. The verdict is still WARN, because the machine genuinely
+  # has no integrity database; only the wording changes, to say which finding
+  # it follows from.
+  add_result "Integrity" "WARN" "INT-07" "AIDE database not initialised" \
+    "Base AIDE non initialisée" "AIDE is not installed, see INT-01" \
+    "Install AIDE first: 'dnf install aide && aide --init'"
 fi
 
 # INT-08 Cron directory permissions (not world-writable)
@@ -2277,12 +2292,15 @@ _ansible_terminal_plan() {
 
 _render_summary() {
   printf "\n${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-  printf "${BOLD}  CyberAar Security Score: ${NC}"
+  printf "${BOLD}  aartool security score: ${NC}"
   if   [[ "$SCORE" -ge 80 ]]; then printf "${GREEN}${BOLD}%s%%${NC}\n" "$SCORE"
   elif [[ "$SCORE" -ge 60 ]]; then printf "${YELLOW}${BOLD}%s%%${NC}\n" "$SCORE"
   else printf "${RED}${BOLD}%s%%${NC}\n" "$SCORE"; fi
-  printf "  ${GREEN}PASS %-4s${NC}  ${YELLOW}WARN %-4s${NC}  ${RED}FAIL %-4s${NC}  of %s checks\n" \
-    "$PASS" "$WARN" "$FAIL" "$TOTAL"
+  # Failures lead. They are the only line that means "this is wrong" rather
+  # than "this could not be verified", and putting PASS first buried them.
+  printf "  ${RED}%-4s failed${NC}   ${YELLOW}%-4s warnings${NC}   ${GREEN}%-4s passed${NC}   of %s checks\n" \
+    "$FAIL" "$WARN" "$PASS" "$TOTAL"
+  printf "  ${DIM}A warning counts as half a failure in the score.${NC}\n"
   printf "  %s  ·  %s\n" "$HOSTNAME_VAL" "$DATE_VAL"
   printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
@@ -2354,7 +2372,7 @@ _render_json() {
 
   cat > "$JSON_OUT" <<EOF
 {
-  "cyberaar_baseline": {
+  "aartool": {
     "version": "${SCRIPT_VERSION}",
     "host": "${_j_host}",
     "os": "${_j_os}",
@@ -2487,7 +2505,7 @@ cat > "$HTML_OUT" <<HTMLEOF
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CyberAar Baseline — ${_h_host}</title>
+<title>aartool: ${_h_host}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -2983,7 +3001,7 @@ footer {
   </div>
   <div class="header-title">
     <h1>Security Baseline Report</h1>
-    <div class="subtitle">Security Baseline Report, CyberAar Checker</div>
+    <div class="subtitle">Generated by aartool-baseline v${SCRIPT_VERSION}</div>
   </div>
   <div class="header-meta">
     <div><strong>${_h_host}</strong></div>
@@ -3072,7 +3090,7 @@ ${ANSIBLE_PLAN_HTML}
     </a>
   </div>
   <div class="footer-text">
-    Generated by <a href="https://github.com/cyberaar/aartool" target="_blank">CyberAar Baseline Checker v${SCRIPT_VERSION}</a><br>
+    Generated by <a href="https://github.com/cyberaar/aartool" target="_blank">aartool-baseline v${SCRIPT_VERSION}</a><br>
     <strong>${DATE_VAL}</strong> · ${_h_host} · ${_h_os}
   </div>
 </footer>
@@ -3118,6 +3136,11 @@ OS_VAL=$(grep -oP '(?<=^PRETTY_NAME=").+(?=")' /etc/os-release 2>/dev/null || un
 
 # ─── RUN CHECKS ──────────────────────────────────────────────────────────────
 _checks_system
+# Kernel checks used to run at bundle-load time, because this file was the only
+# check family with no wrapping function. That put twelve unlabelled KRN rows
+# above section 1, before any header had been printed. It runs here now, which
+# is where build.sh already placed the file in the concatenation order.
+_checks_kernel
 _checks_auth
 _checks_ssh
 _checks_filesystem
@@ -3127,15 +3150,52 @@ _checks_integrity
 _checks_compliance
 
 # ─── COMPUTE SCORE ───────────────────────────────────────────────────────────
+# A warning counts as half a failure, not as a whole one.
+#
+# This used to be PASS / TOTAL, which penalised a WARN exactly as hard as a
+# FAIL. A stock Ubuntu box with 8 real failures and 57 warnings scored 40% in
+# red, and a reader has no way to tell that from a machine with 65 failures.
+# Worse, many warnings are "cannot determine" rather than "is wrong": no /boot
+# to read, no mokutil installed, a container with no systemd. Scoring those
+# identically to PermitRootLogin=yes is what made the number untrustworthy, and
+# a number nobody trusts gets ignored along with the findings under it.
+#
+# FAIL still costs full marks. The point is that the headline number should
+# separate "wrong" from "unverified", which is the same distinction `advise`
+# makes when it pulls decisions out into their own list.
 TOTAL=$((PASS + WARN + FAIL))
 SCORE=0
 # Values passed with -v rather than interpolated into the awk program text.
 # PASS and TOTAL are internal counters today, so this is hygiene rather than a
 # fix, but a program built by string concatenation is one refactor away from
 # taking a value it did not choose.
-[[ "$TOTAL" -gt 0 ]] && SCORE=$(awk -v p="$PASS" -v t="$TOTAL" 'BEGIN {printf "%.0f", (p / t) * 100}')
+[[ "$TOTAL" -gt 0 ]] && SCORE=$(awk -v p="$PASS" -v w="$WARN" -v t="$TOTAL" \
+  'BEGIN {printf "%.0f", ((p + (w * 0.5)) / t) * 100}')
 
 # ─── RENDER OUTPUTS ──────────────────────────────────────────────────────────
 _render_summary          # terminal score box + ansible remediation plan
 _render_json             # JSON file (if $JSON_OUT set)
 _render_html             # HTML file (if $HTML_OUT set)
+
+# ─── HAND THE REPORTS BACK ───────────────────────────────────────────────────
+# This script has to run as root: it reads sshd_config, /etc/shadow and the
+# audit rules. Everything it writes was therefore owned by root, mode 600, and
+# under sudo that left the person who ran it unable to open the report the tool
+# had just printed a path to. `aartool report` and `aartool diff` both failed on
+# it with a permission error.
+#
+# `aartool inspect` already handled this (cmd/inspect.sh). The standalone script
+# did not, and the standalone script is the path the README advertises as the
+# fastest way to try the tool, so this was the first-run experience.
+#
+# Only files this run wrote, and the directory only when this run created it: a
+# --output-dir the user pointed at something pre-existing is not ours to give
+# away.
+if [[ -n "${SUDO_UID:-}" && -n "${SUDO_GID:-}" ]]; then
+  for _f in "$JSON_OUT" "$HTML_OUT"; do
+    [[ -n "$_f" && -e "$_f" ]] && chown "${SUDO_UID}:${SUDO_GID}" "$_f" 2>/dev/null
+  done
+  [[ "${OUTPUT_DIR_CREATED:-false}" == true && -d "$OUTPUT_DIR" ]] \
+    && chown "${SUDO_UID}:${SUDO_GID}" "$OUTPUT_DIR" 2>/dev/null
+  true
+fi

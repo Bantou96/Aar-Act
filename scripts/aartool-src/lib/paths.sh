@@ -64,7 +64,7 @@ resolve_paths() {
   fi
   INVENTORY_EXAMPLE="$ANSIBLE_BASE/inventory/hosts.example"
   TOOLKIT_DASHBOARD="$root/dashboard/index.html"
-  BASELINE="$root/scripts/cyberaar-baseline.sh"
+  BASELINE="$root/scripts/aartool-baseline.sh"
   HARDEN="$root/scripts/run-hardening.sh"
 
   # The inventory is NOT checked here. inventory/hosts is gitignored, because it
@@ -72,7 +72,7 @@ resolve_paths() {
   # local machine has no use for it. Requiring it up front made every command
   # fail on a clean checkout, including the one command that needs nothing.
   # plan and apply check it themselves, where it actually matters.
-  [[ -f "$BASELINE" ]] || die "cyberaar-baseline.sh not found: $BASELINE"
+  [[ -f "$BASELINE" ]] || die "aartool-baseline.sh not found: $BASELINE"
   [[ -f "$HARDEN"   ]] || die "run-hardening.sh not found: $HARDEN"
 }
 

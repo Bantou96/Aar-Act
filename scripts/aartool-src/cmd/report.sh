@@ -108,7 +108,12 @@ _report_build_anon() {
   # "cyberaar_baseline" key to "REDACTED_baseline", the dashboard's bootstrap
   # found no reports to load, and the output was a perfectly valid HTML file
   # showing an empty page. Refuse instead, and say why.
-  local schema="cyberaar_baseline host os date score summary results id category status check detail remediation ansible_remediation remediation_tags version fail_ids warn_ids playbook inventory pass warn fail total"
+  #
+  # The root key was renamed cyberaar_baseline -> aartool in 3.4.0. BOTH belong
+  # here: the new one because `--redact aartool` is now the way to trip the same
+  # bug, and the old one because reports written before 3.4.0 still carry it and
+  # are still readable.
+  local schema="aartool cyberaar_baseline host os date score summary results id category status check detail remediation ansible_remediation remediation_tags version fail_ids warn_ids playbook inventory pass warn fail total"
   local e k
   for e in ${extra[@]+"${extra[@]}"}; do
     for k in $schema; do
@@ -172,7 +177,7 @@ _report_anon_warn() {
 # The same three locations advise looks in, newest first.
 _report_find_newest() {
   local f
-  f=$(find . ./reports /var/log/cyberaar -maxdepth 1 -name 'cyberaar-*.json' -type f -print0 2>/dev/null \
+  f=$(find . ./reports /var/log/cyberaar -maxdepth 1 \( -name 'aartool-*.json' -o -name 'cyberaar-*.json' \) -type f -print0 2>/dev/null \
       | xargs -0 -r ls -t 2>/dev/null | head -1) || true
   [[ -n "$f" ]] && printf '%s' "$f"
   return 0
@@ -281,7 +286,7 @@ cmd_report() {
     return;
   }
   PRELOAD.forEach(function (raw) {
-    var r = raw && raw.cyberaar_baseline;
+    var r = raw && (raw.aartool || raw.cyberaar_baseline);
     if (!r || !r.host) { console.warn('aartool: skipped a report with no host'); return; }
     if (!DB[r.host]) DB[r.host] = [];
     DB[r.host].push(r);
@@ -298,7 +303,7 @@ JS
   # script touches something structural the file is still valid HTML and still
   # opens, and shows nothing at all.
   local embedded
-  embedded=$(grep -c '"cyberaar_baseline"' "$target" || true)
+  embedded=$(grep -cE '"(aartool|cyberaar_baseline)"' "$target" || true)
   if [[ "$embedded" -lt "${#files[@]}" ]]; then
     die "Only ${embedded} of ${#files[@]} reports survived into $target with an intact
         structure, so it would open empty. This is a bug in aartool, not in your

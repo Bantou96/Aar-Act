@@ -99,7 +99,7 @@ EOF
 # is how a tool earns a reputation for being confused.
 _advise_find_report() {
   local f
-  f=$(find . ./reports /var/log/cyberaar -maxdepth 1 -name 'cyberaar-*.json' -type f -print0 2>/dev/null \
+  f=$(find . ./reports /var/log/cyberaar -maxdepth 1 \( -name 'aartool-*.json' -o -name 'cyberaar-*.json' \) -type f -print0 2>/dev/null \
       | xargs -0 -r ls -t 2>/dev/null | head -1) || true
   [[ -n "$f" ]] && printf '%s' "$f"
   return 0
@@ -131,8 +131,8 @@ cmd_advise() {
     info "Using the most recent report found: $report"
   fi
   [[ -f "$report" ]] || die "No such report: $report"
-  grep -q '"cyberaar_baseline"' "$report" \
-    || die "$report does not look like a cyberaar audit report.
+  grep -qE '"(aartool|cyberaar_baseline)"' "$report" \
+    || die "$report does not look like an aartool audit report.
         It must be the JSON that 'aartool inspect -o DIR' writes, not the HTML."
 
   vlog "parsing $report"

@@ -1,5 +1,5 @@
 # ── inspect ──────────────────────────────────────────────────────────────────
-# Wraps cyberaar-baseline.sh. Its flags are already clear and already the ones
+# Wraps aartool-baseline.sh. Its flags are already clear and already the ones
 # in the published docs, so they are passed through rather than renamed: the
 # gain from a second spelling would not repay teaching people two.
 
@@ -105,7 +105,7 @@ cmd_inspect() {
 
   local wrote=0
   if [[ "$save" == true && -d "$out_dir" ]]; then
-    wrote=$(find "$out_dir" -maxdepth 1 -name 'cyberaar-*.json' -newermt '-10 minutes' 2>/dev/null | wc -l)
+    wrote=$(find "$out_dir" -maxdepth 1 \( -name 'aartool-*.json' -o -name 'cyberaar-*.json' \) -newermt '-10 minutes' 2>/dev/null | wc -l)
     # Leave no empty directory behind from a run that produced nothing.
     [[ "$wrote" -eq 0 ]] && rmdir "$out_dir" 2>/dev/null || true
   fi

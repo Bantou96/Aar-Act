@@ -11,7 +11,7 @@ on:
       - "dashboard/**"
       - "ansible-hardening/playbooks/**"
       - "ansible-hardening/roles/*/defaults/**"
-      - "scripts/cyberaar-baseline.sh"
+      - "scripts/aartool-baseline.sh"
       - ".github/workflows/baseline-build.yml"
   pull_request:
     branches: [main]
@@ -22,7 +22,7 @@ on:
       - "dashboard/**"
       - "ansible-hardening/playbooks/**"
       - "ansible-hardening/roles/*/defaults/**"
-      - "scripts/cyberaar-baseline.sh"
+      - "scripts/aartool-baseline.sh"
       - ".github/workflows/baseline-build.yml"
   workflow_dispatch:
 
@@ -40,16 +40,16 @@ jobs:
 
       - name: Verify bundle is in sync with src/
         run: |
-          if ! git diff --exit-code scripts/cyberaar-baseline.sh; then
+          if ! git diff --exit-code scripts/aartool-baseline.sh; then
             echo ""
-            echo "ERROR: cyberaar-baseline.sh is out of sync with src/."
+            echo "ERROR: aartool-baseline.sh is out of sync with src/."
             echo "Run 'bash scripts/build.sh' locally and commit the result."
             exit 1
           fi
 
       - name: Verify check count
         run: |
-          COUNT=$(grep -oh '"[A-Z]\{2,4\}-[0-9]\{2\}"' scripts/cyberaar-baseline.sh | sort -u | wc -l)
+          COUNT=$(grep -oh '"[A-Z]\{2,4\}-[0-9]\{2\}"' scripts/aartool-baseline.sh | sort -u | wc -l)
           echo "Unique check IDs in bundle: $COUNT"
           if [[ "$COUNT" -lt 90 ]]; then
             echo "ERROR: Fewer than 90 unique checks found — build may be corrupt."
@@ -58,7 +58,7 @@ jobs:
           echo "Check count OK: $COUNT"
 
       - name: Verify bash syntax
-        run: bash -n scripts/cyberaar-baseline.sh
+        run: bash -n scripts/aartool-baseline.sh
 
       # Coverage we cannot get any other way: CI runs on Ubuntu and Molecule
       # tests Rocky 9 and Ubuntu 22.04, so nothing in the pipeline ever executes
@@ -71,7 +71,7 @@ jobs:
       - name: Shellcheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck -S warning scripts/cyberaar-baseline.sh
+          shellcheck -S warning scripts/aartool-baseline.sh
           shellcheck -S warning scripts/run-hardening.sh
 
       - name: Distribution mapping tests

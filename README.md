@@ -131,10 +131,10 @@ has no dependencies beyond the coreutils already there, which is what makes it
 work on an air-gapped box:
 
 ```bash
-curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/cyberaar-baseline.sh
+curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/aartool-baseline.sh
 curl -fsSLO https://github.com/cyberaar/aartool/releases/latest/download/SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing
-chmod +x cyberaar-baseline.sh && sudo ./cyberaar-baseline.sh
+chmod +x aartool-baseline.sh && sudo ./aartool-baseline.sh
 ```
 
 `aartool` and the Ansible collection tarball are attached to every release the
@@ -372,7 +372,7 @@ each has its own document.
 | component | what it is | |
 |---|---|---|
 | **Ansible collection** | `cyberaar.hardening`: 52 CIS-aligned roles, RHEL 9 family and Ubuntu/Debian, in parallel pairs with automatic OS detection | [docs/ANSIBLE.md](docs/ANSIBLE.md) |
-| **`cyberaar-baseline.sh`** | The audit itself: one bash file, no dependencies, `curl`-able onto an air-gapped box | [docs/BASELINE.md](docs/BASELINE.md) |
+| **`aartool-baseline.sh`** | The audit itself: one bash file, no dependencies, `curl`-able onto an air-gapped box | [docs/BASELINE.md](docs/BASELINE.md) |
 | **Dashboard** | Single HTML file, no server, no external requests, works on an isolated network | [docs/DASHBOARD.md](docs/DASHBOARD.md) |
 | **Container image** | Ansible and the collections already present, for running without installing anything | [docs/CONTAINER.md](docs/CONTAINER.md) |
 | **Packages** | `.deb` and `.rpm`, and the signed repository they are served from | [docs/PACKAGING.md](docs/PACKAGING.md) |
@@ -386,7 +386,7 @@ aartool/
 ├── scripts/
 │   ├── aartool                       # generated bundle, do not edit
 │   ├── aartool-src/                  # edit here: main.sh, run.sh, lib/, cmd/
-│   ├── cyberaar-baseline.sh          # generated bundle, do not edit
+│   ├── aartool-baseline.sh          # generated bundle, do not edit
 │   ├── src/                          # edit here: checks/, renderers/, lib/
 │   ├── build-aartool.sh  build.sh    # rebuild the two bundles
 │   └── tests/                        # guards, each written after the bug it prevents
@@ -399,7 +399,7 @@ aartool/
 └── execution-environment/
 ```
 
-**Both `scripts/aartool` and `scripts/cyberaar-baseline.sh` are generated.**
+**Both `scripts/aartool` and `scripts/aartool-baseline.sh` are generated.**
 Edit the sources and run the matching build script; CI fails if the committed
 bundle has drifted from them.
 
@@ -449,7 +449,7 @@ or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
 Written with AI assistance ([Claude](https://claude.ai), Anthropic), and tested
 harder because of it:
 
-- **911 assertions across the suite**, plus Molecule scenarios on Rocky 9 and
+- **912 assertions across the suite**, plus Molecule scenarios on Rocky 9 and
   Ubuntu 22.04.
 - **Every guard here was proven to fail on injected drift before it was
   trusted.** A check that cannot fail is worse than no check.

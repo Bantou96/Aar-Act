@@ -1,6 +1,6 @@
 # CyberAar Security Dashboard
 
-A single-file, zero-dependency web dashboard for visualising `cyberaar-baseline` JSON reports.
+A single-file, zero-dependency web dashboard for visualising `aartool-baseline` JSON reports.
 
 **No install, no server, no internet required**: open `index.html` in any modern browser.
 
@@ -12,7 +12,7 @@ A single-file, zero-dependency web dashboard for visualising `cyberaar-baseline`
 
 ```bash
 # Local machine
-sudo cyberaar-baseline --json-out /tmp/$(hostname)-before.json
+sudo aartool-baseline --json-out /tmp/$(hostname)-before.json
 
 # Remote host via Ansible
 ansible-playbook -i ansible-hardening/inventory/hosts \

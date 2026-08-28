@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  CyberAar Security Baseline Checker
-#  Vérificateur de Sécurité de Base CyberAar
+#  aartool-baseline: the audit engine behind `aartool inspect`
+#  aartool-baseline : moteur d'audit derrière `aartool inspect`
 #
 #  Version   : see SCRIPT_VERSION below, which is the only place it is written
 #  Author    : CyberAar (https://github.com/cyberaar/aartool)
@@ -9,22 +9,22 @@
 #  Target    : RHEL/CentOS/Ubuntu/Debian (Linux Government Servers)
 #
 #  Usage:
-#    sudo bash cyberaar-baseline.sh
-#    sudo bash cyberaar-baseline.sh --html-out /tmp/report.html
-#    sudo bash cyberaar-baseline.sh --json-out /tmp/report.json
-#    sudo bash cyberaar-baseline.sh --html-out /tmp/report.html --json-out /tmp/report.json
-#    sudo cyberaar-baseline [same options] (after --install)
+#    sudo bash aartool-baseline.sh
+#    sudo bash aartool-baseline.sh --html-out /tmp/report.html
+#    sudo bash aartool-baseline.sh --json-out /tmp/report.json
+#    sudo bash aartool-baseline.sh --html-out /tmp/report.html --json-out /tmp/report.json
+#    sudo aartool-baseline [same options] (after --install)
 # =============================================================================
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_VERSION="4.6.7"
-SCRIPT_NAME="cyberaar-baseline"
+SCRIPT_VERSION="4.7.0"
+SCRIPT_NAME="aartool-baseline"
 
 _show_help() {
   cat <<HELPEOF
-CyberAar Security Baseline Checker v${SCRIPT_VERSION}
+aartool-baseline v${SCRIPT_VERSION}   (audit engine; `aartool --version` is the toolkit)
 
-Usage: cyberaar-baseline [OPTIONS]
+Usage: aartool-baseline [OPTIONS]
 
   --html-out <file>      Write HTML report to <file>
   --json-out <file>      Write JSON report to <file>
@@ -45,30 +45,30 @@ Remote / Fleet options:
   --ansible-dir <dir>    Path to your Ansible repo (for playbook suggestions)
 
 Install options:
-  --install              Install to /usr/local/bin/cyberaar-baseline
-  --uninstall            Remove from /usr/local/bin/cyberaar-baseline
+  --install              Install to /usr/local/bin/aartool-baseline
+  --uninstall            Remove from /usr/local/bin/aartool-baseline
   --version              Print version and exit
   --help, -h             Show this help
 
 Examples:
   # Local scan
-  sudo cyberaar-baseline --html-out /tmp/report.html
-  sudo cyberaar-baseline --output-dir /var/log/cyberaar
+  sudo aartool-baseline --html-out /tmp/report.html
+  sudo aartool-baseline --output-dir /var/log/cyberaar
 
   # Remote single host
-  cyberaar-baseline --host 10.0.1.10 --user admin --html-out /tmp/report-10.0.1.10.html
+  aartool-baseline --host 10.0.1.10 --user admin --html-out /tmp/report-10.0.1.10.html
 
   # Fleet scan from file
-  cyberaar-baseline --host-file /etc/cyberaar/hosts.txt --user admin --output-dir /var/log/cyberaar
+  aartool-baseline --host-file /etc/cyberaar/hosts.txt --user admin --output-dir /var/log/cyberaar
 
   # Fleet scan from Ansible inventory
-  cyberaar-baseline --inventory inventory/hosts --user admin --output-dir /var/log/cyberaar
+  aartool-baseline --inventory inventory/hosts --user admin --output-dir /var/log/cyberaar
 
   # With Ansible remediation suggestions
-  cyberaar-baseline --host 10.0.1.10 --ansible-dir ~/aartool/ansible-hardening
+  aartool-baseline --host 10.0.1.10 --ansible-dir ~/aartool/ansible-hardening
 
   # Install
-  sudo bash cyberaar-baseline.sh --install
+  sudo bash aartool-baseline.sh --install
 HELPEOF
 }
 
@@ -99,7 +99,7 @@ while [[ $# -gt 0 ]]; do
     --output-dir) OUTPUT_DIR="$2"; shift 2 ;;
     --install)    DO_INSTALL=true; shift ;;
     --uninstall)  DO_UNINSTALL=true; shift ;;
-    --version)    echo "cyberaar-baseline v${SCRIPT_VERSION}"; exit 0 ;;
+    --version)    echo "aartool-baseline v${SCRIPT_VERSION}"; exit 0 ;;
     --help|-h)    _show_help; exit 0 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
@@ -116,23 +116,25 @@ REMOTE_JUMP="${REMOTE_JUMP:-}"
 ANSIBLE_INVENTORY="${ANSIBLE_INVENTORY:-}"
 ANSIBLE_DIR="${ANSIBLE_DIR:-}"
 
+OUTPUT_DIR_CREATED=false
 if [[ -n "$OUTPUT_DIR" ]]; then
+  [[ -d "$OUTPUT_DIR" ]] || OUTPUT_DIR_CREATED=true
   mkdir -p "$OUTPUT_DIR"
   DATESTR=$(date '+%Y%m%d-%H%M%S')
   HOST_SLUG=$(hostname -s 2>/dev/null | tr -cd 'a-zA-Z0-9-')
-  [[ -z "$HTML_OUT" ]] && HTML_OUT="${OUTPUT_DIR}/cyberaar-${HOST_SLUG}-${DATESTR}.html"
-  [[ -z "$JSON_OUT" ]] && JSON_OUT="${OUTPUT_DIR}/cyberaar-${HOST_SLUG}-${DATESTR}.json"
+  [[ -z "$HTML_OUT" ]] && HTML_OUT="${OUTPUT_DIR}/aartool-${HOST_SLUG}-${DATESTR}.html"
+  [[ -z "$JSON_OUT" ]] && JSON_OUT="${OUTPUT_DIR}/aartool-${HOST_SLUG}-${DATESTR}.json"
 fi
 
 # ─── INSTALL ─────────────────────────────────────────────────────────────────
 if [[ "$DO_INSTALL" == true ]]; then
-  [[ $EUID -ne 0 ]] && { echo '❌  Root required: sudo bash cyberaar-baseline.sh --install'; exit 1; }
+  [[ $EUID -ne 0 ]] && { echo '❌  Root required: sudo bash aartool-baseline.sh --install'; exit 1; }
   INST_DEST="/usr/local/bin/${SCRIPT_NAME}"
   cp -f "$SCRIPT_PATH" "$INST_DEST"
   chmod 755 "$INST_DEST"
   chown root:root "$INST_DEST"
   echo "✅  Installed → $INST_DEST"
-  echo "    Try: sudo cyberaar-baseline --help"
+  echo "    Try: sudo aartool-baseline --help"
   exit 0
 fi
 

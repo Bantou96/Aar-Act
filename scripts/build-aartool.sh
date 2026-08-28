@@ -6,7 +6,7 @@
 #  Usage: bash scripts/build-aartool.sh
 #  Output: scripts/aartool (do not edit directly)
 #
-#  Mirrors scripts/build.sh, which builds cyberaar-baseline.sh the same way.
+#  Mirrors scripts/build.sh, which builds aartool-baseline.sh the same way.
 # =============================================================================
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

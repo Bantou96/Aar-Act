@@ -46,7 +46,7 @@ _build_host_list() {
 # open sessions behind on the operator's machine.
 _CYBERAAR_SSH_CTL_DIR=""
 _cyberaar_ssh_ctl_init() {
-  _CYBERAAR_SSH_CTL_DIR="$(mktemp -d -t cyberaar-ssh-XXXXXX 2>/dev/null)" || _CYBERAAR_SSH_CTL_DIR=""
+  _CYBERAAR_SSH_CTL_DIR="$(mktemp -d -t aartool-ssh-XXXXXX 2>/dev/null)" || _CYBERAAR_SSH_CTL_DIR=""
   [[ -n "$_CYBERAAR_SSH_CTL_DIR" ]] && chmod 700 "$_CYBERAAR_SSH_CTL_DIR" 2>/dev/null || true
 }
 _cyberaar_ssh_ctl_cleanup() {
@@ -72,7 +72,7 @@ trap _cyberaar_ssh_ctl_cleanup EXIT INT TERM
 #
 #     scp: Connection closed
 #
-# swallowed by 2>/dev/null, then "bash: /tmp/.cyberaar-baseline-xxx.sh: No such
+# swallowed by 2>/dev/null, then "bash: /tmp/.aartool-baseline-xxx.sh: No such
 # file or directory" from the run that followed, and a cheerful "1 succeeded" at
 # the end. Found on a live bastion, not in review.
 #
@@ -152,9 +152,9 @@ _remote_scan() {
   local target="${REMOTE_USER}@${host}"
   local _rand
   _rand=$(openssl rand -hex 8 2>/dev/null || tr -dc 'a-f0-9' < /dev/urandom 2>/dev/null | head -c 16)
-  local remote_script="/tmp/.cyberaar-baseline-${_rand}.sh"
-  local remote_html="/tmp/.cyberaar-report-${_rand}.html"
-  local remote_json="/tmp/.cyberaar-report-${_rand}.json"
+  local remote_script="/tmp/.aartool-baseline-${_rand}.sh"
+  local remote_html="/tmp/.aartool-report-${_rand}.html"
+  local remote_json="/tmp/.aartool-report-${_rand}.json"
 
   printf "\n${BOLD}${CYAN}━━━  Remote scan: %s  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n" "$host"
 
@@ -262,7 +262,7 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
   fi
 
   printf "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}\n"
-  printf "${BOLD}${CYAN}║  CyberAar Fleet Scan — %d host(s)%-27s║${NC}\n" "${#FLEET_HOSTS[@]}" ""
+  printf "${BOLD}${CYAN}║  aartool fleet scan: %d host(s)%-28s║${NC}\n" "${#FLEET_HOSTS[@]}" ""
   printf "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}\n"
 
   _cyberaar_ssh_ctl_init
@@ -274,8 +274,8 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
     DATESTR=$(date '+%Y%m%d-%H%M%S')
 
     if [[ -n "$OUTPUT_DIR" ]]; then
-      local_html="${OUTPUT_DIR}/cyberaar-${HOST_SLUG}-${DATESTR}.html"
-      local_json="${OUTPUT_DIR}/cyberaar-${HOST_SLUG}-${DATESTR}.json"
+      local_html="${OUTPUT_DIR}/aartool-${HOST_SLUG}-${DATESTR}.html"
+      local_json="${OUTPUT_DIR}/aartool-${HOST_SLUG}-${DATESTR}.json"
     elif [[ -n "$HTML_OUT" ]]; then
       local_html="${HTML_OUT%.html}-${HOST_SLUG}.html"
     elif [[ -n "$JSON_OUT" ]]; then
@@ -294,6 +294,6 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
     "$FLEET_OK" "$FLEET_FAIL" "${#FLEET_HOSTS[@]}"
   printf "  📁 Reports in: %s\n" "${OUTPUT_DIR:-current directory}"
   printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-  printf "  CyberAar — https://github.com/cyberaar/aartool\n\n"
+  printf "  aartool  https://github.com/cyberaar/aartool\n\n"
   exit 0
 fi

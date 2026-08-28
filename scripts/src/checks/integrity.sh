@@ -75,8 +75,15 @@ elif cmd_exists aide || cmd_exists aide2; then
   add_result "Integrity" "FAIL" "INT-07" "AIDE installed but DB missing" "AIDE installé sans base de données" "aide.db not found" \
     "Initialisez: 'aide --init && cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz'"
 else
-  add_result "Integrity" "WARN" "INT-07" "AIDE not installed" "AIDE non installé" "No integrity DB" \
-    "Install AIDE: 'dnf install aide && aide --init'"
+  # Do not restate INT-01 here. When AIDE is absent both checks used to emit
+  # the identical title "AIDE not installed", so one missing package produced
+  # two warnings that read as two problems, and a reader counting findings
+  # counted it twice. The verdict is still WARN, because the machine genuinely
+  # has no integrity database; only the wording changes, to say which finding
+  # it follows from.
+  add_result "Integrity" "WARN" "INT-07" "AIDE database not initialised" \
+    "Base AIDE non initialisée" "AIDE is not installed, see INT-01" \
+    "Install AIDE first: 'dnf install aide && aide --init'"
 fi
 
 # INT-08 Cron directory permissions (not world-writable)

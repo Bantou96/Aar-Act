@@ -61,8 +61,8 @@ ENV AARTOOL_HOME=/opt/aartool
 # audit script but not aartool itself, so the one command the documentation
 # tells people to run was the one thing missing from the container.
 RUN ln -sf /opt/aartool/scripts/aartool             /usr/local/bin/aartool && \
-    ln -sf /opt/aartool/scripts/cyberaar-baseline.sh /usr/local/bin/cyberaar-baseline && \
-    chmod 755 /opt/aartool/scripts/aartool /opt/aartool/scripts/cyberaar-baseline.sh && \
+    ln -sf /opt/aartool/scripts/aartool-baseline.sh /usr/local/bin/aartool-baseline && \
+    chmod 755 /opt/aartool/scripts/aartool /opt/aartool/scripts/aartool-baseline.sh && \
     aartool --version
 
 # `docker run ghcr.io/cyberaar/aartool inspect --host ...` reads as the command

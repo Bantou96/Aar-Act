@@ -30,7 +30,7 @@ is automatic, so the playbook applies the correct set per host based on
 playbooks/0_execute_full_pipeline.yml
 │
 ├── Step 1, 1_execute_baseline_before.yml    [tags: baseline, before]
-│     ├── Copies cyberaar-baseline.sh to each remote host
+│     ├── Copies aartool-baseline.sh to each remote host
 │     ├── Runs the audit script
 │     ├── Fetches HTML + JSON reports back to the control node
 │     └── Reports saved to:

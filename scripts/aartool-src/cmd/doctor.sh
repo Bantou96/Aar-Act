@@ -98,8 +98,8 @@ cmd_doctor() {
 
   # ── The toolkit itself ─────────────────────────────────────────────────────
   _doc_pass "toolkit located" "$ANSIBLE_BASE"
-  [[ -r "$BASELINE" ]] && _doc_pass "cyberaar-baseline.sh" "readable" \
-    || _doc_fail "cyberaar-baseline.sh" "missing or unreadable" "Re-clone, or run: bash scripts/build.sh"
+  [[ -r "$BASELINE" ]] && _doc_pass "aartool-baseline.sh" "readable" \
+    || _doc_fail "aartool-baseline.sh" "missing or unreadable" "Re-clone, or run: bash scripts/build.sh"
   [[ -r "$HARDEN" ]] && _doc_pass "run-hardening.sh" "readable" \
     || _doc_fail "run-hardening.sh" "missing or unreadable" "Re-clone the repository"
 

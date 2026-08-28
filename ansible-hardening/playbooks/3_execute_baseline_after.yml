@@ -1,7 +1,7 @@
 ---
 # =============================================================================
 #  CyberAar | Step 3 — Post-Hardening Baseline
-#  Runs the cyberaar-baseline script AFTER hardening to measure improvement
+#  Runs the aartool-baseline script AFTER hardening to measure improvement
 # =============================================================================
 
 - name: "CyberAar | Post-Hardening Baseline"
@@ -18,7 +18,7 @@
   tasks:
     - name: "Run post-hardening baseline scan"
       ansible.builtin.command: >
-        cyberaar-baseline
+        aartool-baseline
         --html-out {{ baseline_report_html }}
         --json-out {{ baseline_report_json }}
       register: baseline_after_result

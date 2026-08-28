@@ -36,7 +36,7 @@ if cmd_exists auditctl; then
     add_result "Logging" "PASS" "LOG-04" "Audit rules configured" "Règles d'audit présentes" "$AUDIT_RULES rules found" ""
   else
     add_result "Logging" "WARN" "LOG-04" "Few audit rules" "Peu de règles d'audit" "$AUDIT_RULES rule(s)" \
-      "Add rules under /etc/audit/rules.d/ (see the CyberAar Ansible roles)."
+      "Add rules under /etc/audit/rules.d/ (see the cyberaar.hardening Ansible roles)."
   fi
 else
   add_result "Logging" "WARN" "LOG-04" "auditctl not available" "auditctl indisponible" "Cannot check rules" \

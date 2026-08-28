@@ -70,9 +70,9 @@ def load(p):
             doc = json.load(fh)
     except (OSError, json.JSONDecodeError) as e:
         sys.stderr.write(f"[ERROR] Cannot read {p}: {e}\n"); sys.exit(2)
-    b = doc.get("cyberaar_baseline")
+    b = doc.get("aartool") or doc.get("cyberaar_baseline")
     if not b:
-        sys.stderr.write(f"[ERROR] {p} is not a cyberaar-baseline report.\n"); sys.exit(2)
+        sys.stderr.write(f"[ERROR] {p} is not a aartool-baseline report.\n"); sys.exit(2)
     return b
 
 a, b = load(before_path), load(after_path)
@@ -115,6 +115,7 @@ GREEN  = "\033[0;32m" if C else ""
 YELLOW = "\033[1;33m" if C else ""
 CYAN   = "\033[0;36m" if C else ""
 BOLD   = "\033[1m"    if C else ""
+DIM    = "\033[2m"    if C else ""
 RST    = "\033[0m"    if C else ""
 
 def line(sym, colour, cid, text, extra=""):
@@ -133,6 +134,16 @@ if not quiet:
         delta = sb - sa
         col = GREEN if delta > 0 else (RED if delta < 0 else "")
         print(f"{BOLD}score{RST}    {sa} → {sb}   {col}{delta:+d}{RST}")
+        # The scoring formula changed once already: a warning used to cost as
+        # much as a failure, and stopped doing so. Diffing across that change
+        # showed +27 on a machine where nothing whatsoever had happened, which
+        # is exactly the kind of number somebody pastes into a status report.
+        # The per-check verdicts below are always comparable; the score is only
+        # comparable within one engine version.
+        va, vb = a.get("version"), b.get("version")
+        if va and vb and va != vb:
+            print(f"{DIM}         engine {va} → {vb}: the score is not comparable "
+                  f"across versions, the findings below are.{RST}")
     print("─" * 68)
 
 if regressed:
