@@ -43,6 +43,31 @@ supported by the role logic but has no Molecule image yet: treat it as untested.
 
 ---
 
+## How this differs from the tools you already have
+
+These are good tools and `aartool` does not replace them. The gap it is built
+for is the middle of the workflow, between knowing and fixing.
+
+| | what it gives you | what is still on you |
+|---|---|---|
+| [Lynis](https://cisofy.com/lynis/) | a thorough audit and a hardening index | deciding what to do first, and doing it |
+| [OpenSCAP](https://www.open-scap.org/) / CIS-CAT | scanning against a formal profile, and an auditor-shaped report | the report is evidence, not a plan, and the profile is all-or-nothing |
+| [ansible-lockdown](https://github.com/ansible-lockdown), [dev-sec.io](https://dev-sec.io/) | well-maintained remediation roles | knowing which of them this host needs, and what each one breaks |
+
+`aartool` is the loop across that gap: audit, an order to work in, the cost of
+each fix stated before you make it, the change itself, then a diff that proves
+only what you intended moved.
+
+The part that is genuinely different is `explain`. Every finding states what
+closing it breaks, and "not on this machine" is a supported answer. A hardening
+tool that argues one side gets switched off entirely, and its good advice goes
+with it.
+
+If Lynis already tells you what is wrong and you already know what to do about
+it, you do not need this.
+
+---
+
 ## Install
 
 From the package repository, which is what most people want:
@@ -424,19 +449,16 @@ or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
 Written with AI assistance ([Claude](https://claude.ai), Anthropic), and tested
 harder because of it:
 
-- **815 assertions on every commit**, plus Molecule scenarios on Rocky 9 and
+- **911 assertions across the suite**, plus Molecule scenarios on Rocky 9 and
   Ubuntu 22.04.
 - **Every guard here was proven to fail on injected drift before it was
   trusted.** A check that cannot fail is worse than no check.
-- **Run against a live 14-node estate, not only in CI.** One live hardening run
-  found 4 defects that 716 assertions had missed, which is why it is still run
-  on real machines.
+- **Run against a live 15-node estate, not only in CI.** One live hardening run
+  found 4 defects the suite had missed at the time, which is why it is still run
+  on real machines rather than only in CI.
 - **The check and role counts in this README are derived from the tool itself**,
   so the documentation cannot claim a number the code does not produce.
 
 If a claim in this README is not checked by a test, treat it as a bug and open
 an issue.
 
----
-
-*#Cybersecurity #Hardening #AarAct #CyberAar*
