@@ -26,7 +26,7 @@ semver='^[0-9]+\.[0-9]+\.[0-9]+$'
 
 # ── The declared versions ────────────────────────────────────────────────────
 BASELINE_SRC=$(grep -oP '^SCRIPT_VERSION="\K[^"]+'   src/main.sh)
-BASELINE_BIN=$(grep -oP '^SCRIPT_VERSION="\K[^"]+'   cyberaar-baseline.sh)
+BASELINE_BIN=$(grep -oP '^SCRIPT_VERSION="\K[^"]+'   aartool-baseline.sh)
 AARTOOL_SRC=$(grep -oP '^AARTOOL_VERSION="\K[^"]+'   aartool-src/main.sh)
 AARTOOL_BIN=$(grep -oP '^AARTOOL_VERSION="\K[^"]+'   aartool)
 COLLECTION=$(grep -oP '^version:\s*\K\S+'            ../ansible-hardening/galaxy.yml)
@@ -39,7 +39,7 @@ done
 # The bundles are built, not edited. If someone bumps the source and forgets to
 # rebuild, the committed script keeps shipping the old number. CI already fails
 # on bundle drift; this says which number is wrong when it does.
-eq "cyberaar-baseline.sh bundle version" "$BASELINE_BIN" "$BASELINE_SRC"
+eq "aartool-baseline.sh bundle version" "$BASELINE_BIN" "$BASELINE_SRC"
 eq "aartool bundle version"              "$AARTOOL_BIN"  "$AARTOOL_SRC"
 
 # ── Reports must state the version that produced them ────────────────────────
@@ -102,14 +102,14 @@ done
 
 # `--version` must report the declared version, not a string that happens to
 # look like one. Run the built bundles and compare.
-got=$(bash cyberaar-baseline.sh --version 2>/dev/null | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-eq "cyberaar-baseline.sh --version output" "$got" "$BASELINE_SRC"
+got=$(bash aartool-baseline.sh --version 2>/dev/null | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+eq "aartool-baseline.sh --version output" "$got" "$BASELINE_SRC"
 got=$(bash aartool --version 2>/dev/null | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 eq "aartool --version output" "$got" "$AARTOOL_SRC"
 
 # The --help banner too: it is the first thing a new user reads.
-got=$(bash cyberaar-baseline.sh --help 2>/dev/null | grep -oP 'Baseline Checker v\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-eq "cyberaar-baseline.sh --help banner" "$got" "$BASELINE_SRC"
+got=$(bash aartool-baseline.sh --help 2>/dev/null | grep -oP 'aartool-baseline v\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+eq "aartool-baseline.sh --help banner" "$got" "$BASELINE_SRC"
 
 # The package takes its version from AARTOOL_VERSION at build time, so a .deb
 # that reports a version the tool itself does not is impossible by

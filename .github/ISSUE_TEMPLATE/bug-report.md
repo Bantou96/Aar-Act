@@ -9,7 +9,7 @@ assignees: ''
 
 **Component**
 - [ ] Ansible role (name: `linux_<category>_<rhel9|ubuntu>`)
-- [ ] Baseline script (`cyberaar-baseline.sh`)
+- [ ] Baseline script (`aartool-baseline.sh`)
 - [ ] CI / workflow
 
 **Describe the bug**

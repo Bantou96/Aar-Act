@@ -1,7 +1,7 @@
 ---
 # =============================================================================
 #  CyberAar | Step 1 — Pre-Hardening Baseline
-#  Runs the cyberaar-baseline script BEFORE hardening to capture initial state
+#  Runs the aartool-baseline script BEFORE hardening to capture initial state
 # =============================================================================
 
 - name: "CyberAar | Pre-Hardening Baseline"
@@ -24,10 +24,10 @@
         owner: root
         group: root
 
-    - name: "Copy cyberaar-baseline script to remote host"
+    - name: "Copy aartool-baseline script to remote host"
       ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../../scripts/cyberaar-baseline.sh"
-        dest: "/usr/local/bin/cyberaar-baseline"
+        src: "{{ playbook_dir }}/../../scripts/aartool-baseline.sh"
+        dest: "/usr/local/bin/aartool-baseline"
         mode: "0755"
         owner: root
         group: root
@@ -35,7 +35,7 @@
   tasks:
     - name: "Run pre-hardening baseline scan"
       ansible.builtin.command: >
-        cyberaar-baseline
+        aartool-baseline
         --html-out {{ baseline_report_html }}
         --json-out {{ baseline_report_json }}
       register: baseline_before_result

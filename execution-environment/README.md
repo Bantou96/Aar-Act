@@ -9,7 +9,7 @@ A self-contained container image with everything needed to run CyberAar hardenin
 - `cyberaar.hardening` collection, 51 CIS-aligned hardening roles
 - `ansible.posix` + `community.general` dependencies
 - CyberAar playbooks at `/usr/share/cyberaar/playbooks/`
-- `cyberaar-baseline` audit script at `/usr/local/bin/cyberaar-baseline`
+- `aartool-baseline` audit script at `/usr/local/bin/aartool-baseline`
 
 ---
 
@@ -27,7 +27,7 @@ Docker or Podman installed on the control node. No Python, no Ansible, no pip.
 docker run --rm \
   -v ~/.ssh:/root/.ssh:ro \
   ghcr.io/cyberaar/ee-hardening:latest \
-  cyberaar-baseline --host 10.0.1.10 --user admin \
+  aartool-baseline --host 10.0.1.10 --user admin \
   --html-out /tmp/report.html --json-out /tmp/report.json
 ```
 

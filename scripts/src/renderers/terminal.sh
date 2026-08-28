@@ -77,12 +77,15 @@ _ansible_terminal_plan() {
 
 _render_summary() {
   printf "\n${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-  printf "${BOLD}  CyberAar Security Score: ${NC}"
+  printf "${BOLD}  aartool security score: ${NC}"
   if   [[ "$SCORE" -ge 80 ]]; then printf "${GREEN}${BOLD}%s%%${NC}\n" "$SCORE"
   elif [[ "$SCORE" -ge 60 ]]; then printf "${YELLOW}${BOLD}%s%%${NC}\n" "$SCORE"
   else printf "${RED}${BOLD}%s%%${NC}\n" "$SCORE"; fi
-  printf "  ${GREEN}PASS %-4s${NC}  ${YELLOW}WARN %-4s${NC}  ${RED}FAIL %-4s${NC}  of %s checks\n" \
-    "$PASS" "$WARN" "$FAIL" "$TOTAL"
+  # Failures lead. They are the only line that means "this is wrong" rather
+  # than "this could not be verified", and putting PASS first buried them.
+  printf "  ${RED}%-4s failed${NC}   ${YELLOW}%-4s warnings${NC}   ${GREEN}%-4s passed${NC}   of %s checks\n" \
+    "$FAIL" "$WARN" "$PASS" "$TOTAL"
+  printf "  ${DIM}A warning counts as half a failure in the score.${NC}\n"
   printf "  %s  ·  %s\n" "$HOSTNAME_VAL" "$DATE_VAL"
   printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 

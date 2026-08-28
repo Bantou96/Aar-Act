@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  CyberAar Baseline — Build Script
-#  Concatenates src/ files in order to produce cyberaar-baseline.sh.
+#  Concatenates src/ files in order to produce aartool-baseline.sh.
 #
 #  Usage: bash scripts/build.sh
-#  Output: scripts/cyberaar-baseline.sh (do not edit directly)
+#  Output: scripts/aartool-baseline.sh (do not edit directly)
 # =============================================================================
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUT="${SCRIPT_DIR}/cyberaar-baseline.sh"
+OUT="${SCRIPT_DIR}/aartool-baseline.sh"
 
 # Concatenation order is critical: shebang must come first, run.sh last.
 PARTS=(

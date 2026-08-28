@@ -1,12 +1,12 @@
 # CyberAar Security Baseline Checker
 
-**Script:** `scripts/cyberaar-baseline.sh`
+**Script:** `scripts/aartool-baseline.sh`
 **Version:** 4.2.0
 **Checks:** 96 across 8 sections
 
 ## Overview
 
-`cyberaar-baseline.sh` is a standalone bash script that performs a local security audit of a Linux server and produces:
+`aartool-baseline.sh` is a standalone bash script that performs a local security audit of a Linux server and produces:
 
 - **Terminal output**: colour-coded PASS / WARN / FAIL results with a security score
 - **HTML report**: self-contained file suitable for sharing with management or auditors
@@ -35,22 +35,22 @@ It covers the same control areas as the CyberAar Ansible hardening roles, so the
 ### Run directly (no install)
 
 ```bash
-sudo bash scripts/cyberaar-baseline.sh
+sudo bash scripts/aartool-baseline.sh
 ```
 
 ### Install to PATH
 
 ```bash
-sudo bash scripts/cyberaar-baseline.sh --install
-# Installs to /usr/local/bin/cyberaar-baseline
+sudo bash scripts/aartool-baseline.sh --install
+# Installs to /usr/local/bin/aartool-baseline
 
-sudo cyberaar-baseline --help
+sudo aartool-baseline --help
 ```
 
 ### Uninstall
 
 ```bash
-sudo cyberaar-baseline --uninstall
+sudo aartool-baseline --uninstall
 ```
 
 ---
@@ -58,7 +58,7 @@ sudo cyberaar-baseline --uninstall
 ## Usage
 
 ```
-cyberaar-baseline [OPTIONS]
+aartool-baseline [OPTIONS]
 
 Output options:
   --html-out <file>      Write HTML report to <file>
@@ -74,8 +74,8 @@ Remote / fleet options:
   --ansible-dir <dir>    Path to the Ansible repo (improves remediation output)
 
 Install options:
-  --install              Install to /usr/local/bin/cyberaar-baseline
-  --uninstall            Remove from /usr/local/bin/cyberaar-baseline
+  --install              Install to /usr/local/bin/aartool-baseline
+  --uninstall            Remove from /usr/local/bin/aartool-baseline
   --version              Print version and exit
   --help, -h             Show help
 ```
@@ -84,33 +84,33 @@ Install options:
 
 ```bash
 # Local scan, terminal output only
-sudo cyberaar-baseline
+sudo aartool-baseline
 
 # Local scan with HTML report
-sudo cyberaar-baseline --html-out /tmp/report.html
+sudo aartool-baseline --html-out /tmp/report.html
 
 # Local scan with both HTML and JSON
-sudo cyberaar-baseline --html-out /tmp/report.html --json-out /tmp/report.json
+sudo aartool-baseline --html-out /tmp/report.html --json-out /tmp/report.json
 
 # Auto-named reports in a directory (timestamped)
-sudo cyberaar-baseline --output-dir /var/log/cyberaar
+sudo aartool-baseline --output-dir /var/log/cyberaar
 
 # Remote single host
-cyberaar-baseline --host 10.0.1.10 --user admin --ssh-key ~/.ssh/id_rsa \
+aartool-baseline --host 10.0.1.10 --user admin --ssh-key ~/.ssh/id_rsa \
   --html-out /tmp/report-10.0.1.10.html
 
 # Fleet scan from a host file
-cyberaar-baseline --host-file /etc/cyberaar/hosts.txt --user admin \
+aartool-baseline --host-file /etc/cyberaar/hosts.txt --user admin \
   --output-dir /var/log/cyberaar
 
 # Fleet scan from Ansible inventory
-cyberaar-baseline \
+aartool-baseline \
   --inventory ansible-hardening/inventory/hosts \
   --user admin \
   --output-dir /var/log/cyberaar
 
 # With Ansible remediation suggestions pointing to the local repo
-sudo cyberaar-baseline \
+sudo aartool-baseline \
   --ansible-dir ~/aartool/ansible-hardening \
   --html-out /tmp/report.html
 ```
@@ -399,9 +399,9 @@ The baseline script is used at steps 1 and 3 of the three-step pipeline:
 
 ```
 playbooks/0_execute_full_pipeline.yml
-  ├── 1_execute_baseline_before.yml  ← runs cyberaar-baseline, saves "before" report
+  ├── 1_execute_baseline_before.yml  ← runs aartool-baseline, saves "before" report
   ├── 2_configure_hardening.yml      ← applies CyberAar hardening roles
-  └── 3_execute_baseline_after.yml   ← re-runs cyberaar-baseline, saves "after" report
+  └── 3_execute_baseline_after.yml   ← re-runs aartool-baseline, saves "after" report
 ```
 
 To run the full pipeline (baseline → harden → baseline) against a single host:
@@ -416,7 +416,7 @@ Reports are saved under `ansible-hardening/reports/before/<hostname>/` and `repo
 To use the script standalone against a host already in the Ansible inventory and get remediation commands pointing at the local repo:
 
 ```bash
-cyberaar-baseline \
+aartool-baseline \
   --host 10.0.1.10 \
   --user admin \
   --inventory ansible-hardening/inventory/hosts \
@@ -432,14 +432,14 @@ The script can scan multiple hosts in sequence over SSH. The script is copied to
 
 ```bash
 # From a file (one host/IP per line, # comments supported)
-cyberaar-baseline \
+aartool-baseline \
   --host-file /etc/cyberaar/hosts.txt \
   --user admin \
   --ssh-key ~/.ssh/cyberaar.key \
   --output-dir /var/log/cyberaar
 
 # From an Ansible INI inventory
-cyberaar-baseline \
+aartool-baseline \
   --inventory ansible-hardening/inventory/hosts \
   --user admin \
   --output-dir /var/log/cyberaar
@@ -506,13 +506,13 @@ Checks without a mapping have no automated fix in this collection.
 
 ## Contributing to the Script
 
-`cyberaar-baseline.sh` is a **generated bundle**: do not edit it directly. The source lives in `src/` and is assembled by `build.sh`.
+`aartool-baseline.sh` is a **generated bundle**: do not edit it directly. The source lives in `src/` and is assembled by `build.sh`.
 
 ### Source layout
 
 ```
 scripts/
-├── cyberaar-baseline.sh        ← generated bundle (deploy/install this)
+├── aartool-baseline.sh        ← generated bundle (deploy/install this)
 ├── build.sh                    ← assembles src/ in order, runs bash -n
 └── src/
     ├── main.sh                 ← shebang, _show_help, CLI args, install/uninstall
@@ -554,7 +554,7 @@ vim scripts/src/checks/ssh.sh
 bash scripts/build.sh
 
 # 3. Test locally
-sudo bash scripts/cyberaar-baseline.sh \
+sudo bash scripts/aartool-baseline.sh \
   --html-out /tmp/test.html \
   --json-out /tmp/test.json
 
@@ -563,7 +563,7 @@ grep -c "<tr>" /tmp/test.html        # should match total check count
 python3 -c "import json; d=json.load(open('/tmp/test.json')); print(len(d['cyberaar_baseline']['results']), 'checks')"
 ```
 
-Commit both the edited `src/` file(s) **and** the regenerated `cyberaar-baseline.sh`.
+Commit both the edited `src/` file(s) **and** the regenerated `aartool-baseline.sh`.
 
 ---
 

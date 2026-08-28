@@ -129,6 +129,26 @@ if command -v node >/dev/null 2>&1; then
     eval(js+probe);
   ' "$DASH" tests/fixtures/audit-fixture.json 2>&1) || out="ERROR: $out"
 
+  # ── The JSON root key was renamed cyberaar_baseline -> aartool ────────────
+  # Both must load. The old name is in every report anybody already has on disk,
+  # and a dashboard that silently ignores them shows an empty page rather than
+  # an error: exactly the failure mode --redact once produced. Assert the
+  # resolution the loader actually performs, not the key this fixture happens
+  # to carry.
+  keyprobe=$(node -e '
+    const fs=require("fs");
+    const doc=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+    const legacy=doc.cyberaar_baseline;
+    if(!legacy) { console.log("FIXTURE-NOT-LEGACY"); process.exit(0); }
+    const modern={aartool:legacy};
+    const pick=j=>j.aartool||j.cyberaar_baseline;
+    const a=pick(doc), b=pick(modern);
+    console.log((a&&a.host?"legacy-ok":"legacy-FAIL")+" "+(b&&b.host?"modern-ok":"modern-FAIL"));
+  ' tests/fixtures/audit-fixture.json 2>&1) || keyprobe="ERROR: $keyprobe"
+  if [[ "$keyprobe" == "legacy-ok modern-ok" ]]; then ok; else
+    bad "dashboard key resolution: want 'legacy-ok modern-ok', got '$keyprobe'"
+  fi
+
   if [[ "$out" == ERROR:* || "$out" == *NOCMD* ]]; then
     bad "the dashboard threw while rendering a real report: ${out:0:300}"
   else

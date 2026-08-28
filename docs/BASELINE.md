@@ -1,4 +1,4 @@
-# cyberaar-baseline.sh
+# aartool-baseline.sh
 
 The standalone audit script. One file, no dependencies beyond bash and the
 coreutils already on the machine, which is what lets you `curl` it onto an
@@ -22,29 +22,47 @@ It runs **109 security checks** across 9 sections and produces:
 
 No Ansible required, pure bash, no dependencies beyond standard Linux tools.
 
+### How the score is calculated
+
+```
+score = (PASS + WARN/2) / TOTAL
+```
+
+A **FAIL** costs full marks. A **WARN** costs half, because a warning is
+frequently "could not be verified on this machine" rather than "this is wrong":
+no `/boot` to read, no `mokutil` installed, no systemd inside a container. It
+used to cost the same as a failure, which meant a host with 8 real failures and
+57 such warnings scored the same as one that was genuinely broken, and a number
+nobody trusts gets ignored along with the findings under it.
+
+The score is a trend line for one host over time, not a grade and not a
+comparison between hosts. `aartool advise` is what tells you the order to work
+in. Scores are only comparable within one engine version: `aartool diff` prints
+a note when the two reports it is given were produced by different ones.
+
 ### Install to PATH (optional)
 
 ```bash
-sudo bash scripts/cyberaar-baseline.sh --install
-# Installs to /usr/local/bin/cyberaar-baseline
+sudo bash scripts/aartool-baseline.sh --install
+# Installs to /usr/local/bin/aartool-baseline
 ```
 
 ### Run a local audit
 
 ```bash
 # Without installing
-sudo bash scripts/cyberaar-baseline.sh \
+sudo bash scripts/aartool-baseline.sh \
   --html-out /tmp/report.html \
   --json-out /tmp/report.json
 
 # After installing to PATH
-sudo cyberaar-baseline --output-dir /var/log/cyberaar
+sudo aartool-baseline --output-dir /var/log/cyberaar
 
 # Remote single host
-cyberaar-baseline --host 10.0.1.10 --user admin --output-dir /var/log/cyberaar
+aartool-baseline --host 10.0.1.10 --user admin --output-dir /var/log/cyberaar
 
 # Fleet scan from Ansible inventory
-cyberaar-baseline --inventory ansible-hardening/inventory/hosts \
+aartool-baseline --inventory ansible-hardening/inventory/hosts \
   --user admin --output-dir /var/log/cyberaar
 ```
 

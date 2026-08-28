@@ -15,7 +15,7 @@ on:
     paths:
       - "packaging/**"
       - "scripts/aartool"
-      - "scripts/cyberaar-baseline.sh"
+      - "scripts/aartool-baseline.sh"
       - "scripts/run-hardening.sh"
       - "ansible-hardening/**"
       - "dashboard/**"
@@ -25,7 +25,7 @@ on:
     paths:
       - "packaging/**"
       - "scripts/aartool"
-      - "scripts/cyberaar-baseline.sh"
+      - "scripts/aartool-baseline.sh"
       - "scripts/run-hardening.sh"
       - "ansible-hardening/**"
       - "dashboard/**"
