@@ -107,6 +107,36 @@ eq "aartool-baseline.sh --version output" "$got" "$BASELINE_SRC"
 got=$(bash aartool --version 2>/dev/null | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 eq "aartool --version output" "$got" "$AARTOOL_SRC"
 
+# The banner must not contain a version it did not declare.
+#
+# This caught a real one. The banner read "(audit engine; `aartool --version` is
+# the toolkit)" inside an UNQUOTED heredoc, so the backticks ran at display time
+# and interpolated whatever aartool happened to be installed on the machine
+# running it. A build made on a box with an old package printed
+# "aartool 3.3.6" to every user, from a source file containing no such number,
+# and every existing assertion still passed because 4.7.0 was also present.
+#
+# Any semver in --help that is not the declared version is a bug, whether it got
+# there by interpolation or by being typed.
+#
+# The lookarounds exclude dotted quads: --help documents `--host 10.0.1.10`,
+# whose first three octets look exactly like a semver.
+strays=$(bash aartool-baseline.sh --help 2>/dev/null \
+  | grep -oP '(?<![0-9.])[0-9]+\.[0-9]+\.[0-9]+(?![0-9.])' | grep -vFx "$BASELINE_SRC" | sort -u)
+if [[ -z "$strays" ]]; then
+  ok
+else
+  bad "aartool-baseline.sh --help prints a version it does not declare: $(echo "$strays" | tr '\n' ' ')"
+fi
+
+# Nothing in --help may execute. An unquoted heredoc is the mechanism above, and
+# the same shape would happily run anything else.
+if bash aartool-baseline.sh --help 2>/dev/null | grep -q '`'; then
+  bad "aartool-baseline.sh --help contains a backtick; if the heredoc is unquoted it will execute"
+else
+  ok
+fi
+
 # The --help banner too: it is the first thing a new user reads.
 got=$(bash aartool-baseline.sh --help 2>/dev/null | grep -oP 'aartool-baseline v\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 eq "aartool-baseline.sh --help banner" "$got" "$BASELINE_SRC"

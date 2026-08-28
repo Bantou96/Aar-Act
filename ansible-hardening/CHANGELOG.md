@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.4.0]: 2026-08-28
 
 ### Changed
 
@@ -51,6 +51,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **INT-07 duplicated INT-01.** With AIDE absent both emitted the identical
   title "AIDE not installed", so one missing package read as two problems and
   was counted twice.
+- **The `--help` banner executed a command and printed a version from the build
+  machine.** It carried a backtick-quoted `aartool --version` inside an
+  unquoted heredoc, so at display time it ran whatever `aartool` was installed
+  and printed that version to the user. A build made on a box with an older
+  package advertised `aartool 3.3.6` from a source file containing no such
+  number. Caught by running the staged release asset before tagging; guarded
+  now, in both directions (no undeclared version in `--help`, no backtick in
+  the banner at all).
 
 ## [3.3.7]: 2026-08-27
 

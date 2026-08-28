@@ -22,7 +22,7 @@ SCRIPT_NAME="aartool-baseline"
 
 _show_help() {
   cat <<HELPEOF
-aartool-baseline v${SCRIPT_VERSION}   (audit engine; `aartool --version` is the toolkit)
+aartool-baseline v${SCRIPT_VERSION}   (audit engine; run 'aartool --version' for the toolkit)
 
 Usage: aartool-baseline [OPTIONS]
 
