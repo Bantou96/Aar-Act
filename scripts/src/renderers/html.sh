@@ -95,7 +95,7 @@ _render_html() {
     ANSIBLE_PLAN_HTML+="<tr class='plan-row'>"
     ANSIBLE_PLAN_HTML+="<td class='plan-desc'><strong>$_desc</strong></td>"
     ANSIBLE_PLAN_HTML+="<td class='plan-role'><code>$_role_r</code><br><small>Ubuntu: <code>$_role_u</code></small></td>"
-    ANSIBLE_PLAN_HTML+="<td class='plan-tags'><span class='tag-badge'>--tags $_tags</span></td>"
+    ANSIBLE_PLAN_HTML+="<td class='plan-tags'><span class='tag-badge'>--only $_tags</span></td>"
     ANSIBLE_PLAN_HTML+="<td class='plan-cmd'><code>aartool apply --target $_tgt --only $_tags</code></td>"
     ANSIBLE_PLAN_HTML+="</tr>"
   done
@@ -160,10 +160,28 @@ cat > "$HTML_OUT" <<HTMLEOF
   /* Tinted fills. Defined per theme rather than derived, because color-mix()
      is not safe to depend on for a file whose whole point is opening on a
      machine we know nothing about. */
-  --accent-dim: rgba(0, 229, 176, .15);
-  --pass-bg:    rgba(0, 229, 176, .08);
-  --warn-bg:    rgba(245, 158, 11, .08);
-  --fail-bg:    rgba(239, 68, 68, .08);
+  --accent-dim:   rgba(0, 229, 176, .15);
+  --pass-bg:      rgba(0, 229, 176, .08);
+  --warn-bg:      rgba(245, 158, 11, .08);
+  --fail-bg:      rgba(239, 68, 68, .08);
+
+  /* Decorative alphas. These existed as rgba() literals of the OLD palette
+     (0,194,168 = the old teal, 126,211,72 = the old lime, 13,27,62 and
+     19,34,68 = the old navies), which the first port missed because it only
+     looked for hex. A colour written in decimal is still a colour outside the
+     palette: it does not follow @media print, so borders and glows stayed on
+     the dark theme on paper. */
+  --accent-glow:  rgba(0, 229, 176, .30);
+  --accent-wash:  rgba(0, 229, 176, .08);
+  --accent-soft:  rgba(0, 229, 176, .06);
+  --accent-hover: rgba(0, 229, 176, .25);
+  --pass-edge:    rgba(0, 229, 176, .25);
+  --warn-edge:    rgba(245, 158, 11, .25);
+  --fail-edge:    rgba(239, 68, 68, .25);
+  --panel:        rgba(13, 21, 38, .90);
+  --panel-hover:  rgba(17, 28, 48, .95);
+  --hairline:     rgba(255, 255, 255, .05);
+  --shadow:       rgba(0, 0, 0, .40);
 
   /* ── Aliases ───────────────────────────────────────────────────────────────
      The rules below this block are written against these names. Custom
@@ -204,8 +222,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,194,168,.08) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(126,211,72,.05) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 60% at 50% -10%, var(--accent-wash) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, var(--accent-soft) 0%, transparent 60%);
   background-attachment: fixed;
   opacity: 0.04;
   pointer-events: none;
@@ -234,13 +252,13 @@ header {
   top: 0;
   z-index: 100;
   backdrop-filter: blur(12px);
-  box-shadow: 0 4px 30px rgba(0,0,0,.4);
+  box-shadow: 0 4px 30px var(--shadow);
 }
 .header-logo img {
   height: 54px;
   width: auto;
   display: block;
-  filter: drop-shadow(0 2px 8px rgba(0,194,168,.3));
+  filter: drop-shadow(0 2px 8px var(--accent-glow));
 }
 .header-title {
   display: flex;
@@ -252,7 +270,7 @@ header {
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -.01em;
-  color: #fff;
+  color: var(--text);
   line-height: 1.2;
 }
 .header-title .subtitle {
@@ -275,7 +293,7 @@ header {
   display: inline-block;
   background: var(--ca-teal-dim);
   color: var(--ca-teal);
-  border: 1px solid rgba(0,194,168,.3);
+  border: 1px solid var(--accent-glow);
   border-radius: 20px;
   padding: .1rem .6rem;
   font-size: .68rem;
@@ -305,7 +323,7 @@ header {
   right: -5%;
   width: 220px;
   height: 220px;
-  background: radial-gradient(circle, rgba(0,194,168,.07) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
   pointer-events: none;
 }
 .score-ring {
@@ -353,7 +371,7 @@ header {
   display: flex;
   align-items: center;
   gap: .5rem;
-  background: rgba(255,255,255,.04);
+  background: var(--hairline);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: .3rem .9rem;
@@ -379,7 +397,7 @@ header {
   margin-bottom: .4rem;
 }
 .progress {
-  background: rgba(255,255,255,.06);
+  background: var(--hairline);
   border-radius: 99px;
   height: 6px;
   overflow: hidden;
@@ -428,7 +446,7 @@ header {
   font-size: .85rem;
 }
 .results-table thead th {
-  background: rgba(13,27,62,.9);
+  background: var(--panel);
   padding: .6rem 1rem;
   text-align: left;
   font-family: var(--font-mono);
@@ -445,7 +463,7 @@ header {
   background: var(--card);
   transition: background .15s;
 }
-.results-table tbody tr:hover { background: rgba(19,34,68,.95); }
+.results-table tbody tr:hover { background: var(--panel-hover); }
 .results-table tbody tr + tr td { border-top: 1px solid var(--border); }
 .results-table td {
   padding: .75rem 1rem;
@@ -505,9 +523,9 @@ header {
   letter-spacing: .04em;
   white-space: nowrap;
 }
-.badge.pass { background: var(--pass-bg); color: var(--pass); border: 1px solid rgba(34,197,94,.25); }
-.badge.warn { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(245,158,11,.25); }
-.badge.fail { background: var(--fail-bg); color: var(--fail); border: 1px solid rgba(239,68,68,.25); }
+.badge.pass { background: var(--pass-bg); color: var(--pass); border: 1px solid var(--pass-edge); }
+.badge.warn { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-edge); }
+.badge.fail { background: var(--fail-bg); color: var(--fail); border: 1px solid var(--fail-edge); }
 
 /* ── Category label ──────────────────────────────────────────────────── */
 .cat-label {
@@ -515,7 +533,7 @@ header {
   font-size: .68rem;
   font-family: var(--font-mono);
   color: var(--muted);
-  background: rgba(255,255,255,.04);
+  background: var(--hairline);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: .1rem .4rem;
@@ -573,14 +591,26 @@ footer {
     --danger:    #b91c1c;   /* 5.9:1 on white; #ef4444 is 3.3:1 */
     --info:      #1d4ed8;
 
-    --accent-dim: rgba(15, 118, 110, .10);
-    --pass-bg:    rgba(15, 118, 110, .07);
-    --warn-bg:    rgba(180, 83, 9, .07);
-    --fail-bg:    rgba(185, 28, 28, .07);
+    --accent-dim:   rgba(15, 118, 110, .10);
+    --pass-bg:      rgba(15, 118, 110, .07);
+    --warn-bg:      rgba(180, 83, 9, .07);
+    --fail-bg:      rgba(185, 28, 28, .07);
+
+    --accent-glow:  rgba(15, 118, 110, .25);
+    --accent-wash:  rgba(15, 118, 110, .06);
+    --accent-soft:  rgba(15, 118, 110, .05);
+    --accent-hover: rgba(15, 118, 110, .12);
+    --pass-edge:    rgba(15, 118, 110, .35);
+    --warn-edge:    rgba(180, 83, 9, .35);
+    --fail-edge:    rgba(185, 28, 28, .35);
+    --panel:        #f8fafc;
+    --panel-hover:  #f1f5f9;
+    --hairline:     rgba(0, 0, 0, .08);
+    --shadow:       rgba(0, 0, 0, .10);
   }
 
   body {
-    background: #fff;
+    background: var(--bg);
     color: var(--text);
     font-size: 10pt;
     line-height: 1.45;
@@ -621,7 +651,7 @@ footer {
   margin-bottom: 1rem;
 }
 .plan-table thead th {
-  background: rgba(13,27,62,.9);
+  background: var(--panel);
   padding: .6rem 1rem;
   text-align: left;
   font-family: var(--font-mono);
@@ -635,7 +665,7 @@ footer {
 .plan-table thead th:first-child { border-radius: var(--radius) 0 0 0; }
 .plan-table thead th:last-child  { border-radius: 0 var(--radius) 0 0; }
 .plan-table tbody tr { background: var(--card); transition: background .15s; }
-.plan-table tbody tr:hover { background: rgba(19,34,68,.95); }
+.plan-table tbody tr:hover { background: var(--panel-hover); }
 .plan-table tbody tr + tr td { border-top: 1px solid var(--border); }
 .plan-table td { padding: .75rem 1rem; vertical-align: top; }
 .plan-table tbody tr:last-child td:first-child { border-radius: 0 0 0 var(--radius); }
@@ -648,7 +678,7 @@ footer {
   display: inline-block;
   background: var(--ca-teal-dim);
   color: var(--ca-teal);
-  border: 1px solid rgba(0,194,168,.3);
+  border: 1px solid var(--accent-glow);
   border-radius: 4px;
   padding: .15rem .5rem;
   font-family: var(--font-mono);
@@ -661,8 +691,8 @@ footer {
   word-break: break-all;
 }
 .consolidated-cmd {
-  background: rgba(126,211,72,.06);
-  border: 1px solid rgba(126,211,72,.2);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-glow);
   border-radius: var(--radius);
   padding: 1rem 1.2rem;
   margin-top: 1rem;
@@ -683,7 +713,7 @@ footer {
 .copy-btn {
   float: right;
   background: var(--ca-teal-dim);
-  border: 1px solid rgba(0,194,168,.3);
+  border: 1px solid var(--accent-glow);
   color: var(--ca-teal);
   border-radius: 6px;
   padding: .2rem .6rem;
@@ -692,7 +722,7 @@ footer {
   font-family: var(--font-body);
   margin-top: -.1rem;
 }
-.copy-btn:hover { background: rgba(0,194,168,.25); }
+.copy-btn:hover { background: var(--accent-hover); }
 
 </style>
 </head>
@@ -765,7 +795,8 @@ ${HTML_ROWS}
   <div class="section-title">Remediation Plan</div>
   <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem;">
     A targeted command for each failing or warning check.
-    Ajoutez <code style="color:var(--ca-teal)">--check --diff</code> pour simuler.
+    Preview any of them with <code style="color:var(--ca-teal)">aartool plan</code>,
+    same arguments. It changes nothing.
   </p>
   <table class="plan-table">
     <thead>
@@ -773,7 +804,7 @@ ${HTML_ROWS}
         <th>Issue</th>
         <th>Ansible Role</th>
         <th>Tags</th>
-        <th>Commande aartool</th>
+        <th>Command</th>
       </tr>
     </thead>
     <tbody>
@@ -782,7 +813,7 @@ ${ANSIBLE_PLAN_HTML}
   </table>
   <div class="consolidated-cmd">
     <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent.trim()).then(()=>{this.textContent='✅ Copied';setTimeout(()=>this.textContent='📋 Copy',1500)})">📋 Copy</button>
-    <span class="cmd-label">Tout corriger en une commande / Fix everything in one run</span>
+    <span class="cmd-label">Fix everything in one run</span>
     ${ANSIBLE_CONSOLIDATED_CMD}
   </div>
 </div>
