@@ -5,22 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.3]: 2026-08-29
+
+### Reverted
+
+- **The single filesystem walk from 3.5.2 is reverted.** FS-05, FS-07 and FS-10
+  go back to running their own `find / -xdev`. The combined traversal measured
+  faster here and was slower in real use, which is the measurement that counts.
+  Behaviour is identical to 3.5.1.
+
 ## [3.5.2]: 2026-08-29
 
 ### Changed
 
-- **The filesystem is walked once, not three times.** FS-05 (SUID files), FS-07
-  (world-writable directories with no sticky bit) and FS-10 (unowned files) each
-  ran their own `find / -xdev`. On the machine this was measured on they were
-  7.1s of a 35s audit, and they are the part that scales with the size of the
-  disk rather than with the number of checks: on a fileserver they dominate
-  everything else. Collected in a single traversal now.
-
-  A full audit went from **31.8s to 21.3s** on the same host with a warm cache,
-  about a third faster, and the saving grows with the filesystem.
-
-  The counts are identical, which is asserted against the three original walks
-  rather than assumed: `scripts/tests/test_fs_walk.sh`.
+- **The filesystem was walked once instead of three times.** Reverted in 3.5.3;
+  do not install this version for the change, it is superseded.
 
 ## [3.5.1]: 2026-08-29
 

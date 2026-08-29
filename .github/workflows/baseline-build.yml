@@ -102,9 +102,6 @@ jobs:
       - name: Every check carries a French name
         run: bash scripts/tests/test_french_names.sh
 
-      - name: The combined filesystem walk agrees with the three it replaced
-        run: bash scripts/tests/test_fs_walk.sh
-
       # `aartool plan` runs the playbook with --check, which installs nothing,
       # so a role that installs a package and then starts its service hits a
       # unit that is not there. Reported twice by users, for ufw and for ssh,

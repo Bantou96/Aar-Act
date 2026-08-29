@@ -17,7 +17,7 @@
 # =============================================================================
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_VERSION="4.8.2"
+SCRIPT_VERSION="4.8.3"
 SCRIPT_NAME="aartool-baseline"
 
 _show_help() {
@@ -1699,45 +1699,6 @@ _checks_filesystem() {
 # =============================================================================
 section "4. FILESYSTEM & PERMISSIONS"
 
-# ── One walk of the filesystem, not three ────────────────────────────────────
-# FS-05 (SUID files), FS-07 (world-writable dirs with no sticky bit) and FS-10
-# (unowned files) each ran their own `find / -xdev`. Three traversals of the
-# same tree, and on anything with a real number of inodes they are the slowest
-# part of the audit by a wide margin: 7.1s of a 35s run on the machine this was
-# written on, and that machine has a small disk.
-#
-# The three predicates are collected in one pass and counted by tag. The counts
-# are identical, asserted in scripts/tests/test_fs_walk.sh rather than assumed.
-#
-# -printf is GNU find. Every supported target (RHEL 9 family, Ubuntu, Debian)
-# ships GNU findutils; the fallback keeps a busybox or BSD host working rather
-# than silently reporting zero for three checks, which would read as three
-# passes.
-_FS_SUID=0 _FS_NOSTICKY=0 _FS_UNOWNED=0
-if find / -xdev -maxdepth 0 -printf '' 2>/dev/null; then
-  while read -r _tag; do
-    case "$_tag" in
-      S) _FS_SUID=$((_FS_SUID+1)) ;;
-      T) _FS_NOSTICKY=$((_FS_NOSTICKY+1)) ;;
-      U) _FS_UNOWNED=$((_FS_UNOWNED+1)) ;;
-    esac
-  #
-  # Each group ends in `-o -true` and the groups are NOT joined by -o. That is
-  # load-bearing: -o short-circuits, so with `A -o B -o C` a file matching A is
-  # never tested against C. A file that is both SUID and unowned printed S and
-  # was missing from the unowned count. Two of them on the machine this was
-  # written on, found by diffing against the three walks rather than by trusting
-  # the rewrite. Ending each group in -true makes it always continue.
-  done < <(find / -xdev \
-      \( -type f -perm -4000 -printf 'S\n' -o -true \) \
-      \( -type d -perm -0002 ! -perm -1000 -printf 'T\n' -o -true \) \
-      \( -type f \( -nouser -o -nogroup \) -printf 'U\n' -o -true \) 2>/dev/null)
-else
-  _FS_SUID=$(find / -xdev -perm -4000 -type f 2>/dev/null | wc -l)
-  _FS_NOSTICKY=$(find / -xdev -type d -perm -0002 ! -perm -1000 2>/dev/null | wc -l)
-  _FS_UNOWNED=$(find / -xdev \( -nouser -o -nogroup \) -type f 2>/dev/null | wc -l)
-fi
-
 # FS-01 /etc/passwd
 PP=$(stat -c "%a" /etc/passwd 2>/dev/null || echo "")
 [[ "$PP" == "644" ]] && \
@@ -1773,7 +1734,7 @@ else
 fi
 
 # FS-05 SUID count
-SUID=$_FS_SUID
+SUID=$(find / -xdev -perm -4000 -type f 2>/dev/null | wc -l)
 if [[ "$SUID" -le 20 ]]; then
   add_result "Files" "PASS" "FS-05" "SUID binary count OK" "Binaires SUID: count OK" "Count: $SUID" ""
 else
@@ -1791,7 +1752,7 @@ else
 fi
 
 # FS-07 Sticky bit on world-writable directories
-NOSTICKY=$_FS_NOSTICKY
+NOSTICKY=$(find / -xdev -type d -perm -0002 ! -perm -1000 2>/dev/null | wc -l)
 if [[ "$NOSTICKY" -eq 0 ]]; then
   add_result "Files" "PASS" "FS-07" "Sticky bit on all world-writable dirs" "Sticky bit sur répertoires partagés" "All world-writable dirs have sticky bit" ""
 else
@@ -1820,7 +1781,7 @@ else
 fi
 
 # FS-10 Unowned files and directories
-UNOWNED=$_FS_UNOWNED
+UNOWNED=$(find / -xdev \( -nouser -o -nogroup \) -type f 2>/dev/null | wc -l)
 if [[ "$UNOWNED" -eq 0 ]]; then
   add_result "Files" "PASS" "FS-10" "No unowned files" "Aucun fichier sans propriétaire" "0 files" ""
 else
