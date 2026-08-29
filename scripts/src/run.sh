@@ -11,6 +11,12 @@ fi
 
 HOSTNAME_VAL=$(hostname -f 2>/dev/null || hostname)
 DATE_VAL=$(date '+%Y-%m-%d %H:%M:%S')
+# The human-readable one above has no timezone, which is fine on a page someone
+# reads and wrong for the SIEM ingestion docs/BASELINE.md advertises: two hosts
+# in two zones produce timestamps that cannot be ordered. Emitted alongside
+# rather than instead, because `date` is in the HTML header and is what the
+# dashboard sorts on in every report already written.
+DATE_ISO=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 OS_VAL=$(grep -oP '(?<=^PRETTY_NAME=").+(?=")' /etc/os-release 2>/dev/null || uname -o)
 
 # ─── RUN CHECKS ──────────────────────────────────────────────────────────────

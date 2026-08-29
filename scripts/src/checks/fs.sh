@@ -9,7 +9,7 @@ PP=$(stat -c "%a" /etc/passwd 2>/dev/null || echo "")
 [[ "$PP" == "644" ]] && \
   add_result "Files" "PASS" "FS-01" "/etc/passwd perms 644" "Perms /etc/passwd correctes" "Mode: 644" "" || \
   add_result "Files" "FAIL" "FS-01" "/etc/passwd perms wrong" "Perms /etc/passwd incorrectes" "Mode: ${PP:-?}" \
-    "Corrigez: 'chmod 644 /etc/passwd'"
+    "Fix: 'chmod 644 /etc/passwd'"
 
 # FS-02 /etc/shadow
 SP=$(stat -c "%a" /etc/shadow 2>/dev/null || echo "")
@@ -35,7 +35,7 @@ if [[ "$WW" -eq 0 ]]; then
   add_result "Files" "PASS" "FS-04" "No world-writable files" "Aucun fichier inscriptible par tous" "0 found in /etc /usr /bin /sbin" ""
 else
   add_result "Files" "FAIL" "FS-04" "World-writable files found" "Fichiers inscriptibles par tous" "$WW file(s)" \
-    "Auditez: 'find /etc /usr -perm -0002 -type f -ls'"
+    "Audit: 'find /etc /usr -perm -0002 -type f -ls'"
 fi
 
 # FS-05 SUID count

@@ -379,6 +379,30 @@ declare -A ANSIBLE_MAP=(
   # KRN-12 is the summary of the four above it, not a setting of its own.
 )
 
+# ── Reachability wave ────────────────────────────────────────────────────────
+# Which question a finding answers: what an attacker reaches with no account,
+# what turns an account into root, what would have stopped you noticing, and
+# hygiene. This is the ordering `aartool advise` prints and the thing that makes
+# the tool different from a flat severity list.
+#
+# It is emitted into the JSON for the same reason remediation_tags is: a
+# consumer that wants the ordering should not have to reimplement it. The
+# dashboard kept its own copy in JS and advise has one in shell; that is two
+# places that must agree, which is the drift that has bitten this repository
+# three times. scripts/tests/test_waves.sh asserts this function and
+# _advise_wave give the same answer for every ID the baseline can emit, so a new
+# check family cannot be classified differently by the two of them.
+_wave_of() {
+  case "$1" in
+    SSH-*|NET-*)               printf 1 ;;
+    KRN-*|AUTH-*|SYS-04|SYS-05|SYS-07|SYS-08|SYS-09|SYS-10|FS-01|FS-02|FS-03|FS-05|FS-06|FS-09)
+                               printf 2 ;;
+    LOG-*|INT-*|AUD-*)         printf 3 ;;
+    SYS-02|SYS-03|SYS-11)      printf 1 ;;   # unpatched is reachable from the network
+    *)                         printf 4 ;;
+  esac
+}
+
 # =============================================================================
 #  REMOTE SCAN ENGINE
 #  When --host / --host-file / --inventory is given, SSH into each target,
@@ -680,9 +704,21 @@ if [[ -n "$REMOTE_HOST" || -n "$REMOTE_HOST_FILE" || -n "$ANSIBLE_INVENTORY" ]];
 fi
 
 # ─── COLORS ──────────────────────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
-DIM='\033[2m'   # column headers and IDs: present, but not competing with the result
+# Only when stdout is a terminal. These used to be unconditional, so
+# `aartool inspect > audit.txt` wrote 134 lines of raw \033[ escapes into the
+# file, and the `aartool diff ... || mail` pattern the README suggests mailed
+# escape sequences to whoever was on call.
+#
+# NO_COLOR is honoured because it is the convention every other CLI follows
+# (no-color.org): set to anything, colour is off. FORCE_COLOR overrides in the
+# other direction, for piping into `less -R` on purpose.
+if [[ -n "${FORCE_COLOR:-}" ]] || { [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; }; then
+  RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+  CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+  DIM='\033[2m'   # column headers and IDs: present, but not competing with the result
+else
+  RED=''; GREEN=''; YELLOW=''; CYAN=''; BOLD=''; NC=''; DIM=''
+fi
 
 # ─── GLOBALS ─────────────────────────────────────────────────────────────────
 PASS=0; WARN=0; FAIL=0
@@ -705,16 +741,53 @@ WARN_IDS=()
 # A fixed-width rule with a column header, so a section reads as a table rather
 # than as a stream. The old version appended a fixed-length bar to a
 # variable-length title, so every section ended at a different column.
-REPORT_WIDTH=86
+# The table has to fit the terminal it is printed in. This was a hard-coded 86,
+# which is wider than the 80 columns a default terminal gives you, so every row
+# wrapped and the table stopped being a table. Worse, the section rules were
+# drawn at 86 while rows ran to 156 characters, because the DETAIL column had no
+# bound at all: the rules ended 70 columns short of the content they were meant
+# to be ruling off.
+#
+# tput needs a terminal; when there is none (a pipe, a file, CI) 100 is a
+# sensible fixed width for a file someone will open later.
+if [[ -t 1 ]]; then
+  REPORT_WIDTH=$(tput cols 2>/dev/null || echo 86)
+else
+  REPORT_WIDTH=100
+fi
+[[ "$REPORT_WIDTH" =~ ^[0-9]+$ ]] || REPORT_WIDTH=86
+(( REPORT_WIDTH < 60 ))  && REPORT_WIDTH=60    # below this nothing helps
+(( REPORT_WIDTH > 140 )) && REPORT_WIDTH=140   # long lines are hard to track back
+
+# Column widths derived from it once, so the header rule and the rows cannot
+# disagree. 2 indent + 6 status + 1 + 9 id + 1 + name + 1 + detail.
+COL_NAME=42
+COL_DETAIL=$(( REPORT_WIDTH - 2 - 6 - 1 - 9 - 1 - COL_NAME - 1 ))
+if (( COL_DETAIL < 18 )); then                 # narrow terminal: give up name width first
+  COL_NAME=$(( COL_NAME - (18 - COL_DETAIL) ))
+  (( COL_NAME < 20 )) && COL_NAME=20
+  COL_DETAIL=$(( REPORT_WIDTH - 2 - 6 - 1 - 9 - 1 - COL_NAME - 1 ))
+  (( COL_DETAIL < 8 )) && COL_DETAIL=8
+fi
+# A horizontal rule at the current table width. Every renderer that wants one
+# calls this; literal runs of ━ were baked at 61 characters while the table was
+# 86 and the rows were 156, so nothing lined up with anything.
+rule() {
+  local ch="${1:-━}" n="${2:-$REPORT_WIDTH}"
+  printf '%*s' "$n" '' | tr ' ' "$ch"
+}
+
 section() {
   local title="$1" pad
-  # Titles are "1. SYSTEM & OS / Systeme et OS": keep the English half for the
-  # terminal, where the column header is English too.
+  # Section titles used to be "1. SYSTEM & OS / Systeme et OS" and this stripped
+  # the half after the slash. No caller passes one any more: the output is
+  # English throughout. Kept because it costs nothing and a bilingual title
+  # would otherwise print raw, but it is no longer doing any work.
   title="${title%% / *}"
   pad=$(( REPORT_WIDTH - ${#title} - 6 ))
   (( pad < 3 )) && pad=3
   printf "\n${BOLD}${CYAN}── %s %s${NC}\n" "$title" "$(printf '─%.0s' $(seq 1 "$pad"))"
-  printf "${DIM}  %-6s %-9s %-42s %s${NC}\n" "STATUS" "ID" "CHECK" "DETAIL"
+  printf "${DIM}  %-6s %-9s %-*s %s${NC}\n" "STATUS" "ID" "$COL_NAME" "CHECK" "DETAIL"
 }
 
 # Encode special HTML characters to prevent XSS in report output
@@ -769,8 +842,14 @@ add_result() {
   #
   # The ID is printed because `aartool explain SSH-01` needs it, and until now
   # the only place to find it was the JSON report.
-  printf "  ${color}%-6s${NC} ${DIM}%-9s${NC} %-42s %s\n" \
-    "$status" "$id" "$name_en" "$detail"
+  # Truncate to the derived widths rather than letting DETAIL run to whatever
+  # length the machine happened to produce. An ellipsis is honest: the full text
+  # is in the JSON and the HTML, and `aartool explain <ID>` prints all of it.
+  local _n="$name_en" _d="$detail"
+  (( ${#_n} > COL_NAME ))   && _n="${_n:0:$((COL_NAME-1))}…"
+  (( ${#_d} > COL_DETAIL )) && _d="${_d:0:$((COL_DETAIL-1))}…"
+  printf "  ${color}%-6s${NC} ${DIM}%-9s${NC} %-*s %s\n" \
+    "$status" "$id" "$COL_NAME" "$_n" "$_d"
 
   # Per-check hints are off by default: they doubled the length of every run,
   # and `aartool explain <ID>` gives the same thing in full, plus what closing
@@ -808,18 +887,18 @@ section "1. SYSTEM & OS"
 _SYS_FAM="$(distro_family)"
 if distro_roles_available; then
   add_result "System" "PASS" "SYS-01" "Distribution supported" "Distribution supportée" \
-    "$(distro_pretty) — family: $_SYS_FAM, hardening roles available" ""
+    "$(distro_pretty), family: $_SYS_FAM, hardening roles available" ""
 elif [[ "$_SYS_FAM" == "unknown" ]]; then
   add_result "System" "WARN" "SYS-01" "Distribution not identified" "Distribution non identifiée" \
-    "$(distro_pretty) — audit still valid, hardening roles unavailable" \
+    "$(distro_pretty): audit still valid, hardening roles unavailable" \
     "The audit still holds: it reads /proc, /etc and systemd, which do not depend on the distribution. The hardening roles cover the RHEL and Debian families (tested on $(distro_roles_tested))."
 else
   add_result "System" "WARN" "SYS-01" "Audit-only distribution" "Distribution en audit seul" \
-    "$(distro_pretty) — family: $_SYS_FAM, audit valid, no hardening roles" \
+    "$(distro_pretty), family: $_SYS_FAM, audit valid, no hardening roles" \
     "The audit and 'aartool surface' work normally. The Ansible roles do not cover the $_SYS_FAM family yet: the recommendation on each check still applies by hand."
 fi
 
-# SYS-02 Kernel (informational — always WARN to prompt version review)
+# SYS-02 Kernel (informational, always WARN to prompt version review)
 add_result "System" "WARN" "SYS-02" "Kernel version" "Version noyau" "$(uname -r)" \
   "Check for kernel updates: 'dnf check-update kernel' or 'apt list --upgradable | grep linux-image'."
 
@@ -1603,7 +1682,7 @@ PP=$(stat -c "%a" /etc/passwd 2>/dev/null || echo "")
 [[ "$PP" == "644" ]] && \
   add_result "Files" "PASS" "FS-01" "/etc/passwd perms 644" "Perms /etc/passwd correctes" "Mode: 644" "" || \
   add_result "Files" "FAIL" "FS-01" "/etc/passwd perms wrong" "Perms /etc/passwd incorrectes" "Mode: ${PP:-?}" \
-    "Corrigez: 'chmod 644 /etc/passwd'"
+    "Fix: 'chmod 644 /etc/passwd'"
 
 # FS-02 /etc/shadow
 SP=$(stat -c "%a" /etc/shadow 2>/dev/null || echo "")
@@ -1629,7 +1708,7 @@ if [[ "$WW" -eq 0 ]]; then
   add_result "Files" "PASS" "FS-04" "No world-writable files" "Aucun fichier inscriptible par tous" "0 found in /etc /usr /bin /sbin" ""
 else
   add_result "Files" "FAIL" "FS-04" "World-writable files found" "Fichiers inscriptibles par tous" "$WW file(s)" \
-    "Auditez: 'find /etc /usr -perm -0002 -type f -ls'"
+    "Audit: 'find /etc /usr -perm -0002 -type f -ls'"
 fi
 
 # FS-05 SUID count
@@ -1954,7 +2033,7 @@ else
     "Add RateLimitBurst=10000 and RateLimitInterval=30s to /etc/systemd/journald.conf.d/99-cis-journald.conf"
 fi
 
-# LOG-08 Remote syslog configured (informational — no Ansible remediation)
+# LOG-08 Remote syslog configured (informational, no Ansible remediation)
 REMOTE_LOG=false
 if [[ -f /etc/rsyslog.conf ]] || [[ -d /etc/rsyslog.d ]]; then
   grep -rqE '@@?[0-9a-zA-Z]|action\(type="omfwd"' /etc/rsyslog.conf /etc/rsyslog.d/*.conf 2>/dev/null && REMOTE_LOG=true
@@ -1997,10 +2076,10 @@ if [[ "$SUSP_CRON" -eq 0 ]]; then
   add_result "Integrity" "PASS" "INT-03" "No suspicious cron entries" "Crons propres" "Crontabs look clean" ""
 else
   add_result "Integrity" "FAIL" "INT-03" "Suspicious cron entries" "Crons suspects détectés" "$SUSP_CRON entry/entries (manual review required)" \
-    "Auditez: 'crontab -l' et /etc/cron* — cherchez wget/curl/bash vers /tmp."
+    "Audit: 'crontab -l' and /etc/cron*, look for wget/curl/bash fetching into /tmp."
 fi
 
-# INT-04 Open listening ports (always informational — manual review required)
+# INT-04 Open listening ports (always informational, manual review required)
 LISTEN_PORTS=$(ss -tlnp 2>/dev/null | grep -c "LISTEN" || echo "?")
 add_result "Integrity" "WARN" "INT-04" "Open listening ports" "Ports en écoute (revue manuelle)" "$LISTEN_PORTS port(s) listening" \
   "Manual review required: 'ss -tlnp', then close every port that is not justified."
@@ -2016,7 +2095,7 @@ elif cmd_exists apt-get; then
     /etc/apt/apt.conf /etc/apt/apt.conf.d/ 2>/dev/null | wc -l)
   [[ "$UNAUTH" -eq 0 ]] && PKG_GPG_OK=true
 else
-  PKG_GPG_OK=true  # Cannot determine — assume OK
+  PKG_GPG_OK=true  # Cannot determine, assume OK
 fi
 if $PKG_GPG_OK; then
   add_result "Integrity" "PASS" "INT-05" "Package signature check enabled" "Vérif signature paquets active" "gpgcheck enforced" ""
@@ -2042,7 +2121,7 @@ if $AIDE_DB_OK; then
   add_result "Integrity" "PASS" "INT-07" "AIDE database initialized" "Base AIDE initialisée" "aide.db found" ""
 elif cmd_exists aide || cmd_exists aide2; then
   add_result "Integrity" "FAIL" "INT-07" "AIDE installed but DB missing" "AIDE installé sans base de données" "aide.db not found" \
-    "Initialisez: 'aide --init && cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz'"
+    "Initialise: 'aide --init && cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz'"
 else
   # Do not restate INT-01 here. When AIDE is absent both checks used to emit
   # the identical title "AIDE not installed", so one missing package produced
@@ -2103,7 +2182,7 @@ else
     "Isolez /tmp: ajoutez 'tmpfs /tmp tmpfs defaults,noexec,nosuid,nodev 0 0' dans /etc/fstab"
 fi
 
-# COMP-03 /home on separate partition (informational — cannot change post-install)
+# COMP-03 /home on separate partition (informational, cannot change post-install)
 HOME_PART=$(grep -cE '\s/home\s' /proc/mounts 2>/dev/null || true)
 HOME_PART=${HOME_PART:-0}
 if [[ "$HOME_PART" -ge 1 ]]; then
@@ -2113,7 +2192,7 @@ else
     "Manual review: putting /home on its own partition is recommended (CIS 1.1.18)"
 fi
 
-# COMP-04 /var on separate partition (informational — cannot change post-install)
+# COMP-04 /var on separate partition (informational, cannot change post-install)
 VAR_PART=$(grep -cE '\s/var\s' /proc/mounts 2>/dev/null || true)
 VAR_PART=${VAR_PART:-0}
 if [[ "$VAR_PART" -ge 1 ]]; then
@@ -2254,7 +2333,7 @@ _ansible_terminal_plan() {
   grep -qi 'ubuntu\|debian' /etc/os-release 2>/dev/null && \
     _os_hint="(Ubuntu / Debian)"
 
-  printf "\n${BOLD}${CYAN}━━━  REMEDIATION  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "\n${BOLD}${CYAN}━━━  REMEDIATION  %s${NC}\n" "$(rule '━' $(( REPORT_WIDTH - 19 )) )"
   printf "  Platform: ${BOLD}%s${NC}\n\n" "$_os_hint"
 
   local _idx=1
@@ -2287,11 +2366,11 @@ _ansible_terminal_plan() {
   printf "\n  ${CYAN}   %s is a host or group in your inventory.${NC}\n" "$_tgt"
   printf "  ${CYAN}   aartool advise orders these by what an attacker reaches first,${NC}\n"
   printf "  ${CYAN}   and says what each fix costs before you run it.${NC}\n"
-  printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n\n"
+  printf "${BOLD}%s${NC}\n\n" "$(rule)"
 }
 
 _render_summary() {
-  printf "\n${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "\n${BOLD}%s${NC}\n" "$(rule)"
   printf "${BOLD}  aartool security score: ${NC}"
   if   [[ "$SCORE" -ge 80 ]]; then printf "${GREEN}${BOLD}%s%%${NC}\n" "$SCORE"
   elif [[ "$SCORE" -ge 60 ]]; then printf "${YELLOW}${BOLD}%s%%${NC}\n" "$SCORE"
@@ -2302,7 +2381,7 @@ _render_summary() {
     "$FAIL" "$WARN" "$PASS" "$TOTAL"
   printf "  ${DIM}A warning counts as half a failure in the score.${NC}\n"
   printf "  %s  ·  %s\n" "$HOSTNAME_VAL" "$DATE_VAL"
-  printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "${BOLD}%s${NC}\n" "$(rule)"
 
   # The remediation plan used to print here, after the score, which put the one
   # number anybody looks for in the middle of the output with 117 lines below
@@ -2313,7 +2392,7 @@ _render_summary() {
   # _ansible_terminal_plan is still defined and still used by the HTML report.
   printf "\n  ${CYAN}Next:${NC}  aartool advise   what to fix first, and what each fix costs\n"
   if [[ "${AARTOOL_HINTS:-0}" != "1" ]]; then
-    printf "         ${DIM}aartool inspect --hints   to see a one-line fix under each finding${NC}\n"
+    printf "         ${DIM}aartool inspect --hints   a one-line fix under each finding${NC}\n"
   fi
   printf "\n"
 }
@@ -2335,7 +2414,7 @@ _render_json() {
     re="${re//\"/\\\"}"; re="${re//$'\n'/ }"
     local ne="${RESULT_NAME_EN[$i]//\\/\\\\}"
     ne="${ne//\"/\\\"}"
-    JSON_ARR+="{\"id\":\"${RESULT_ID[$i]}\",\"category\":\"${RESULT_CATEGORY[$i]}\",\"status\":\"${RESULT_STATUS[$i]}\",\"check\":\"${ne}\",\"detail\":\"${de}\",\"remediation\":\"${re}\"}"
+    JSON_ARR+="{\"id\":\"${RESULT_ID[$i]}\",\"category\":\"${RESULT_CATEGORY[$i]}\",\"status\":\"${RESULT_STATUS[$i]}\",\"wave\":$(_wave_of "${RESULT_ID[$i]}"),\"check\":\"${ne}\",\"detail\":\"${de}\",\"remediation\":\"${re}\"}"
     [[ $i -lt $((n-1)) ]] && JSON_ARR+=","
   done
   JSON_ARR+="]"
@@ -2377,6 +2456,7 @@ _render_json() {
     "host": "${_j_host}",
     "os": "${_j_os}",
     "date": "${DATE_VAL}",
+    "date_iso": "${DATE_ISO}",
     "score": ${SCORE},
     "summary": {
       "pass": ${PASS},
@@ -2417,11 +2497,10 @@ _render_html() {
   local HTML_ROWS=""
   local _n="${#RESULT_ID[@]}"
   for (( _i=0; _i<_n; _i++ )); do
-    local _h_detail _h_rem _h_name_en _h_name_fr _badge _rem_html
+    local _h_detail _h_rem _h_name_en _badge _rem_html
     _h_detail=$(html_escape "${RESULT_DETAIL[$_i]}")
     _h_rem=$(html_escape "${RESULT_REMEDIATION[$_i]}")
     _h_name_en=$(html_escape "${RESULT_NAME_EN[$_i]}")
-    _h_name_fr=$(html_escape "${RESULT_NAME_FR[$_i]}")
     case "${RESULT_STATUS[$_i]}" in
       PASS) _badge="<span class='badge pass'>✅ PASS</span>" ;;
       WARN) _badge="<span class='badge warn'>⚠️ WARN</span>" ;;
@@ -2438,26 +2517,39 @@ _render_html() {
     HTML_ROWS+="</tr>"
   done
 
-  SC_COLOR="#ef4444"
-  [[ "$SCORE" -ge 40 ]] && SC_COLOR="#f59e0b"
-  [[ "$SCORE" -ge 60 ]] && SC_COLOR="#f59e0b"
-  [[ "$SCORE" -ge 75 ]] && SC_COLOR="#22c55e"
+  # The score colour is chosen here, in shell, but named as a TOKEN rather than
+  # baked as a hex. Three literal hexes used to be written into the document at
+  # generation time, which put the single largest element on the page outside
+  # the palette: it could not follow the light theme in @media print, so the
+  # score ring stayed at #22c55e on white paper while everything around it
+  # switched. Emitting var(--...) lets the same cascade reach it.
+  #
+  # Thresholds match dashboard/index.html: < 60 danger, < 80 warn, else accent.
+  SC_TOKEN="--danger"
+  [[ "$SCORE" -ge 60 ]] && SC_TOKEN="--warn"
+  [[ "$SCORE" -ge 80 ]] && SC_TOKEN="--accent"
 
-  # Score ring CSS vars
-  RING_COLOR="${SC_COLOR}"
-  case "$SC_COLOR" in
-    '#ef4444') RING_COLORALPHA='rgba(239,68,68,.4)' ;;
-    '#f59e0b') RING_COLORALPHA='rgba(245,158,11,.4)' ;;
-    '#22c55e') RING_COLORALPHA='rgba(34,197,94,.4)' ;;
-    *)         RING_COLORALPHA='rgba(56,189,248,.4)' ;;
+  RING_COLOR="var(${SC_TOKEN})"
+  # The dim companion is a token too, so print gets the printable variant.
+  case "$SC_TOKEN" in
+    '--danger') RING_COLORALPHA='var(--fail-bg)' ;;
+    '--warn')   RING_COLORALPHA='var(--warn-bg)' ;;
+    *)          RING_COLORALPHA='var(--pass-bg)' ;;
   esac
   RING_OFFSET=$(python3 -c "import math; s=${SCORE}; c=2*math.pi*36; print(round(c*(1-s/100),2))" 2>/dev/null || echo '113')
 
-  SCORE_LABEL="CRITIQUE"
-  [[ "$SCORE" -ge 40 ]] && SCORE_LABEL="FAIBLE"
-  [[ "$SCORE" -ge 60 ]] && SCORE_LABEL="MOYEN"
-  [[ "$SCORE" -ge 75 ]] && SCORE_LABEL="BON"
-  [[ "$SCORE" -ge 90 ]] && SCORE_LABEL="EXCELLENT"
+  # English, like every other word in this document, the CLI, the JSON and the
+  # dashboard. The page declared lang="fr" and printed CRITIQUE/FAIBLE/MOYEN
+  # while rendering English check names and English remediation either side of
+  # it, which read as a bug rather than as a translation.
+  #
+  # Label boundaries must nest inside the colour boundaries above, or the page
+  # contradicts itself: at 78 this read "BON" in amber.
+  SCORE_LABEL="CRITICAL"
+  [[ "$SCORE" -ge 40 ]] && SCORE_LABEL="WEAK"
+  [[ "$SCORE" -ge 60 ]] && SCORE_LABEL="FAIR"
+  [[ "$SCORE" -ge 80 ]] && SCORE_LABEL="GOOD"
+  [[ "$SCORE" -ge 90 ]] && SCORE_LABEL="STRONG"
 
 
   # Build Ansible remediation HTML
@@ -2501,38 +2593,78 @@ _h_os=$(html_escape "$OS_VAL")
 
 cat > "$HTML_OUT" <<HTMLEOF
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>aartool: ${_h_host}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ── Design Tokens ───────────────────────────────────────────────────── */
+/* ── Design Tokens ───────────────────────────────────────────────────────────
+   These are the tokens from dashboard/index.html, which are in turn the tokens
+   from website/src/styles/global.css. There is no second CyberAar palette.
+
+   This file used to carry its own teal and a lime green that appear nowhere
+   else in the product. A report and the dashboard that loads it are the same
+   tool and should not look like two.
+
+   No webfonts. This document is opened on air-gapped machines, and a <link> to
+   fonts.googleapis.com told a third party the IP and referrer of whoever opened
+   an audit report. The system stacks below are the dashboard's, verbatim.
+   ────────────────────────────────────────────────────────────────────────── */
 :root {
-  --ca-navy:     #0D1B3E;
-  --ca-navy-mid: #132244;
-  --ca-navy-lt:  #1A2F5A;
-  --ca-teal:     #00C2A8;
-  --ca-green:    #7ED348;
-  --ca-teal-dim: rgba(0,194,168,.15);
-  --ca-green-dim:rgba(126,211,72,.15);
-  --pass:  #22c55e;
-  --warn:  #f59e0b;
-  --fail:  #ef4444;
-  --info:  #38bdf8;
-  --pass-bg: rgba(34,197,94,.08);
-  --warn-bg: rgba(245,158,11,.08);
-  --fail-bg: rgba(239,68,68,.08);
-  --text:    #E8EFF8;
-  --muted:   #7A90B0;
-  --border:  rgba(255,255,255,.07);
-  --card:    rgba(19,34,68,.7);
-  --radius:  12px;
-  --font-display: 'Syne', sans-serif;
-  --font-body:    'Inter', sans-serif;
-  --font-mono:    'JetBrains Mono', monospace;
+  --bg:        #080d1a;
+  --surface:   #0d1526;
+  --surface-2: #111c30;
+  --border:    rgba(255, 255, 255, 0.08);
+  --border-2:  rgba(255, 255, 255, 0.14);
+  --text:      #e2e8f0;
+  --muted:     #94a3b8;
+  --accent:    #00e5b0;
+  --warn:      #f59e0b;
+  --danger:    #ef4444;
+  --info:      #38bdf8;
+
+  --mono: ui-monospace, SFMono-Regular, "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+
+  /* One type scale, the dashboard's. */
+  --fs-hero: 3.1rem;
+  --fs-xl:   1.9rem;
+  --fs-lg:   1.05rem;
+  --fs-md:   0.9rem;
+  --fs-sm:   0.8rem;
+  --fs-xs:   0.74rem;
+  --fs-2xs:  0.67rem;
+
+  --r-sm: 5px; --r-md: 8px; --r-lg: 12px;
+
+  /* Tinted fills. Defined per theme rather than derived, because color-mix()
+     is not safe to depend on for a file whose whole point is opening on a
+     machine we know nothing about. */
+  --accent-dim: rgba(0, 229, 176, .15);
+  --pass-bg:    rgba(0, 229, 176, .08);
+  --warn-bg:    rgba(245, 158, 11, .08);
+  --fail-bg:    rgba(239, 68, 68, .08);
+
+  /* ── Aliases ───────────────────────────────────────────────────────────────
+     The rules below this block are written against these names. Custom
+     properties resolve at use time, so overriding only the canonical tokens in
+     @media print re-colours everything through these automatically. Keep it
+     that way: define a colour once, alias it here, never inline a hex below. */
+  --ca-navy:      var(--bg);
+  --ca-navy-mid:  var(--surface);
+  --ca-navy-lt:   var(--surface-2);
+  --ca-teal:      var(--accent);
+  --ca-green:     var(--accent);
+  --ca-teal-dim:  var(--accent-dim);
+  --ca-green-dim: var(--accent-dim);
+  --pass:         var(--accent);
+  --fail:         var(--danger);
+  --card:         var(--surface);
+  --radius:       var(--r-lg);
+  --font-display: var(--mono);
+  --font-body:    var(--sans);
+  --font-mono:    var(--mono);
 }
 
 /* ── Reset + base ────────────────────────────────────────────────────── */
@@ -2895,10 +3027,63 @@ footer {
 .footer-text strong { color: var(--text); }
 
 /* ── Print ───────────────────────────────────────────────────────────── */
+/* ── Print ───────────────────────────────────────────────────────────────────
+   The README offers print-to-PDF as the way to attach an audit to an engagement
+   report, and this used to be four lines that reset no colours at all. The body
+   is a dark ground with near-white text; browsers do not print background
+   colours by default, so #e2e8f0 landed on white paper and the document came
+   out essentially blank.
+
+   Switching to the light palette is what the dashboard does, and it is better
+   than forcing black: the accent survives as a colour rather than becoming
+   another shade of grey. The two accent values are not a preference, they are
+   the same brand colour measured against each ground. -------------------- */
+@page { size: A4; margin: 15mm 13mm; }
+
 @media print {
+  :root {
+    --bg:        #ffffff;
+    --surface:   #ffffff;
+    --surface-2: #f8fafc;
+    --border:    #e2e8f0;
+    --border-2:  #cbd5e1;
+    --text:      #0f172a;
+    --muted:     #475569;
+    --accent:    #0F766E;   /* 4.5:1 on white; #00e5b0 is 1.4:1 */
+    --warn:      #b45309;   /* 5.0:1 on white; #f59e0b is 2.2:1 */
+    --danger:    #b91c1c;   /* 5.9:1 on white; #ef4444 is 3.3:1 */
+    --info:      #1d4ed8;
+
+    --accent-dim: rgba(15, 118, 110, .10);
+    --pass-bg:    rgba(15, 118, 110, .07);
+    --warn-bg:    rgba(180, 83, 9, .07);
+    --fail-bg:    rgba(185, 28, 28, .07);
+  }
+
+  body {
+    background: #fff;
+    color: var(--text);
+    font-size: 10pt;
+    line-height: 1.45;
+  }
   body::before { display: none }
   header { position: static }
   .progress-bar { animation: none !important }
+
+  /* Tinted status fills carry meaning here, so ask for them to be printed
+     rather than relying on the reader having ticked "background graphics". */
+  .status-pass, .status-warn, .status-fail,
+  .score-hero, .plan-table th, thead {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A finding split across a page break loses the row it belongs to. */
+  tr, .finding, .plan-row { break-inside: avoid; page-break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; page-break-after: avoid; }
+
+  /* Anything interactive is noise on paper. */
+  a { text-decoration: none; color: var(--accent); }
 }
 @media (max-width: 680px) {
   header { grid-template-columns: auto 1fr; }
@@ -3132,6 +3317,12 @@ fi
 
 HOSTNAME_VAL=$(hostname -f 2>/dev/null || hostname)
 DATE_VAL=$(date '+%Y-%m-%d %H:%M:%S')
+# The human-readable one above has no timezone, which is fine on a page someone
+# reads and wrong for the SIEM ingestion docs/BASELINE.md advertises: two hosts
+# in two zones produce timestamps that cannot be ordered. Emitted alongside
+# rather than instead, because `date` is in the HTML header and is what the
+# dashboard sorts on in every report already written.
+DATE_ISO=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 OS_VAL=$(grep -oP '(?<=^PRETTY_NAME=").+(?=")' /etc/os-release 2>/dev/null || uname -o)
 
 # ─── RUN CHECKS ──────────────────────────────────────────────────────────────

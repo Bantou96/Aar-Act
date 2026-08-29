@@ -16,11 +16,10 @@ _render_html() {
   local HTML_ROWS=""
   local _n="${#RESULT_ID[@]}"
   for (( _i=0; _i<_n; _i++ )); do
-    local _h_detail _h_rem _h_name_en _h_name_fr _badge _rem_html
+    local _h_detail _h_rem _h_name_en _badge _rem_html
     _h_detail=$(html_escape "${RESULT_DETAIL[$_i]}")
     _h_rem=$(html_escape "${RESULT_REMEDIATION[$_i]}")
     _h_name_en=$(html_escape "${RESULT_NAME_EN[$_i]}")
-    _h_name_fr=$(html_escape "${RESULT_NAME_FR[$_i]}")
     case "${RESULT_STATUS[$_i]}" in
       PASS) _badge="<span class='badge pass'>✅ PASS</span>" ;;
       WARN) _badge="<span class='badge warn'>⚠️ WARN</span>" ;;
@@ -37,26 +36,39 @@ _render_html() {
     HTML_ROWS+="</tr>"
   done
 
-  SC_COLOR="#ef4444"
-  [[ "$SCORE" -ge 40 ]] && SC_COLOR="#f59e0b"
-  [[ "$SCORE" -ge 60 ]] && SC_COLOR="#f59e0b"
-  [[ "$SCORE" -ge 75 ]] && SC_COLOR="#22c55e"
+  # The score colour is chosen here, in shell, but named as a TOKEN rather than
+  # baked as a hex. Three literal hexes used to be written into the document at
+  # generation time, which put the single largest element on the page outside
+  # the palette: it could not follow the light theme in @media print, so the
+  # score ring stayed at #22c55e on white paper while everything around it
+  # switched. Emitting var(--...) lets the same cascade reach it.
+  #
+  # Thresholds match dashboard/index.html: < 60 danger, < 80 warn, else accent.
+  SC_TOKEN="--danger"
+  [[ "$SCORE" -ge 60 ]] && SC_TOKEN="--warn"
+  [[ "$SCORE" -ge 80 ]] && SC_TOKEN="--accent"
 
-  # Score ring CSS vars
-  RING_COLOR="${SC_COLOR}"
-  case "$SC_COLOR" in
-    '#ef4444') RING_COLORALPHA='rgba(239,68,68,.4)' ;;
-    '#f59e0b') RING_COLORALPHA='rgba(245,158,11,.4)' ;;
-    '#22c55e') RING_COLORALPHA='rgba(34,197,94,.4)' ;;
-    *)         RING_COLORALPHA='rgba(56,189,248,.4)' ;;
+  RING_COLOR="var(${SC_TOKEN})"
+  # The dim companion is a token too, so print gets the printable variant.
+  case "$SC_TOKEN" in
+    '--danger') RING_COLORALPHA='var(--fail-bg)' ;;
+    '--warn')   RING_COLORALPHA='var(--warn-bg)' ;;
+    *)          RING_COLORALPHA='var(--pass-bg)' ;;
   esac
   RING_OFFSET=$(python3 -c "import math; s=${SCORE}; c=2*math.pi*36; print(round(c*(1-s/100),2))" 2>/dev/null || echo '113')
 
-  SCORE_LABEL="CRITIQUE"
-  [[ "$SCORE" -ge 40 ]] && SCORE_LABEL="FAIBLE"
-  [[ "$SCORE" -ge 60 ]] && SCORE_LABEL="MOYEN"
-  [[ "$SCORE" -ge 75 ]] && SCORE_LABEL="BON"
-  [[ "$SCORE" -ge 90 ]] && SCORE_LABEL="EXCELLENT"
+  # English, like every other word in this document, the CLI, the JSON and the
+  # dashboard. The page declared lang="fr" and printed CRITIQUE/FAIBLE/MOYEN
+  # while rendering English check names and English remediation either side of
+  # it, which read as a bug rather than as a translation.
+  #
+  # Label boundaries must nest inside the colour boundaries above, or the page
+  # contradicts itself: at 78 this read "BON" in amber.
+  SCORE_LABEL="CRITICAL"
+  [[ "$SCORE" -ge 40 ]] && SCORE_LABEL="WEAK"
+  [[ "$SCORE" -ge 60 ]] && SCORE_LABEL="FAIR"
+  [[ "$SCORE" -ge 80 ]] && SCORE_LABEL="GOOD"
+  [[ "$SCORE" -ge 90 ]] && SCORE_LABEL="STRONG"
 
 
   # Build Ansible remediation HTML
@@ -100,38 +112,78 @@ _h_os=$(html_escape "$OS_VAL")
 
 cat > "$HTML_OUT" <<HTMLEOF
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>aartool: ${_h_host}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ── Design Tokens ───────────────────────────────────────────────────── */
+/* ── Design Tokens ───────────────────────────────────────────────────────────
+   These are the tokens from dashboard/index.html, which are in turn the tokens
+   from website/src/styles/global.css. There is no second CyberAar palette.
+
+   This file used to carry its own teal and a lime green that appear nowhere
+   else in the product. A report and the dashboard that loads it are the same
+   tool and should not look like two.
+
+   No webfonts. This document is opened on air-gapped machines, and a <link> to
+   fonts.googleapis.com told a third party the IP and referrer of whoever opened
+   an audit report. The system stacks below are the dashboard's, verbatim.
+   ────────────────────────────────────────────────────────────────────────── */
 :root {
-  --ca-navy:     #0D1B3E;
-  --ca-navy-mid: #132244;
-  --ca-navy-lt:  #1A2F5A;
-  --ca-teal:     #00C2A8;
-  --ca-green:    #7ED348;
-  --ca-teal-dim: rgba(0,194,168,.15);
-  --ca-green-dim:rgba(126,211,72,.15);
-  --pass:  #22c55e;
-  --warn:  #f59e0b;
-  --fail:  #ef4444;
-  --info:  #38bdf8;
-  --pass-bg: rgba(34,197,94,.08);
-  --warn-bg: rgba(245,158,11,.08);
-  --fail-bg: rgba(239,68,68,.08);
-  --text:    #E8EFF8;
-  --muted:   #7A90B0;
-  --border:  rgba(255,255,255,.07);
-  --card:    rgba(19,34,68,.7);
-  --radius:  12px;
-  --font-display: 'Syne', sans-serif;
-  --font-body:    'Inter', sans-serif;
-  --font-mono:    'JetBrains Mono', monospace;
+  --bg:        #080d1a;
+  --surface:   #0d1526;
+  --surface-2: #111c30;
+  --border:    rgba(255, 255, 255, 0.08);
+  --border-2:  rgba(255, 255, 255, 0.14);
+  --text:      #e2e8f0;
+  --muted:     #94a3b8;
+  --accent:    #00e5b0;
+  --warn:      #f59e0b;
+  --danger:    #ef4444;
+  --info:      #38bdf8;
+
+  --mono: ui-monospace, SFMono-Regular, "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+
+  /* One type scale, the dashboard's. */
+  --fs-hero: 3.1rem;
+  --fs-xl:   1.9rem;
+  --fs-lg:   1.05rem;
+  --fs-md:   0.9rem;
+  --fs-sm:   0.8rem;
+  --fs-xs:   0.74rem;
+  --fs-2xs:  0.67rem;
+
+  --r-sm: 5px; --r-md: 8px; --r-lg: 12px;
+
+  /* Tinted fills. Defined per theme rather than derived, because color-mix()
+     is not safe to depend on for a file whose whole point is opening on a
+     machine we know nothing about. */
+  --accent-dim: rgba(0, 229, 176, .15);
+  --pass-bg:    rgba(0, 229, 176, .08);
+  --warn-bg:    rgba(245, 158, 11, .08);
+  --fail-bg:    rgba(239, 68, 68, .08);
+
+  /* ── Aliases ───────────────────────────────────────────────────────────────
+     The rules below this block are written against these names. Custom
+     properties resolve at use time, so overriding only the canonical tokens in
+     @media print re-colours everything through these automatically. Keep it
+     that way: define a colour once, alias it here, never inline a hex below. */
+  --ca-navy:      var(--bg);
+  --ca-navy-mid:  var(--surface);
+  --ca-navy-lt:   var(--surface-2);
+  --ca-teal:      var(--accent);
+  --ca-green:     var(--accent);
+  --ca-teal-dim:  var(--accent-dim);
+  --ca-green-dim: var(--accent-dim);
+  --pass:         var(--accent);
+  --fail:         var(--danger);
+  --card:         var(--surface);
+  --radius:       var(--r-lg);
+  --font-display: var(--mono);
+  --font-body:    var(--sans);
+  --font-mono:    var(--mono);
 }
 
 /* ── Reset + base ────────────────────────────────────────────────────── */
@@ -494,10 +546,63 @@ footer {
 .footer-text strong { color: var(--text); }
 
 /* ── Print ───────────────────────────────────────────────────────────── */
+/* ── Print ───────────────────────────────────────────────────────────────────
+   The README offers print-to-PDF as the way to attach an audit to an engagement
+   report, and this used to be four lines that reset no colours at all. The body
+   is a dark ground with near-white text; browsers do not print background
+   colours by default, so #e2e8f0 landed on white paper and the document came
+   out essentially blank.
+
+   Switching to the light palette is what the dashboard does, and it is better
+   than forcing black: the accent survives as a colour rather than becoming
+   another shade of grey. The two accent values are not a preference, they are
+   the same brand colour measured against each ground. -------------------- */
+@page { size: A4; margin: 15mm 13mm; }
+
 @media print {
+  :root {
+    --bg:        #ffffff;
+    --surface:   #ffffff;
+    --surface-2: #f8fafc;
+    --border:    #e2e8f0;
+    --border-2:  #cbd5e1;
+    --text:      #0f172a;
+    --muted:     #475569;
+    --accent:    #0F766E;   /* 4.5:1 on white; #00e5b0 is 1.4:1 */
+    --warn:      #b45309;   /* 5.0:1 on white; #f59e0b is 2.2:1 */
+    --danger:    #b91c1c;   /* 5.9:1 on white; #ef4444 is 3.3:1 */
+    --info:      #1d4ed8;
+
+    --accent-dim: rgba(15, 118, 110, .10);
+    --pass-bg:    rgba(15, 118, 110, .07);
+    --warn-bg:    rgba(180, 83, 9, .07);
+    --fail-bg:    rgba(185, 28, 28, .07);
+  }
+
+  body {
+    background: #fff;
+    color: var(--text);
+    font-size: 10pt;
+    line-height: 1.45;
+  }
   body::before { display: none }
   header { position: static }
   .progress-bar { animation: none !important }
+
+  /* Tinted status fills carry meaning here, so ask for them to be printed
+     rather than relying on the reader having ticked "background graphics". */
+  .status-pass, .status-warn, .status-fail,
+  .score-hero, .plan-table th, thead {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A finding split across a page break loses the row it belongs to. */
+  tr, .finding, .plan-row { break-inside: avoid; page-break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; page-break-after: avoid; }
+
+  /* Anything interactive is noise on paper. */
+  a { text-decoration: none; color: var(--accent); }
 }
 @media (max-width: 680px) {
   header { grid-template-columns: auto 1fr; }

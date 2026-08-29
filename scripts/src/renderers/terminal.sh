@@ -39,7 +39,7 @@ _ansible_terminal_plan() {
   grep -qi 'ubuntu\|debian' /etc/os-release 2>/dev/null && \
     _os_hint="(Ubuntu / Debian)"
 
-  printf "\n${BOLD}${CYAN}━━━  REMEDIATION  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "\n${BOLD}${CYAN}━━━  REMEDIATION  %s${NC}\n" "$(rule '━' $(( REPORT_WIDTH - 19 )) )"
   printf "  Platform: ${BOLD}%s${NC}\n\n" "$_os_hint"
 
   local _idx=1
@@ -72,11 +72,11 @@ _ansible_terminal_plan() {
   printf "\n  ${CYAN}   %s is a host or group in your inventory.${NC}\n" "$_tgt"
   printf "  ${CYAN}   aartool advise orders these by what an attacker reaches first,${NC}\n"
   printf "  ${CYAN}   and says what each fix costs before you run it.${NC}\n"
-  printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n\n"
+  printf "${BOLD}%s${NC}\n\n" "$(rule)"
 }
 
 _render_summary() {
-  printf "\n${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "\n${BOLD}%s${NC}\n" "$(rule)"
   printf "${BOLD}  aartool security score: ${NC}"
   if   [[ "$SCORE" -ge 80 ]]; then printf "${GREEN}${BOLD}%s%%${NC}\n" "$SCORE"
   elif [[ "$SCORE" -ge 60 ]]; then printf "${YELLOW}${BOLD}%s%%${NC}\n" "$SCORE"
@@ -87,7 +87,7 @@ _render_summary() {
     "$FAIL" "$WARN" "$PASS" "$TOTAL"
   printf "  ${DIM}A warning counts as half a failure in the score.${NC}\n"
   printf "  %s  ·  %s\n" "$HOSTNAME_VAL" "$DATE_VAL"
-  printf "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "${BOLD}%s${NC}\n" "$(rule)"
 
   # The remediation plan used to print here, after the score, which put the one
   # number anybody looks for in the middle of the output with 117 lines below
@@ -98,7 +98,7 @@ _render_summary() {
   # _ansible_terminal_plan is still defined and still used by the HTML report.
   printf "\n  ${CYAN}Next:${NC}  aartool advise   what to fix first, and what each fix costs\n"
   if [[ "${AARTOOL_HINTS:-0}" != "1" ]]; then
-    printf "         ${DIM}aartool inspect --hints   to see a one-line fix under each finding${NC}\n"
+    printf "         ${DIM}aartool inspect --hints   a one-line fix under each finding${NC}\n"
   fi
   printf "\n"
 }

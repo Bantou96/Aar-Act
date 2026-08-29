@@ -29,7 +29,7 @@ else
     "Isolez /tmp: ajoutez 'tmpfs /tmp tmpfs defaults,noexec,nosuid,nodev 0 0' dans /etc/fstab"
 fi
 
-# COMP-03 /home on separate partition (informational — cannot change post-install)
+# COMP-03 /home on separate partition (informational, cannot change post-install)
 HOME_PART=$(grep -cE '\s/home\s' /proc/mounts 2>/dev/null || true)
 HOME_PART=${HOME_PART:-0}
 if [[ "$HOME_PART" -ge 1 ]]; then
@@ -39,7 +39,7 @@ else
     "Manual review: putting /home on its own partition is recommended (CIS 1.1.18)"
 fi
 
-# COMP-04 /var on separate partition (informational — cannot change post-install)
+# COMP-04 /var on separate partition (informational, cannot change post-install)
 VAR_PART=$(grep -cE '\s/var\s' /proc/mounts 2>/dev/null || true)
 VAR_PART=${VAR_PART:-0}
 if [[ "$VAR_PART" -ge 1 ]]; then

@@ -425,8 +425,22 @@ for _f in "$_core" "$_term"; do
 done
 
 check "hints are off by default"   "$(cat $_core)"  'AARTOOL_HINTS:-0'
-check "check IDs are printed"      "$(cat $_core)"  '"$status" "$id" "$name_en"'
-check "section prints a header"    "$(cat $_core)"  'STATUS" "ID" "CHECK" "DETAIL"'
+# These two used to grep core.sh for the literal argument list of its printf,
+# so widening the columns to fit the terminal broke them while the output was
+# perfectly correct. Assert what a user sees instead: a source-text match proves
+# a line exists, not that it prints anything.
+_row=$(
+  # shellcheck source=/dev/null
+  source "$_core" 2>/dev/null
+  section "9. TEST"
+  add_result "Test" "FAIL" "SSH-01" "A check name" "Un nom" "some detail" ""
+) 2>/dev/null
+check "section prints a header"    "$_row"  'STATUS'
+check "header names every column"  "$_row"  'CHECK'
+check "check IDs are printed"      "$_row"  'SSH-01'
+check "the status word is printed" "$_row"  'FAIL'
+check "the check name is printed"  "$_row"  'A check name'
+check "the detail is printed"      "$_row"  'some detail'
 
 # No emoji in the status column: they are one, two and two cells wide, so no two
 # rows line up, which is most of why 109 results read as a wall.

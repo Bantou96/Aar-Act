@@ -131,3 +131,27 @@ declare -A ANSIBLE_MAP=(
   ["KRN-11"]="kernel,sysctl|linux_kernel_hardening_rhel9|linux_kernel_hardening_ubuntu|Exotic filesystem modules blacklisted"
   # KRN-12 is the summary of the four above it, not a setting of its own.
 )
+
+# ── Reachability wave ────────────────────────────────────────────────────────
+# Which question a finding answers: what an attacker reaches with no account,
+# what turns an account into root, what would have stopped you noticing, and
+# hygiene. This is the ordering `aartool advise` prints and the thing that makes
+# the tool different from a flat severity list.
+#
+# It is emitted into the JSON for the same reason remediation_tags is: a
+# consumer that wants the ordering should not have to reimplement it. The
+# dashboard kept its own copy in JS and advise has one in shell; that is two
+# places that must agree, which is the drift that has bitten this repository
+# three times. scripts/tests/test_waves.sh asserts this function and
+# _advise_wave give the same answer for every ID the baseline can emit, so a new
+# check family cannot be classified differently by the two of them.
+_wave_of() {
+  case "$1" in
+    SSH-*|NET-*)               printf 1 ;;
+    KRN-*|AUTH-*|SYS-04|SYS-05|SYS-07|SYS-08|SYS-09|SYS-10|FS-01|FS-02|FS-03|FS-05|FS-06|FS-09)
+                               printf 2 ;;
+    LOG-*|INT-*|AUD-*)         printf 3 ;;
+    SYS-02|SYS-03|SYS-11)      printf 1 ;;   # unpatched is reachable from the network
+    *)                         printf 4 ;;
+  esac
+}
