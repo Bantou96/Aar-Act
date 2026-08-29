@@ -17,7 +17,7 @@
 # =============================================================================
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_VERSION="4.8.0"
+SCRIPT_VERSION="4.8.1"
 SCRIPT_NAME="aartool-baseline"
 
 _show_help() {
@@ -773,8 +773,16 @@ fi
 # calls this; literal runs of ━ were baked at 61 characters while the table was
 # 86 and the rows were 156, so nothing lined up with anything.
 rule() {
-  local ch="${1:-━}" n="${2:-$REPORT_WIDTH}"
-  printf '%*s' "$n" '' | tr ' ' "$ch"
+  local ch="${1:-━}" n="${2:-$REPORT_WIDTH}" pad
+  # NOT `tr`. tr translates BYTES, and ━ is three of them (e2 94 81), so
+  # `tr ' ' '━'` mapped every space to 0xe2 and produced a run of invalid UTF-8
+  # where the summary rule should be. On a terminal that is a line of replacement
+  # characters, which is how the score box lost its banner in 3.5.0.
+  #
+  # Bash parameter substitution replaces strings, not bytes, so it is correct for
+  # any character passed in here.
+  printf -v pad '%*s' "$n" ''
+  printf '%s' "${pad// /$ch}"
 }
 
 section() {

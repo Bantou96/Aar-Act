@@ -5,7 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.5.1]: 2026-08-29
+
+### Fixed
+
+- **The score box lost its banner.** `rule()` built the horizontal lines with
+  `tr ' ' '━'`, and `tr` translates BYTES: `━` is three of them (`e2 94 81`), so
+  every space became a lone `0xe2` and the summary printed a run of invalid
+  UTF-8 where the banner should be. Introduced in 3.5.0 when the rules were made
+  adaptive, and spotted by a reader rather than by the suite, which never looked
+  at what a rule contained. Now built with parameter substitution, which
+  replaces strings rather than bytes, and guarded on the character count, the
+  byte count and UTF-8 validity.
+- **The remediation plan told you to run a command that fails.** It read
+  *"Ajoutez `--check --diff` pour simuler"*: French in an English document, and
+  wrong, since `--check` and `--diff` are `ansible-playbook` flags while every
+  command in that table is `aartool apply`, which rejects them. It now points at
+  `aartool plan`. The Tags column advertised `--tags` beside a command using
+  `--only`; both say `--only`.
+- Two more French strings in that section: the `Commande aartool` column header
+  and a bilingual button label.
+- **Colours written as `rgba()` escaped the palette port.** `rgba(0,194,168,…)`
+  is the old teal and `rgba(126,211,72,…)` the old lime, so borders, glows and
+  table hovers did not follow the print theme. Sixteen literals are tokens now.
 
 ### Added
 

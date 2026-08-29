@@ -435,6 +435,30 @@ _row=$(
   section "9. TEST"
   add_result "Test" "FAIL" "SSH-01" "A check name" "Un nom" "some detail" ""
 ) 2>/dev/null
+# ── The horizontal rules must be real characters ─────────────────────────────
+# rule() was built with `tr ' ' '━'`, and tr translates BYTES: ━ is e2 94 81, so
+# every space became a lone 0xe2 and the score box printed a run of invalid
+# UTF-8 instead of a banner. It shipped in 3.5.0 and a reader spotted it, not
+# the suite: nothing here looked at what the rule actually contained.
+#
+# Assert the rendered rule is the requested character, the requested number of
+# times, and is valid UTF-8.
+_r=$(
+  # shellcheck source=/dev/null
+  source "$_core" 2>/dev/null
+  # shellcheck disable=SC2034  # read by rule() from the sourced core.sh
+  REPORT_WIDTH=40
+  rule
+)
+check "rule draws the box character"  "$_r"  '━━━━━━━━━━'
+_rlen=$(printf '%s' "$_r" | wc -m)          # characters, not bytes
+_rbytes=$(printf '%s' "$_r" | wc -c)
+check "rule is 40 characters wide"    "$_rlen"    '40'
+check "rule is valid UTF-8"           "$(printf '%s' "$_r" | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1 && echo ok)"  'ok'
+# 40 three-byte characters. A byte-wise build would give 40 bytes, not 120, so
+# this fails loudly on the exact regression above.
+check "rule is multibyte, not bytes"  "$_rbytes"  '120'
+
 check "section prints a header"    "$_row"  'STATUS'
 check "header names every column"  "$_row"  'CHECK'
 check "check IDs are printed"      "$_row"  'SSH-01'
