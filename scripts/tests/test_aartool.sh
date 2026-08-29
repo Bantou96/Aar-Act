@@ -434,8 +434,7 @@ _row=$(
   source "$_core" 2>/dev/null
   section "9. TEST"
   add_result "Test" "FAIL" "SSH-01" "A check name" "Un nom" "some detail" ""
-  2>/dev/null
-)
+) 2>/dev/null
 check "section prints a header"    "$_row"  'STATUS'
 check "header names every column"  "$_row"  'CHECK'
 check "check IDs are printed"      "$_row"  'SSH-01'

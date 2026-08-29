@@ -2529,7 +2529,6 @@ _render_html() {
   [[ "$SCORE" -ge 60 ]] && SC_TOKEN="--warn"
   [[ "$SCORE" -ge 80 ]] && SC_TOKEN="--accent"
 
-  SC_COLOR="var(${SC_TOKEN})"
   RING_COLOR="var(${SC_TOKEN})"
   # The dim companion is a token too, so print gets the printable variant.
   case "$SC_TOKEN" in
