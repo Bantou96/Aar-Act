@@ -151,6 +151,22 @@ if command -v node >/dev/null 2>&1; then
     printf '%s\n%s\n' "$subres" "$cssres" | grep -v '^$' | sed 's/^/        /'
   fi
 
+  # ── The report is in one language, and it is English ──────────────────────
+  # It declared lang="fr" and printed CRITIQUE / FAIBLE / MOYEN as the score
+  # label, either side of English check names and English remediation, and
+  # computed a French check name into a variable it never rendered. That reads
+  # as a bug rather than as a translation. If a French report is ever wanted it
+  # should be a mode, not four leftover strings.
+  lang=$(grep -oP '<html lang="\K[a-z]+' "$RENDERER" | head -1)
+  [[ "$lang" == "en" ]] && ok || bad "the HTML report declares lang=\"$lang\"; its content is English"
+
+  frstr=$(grep -nP '"(CRITIQUE|FAIBLE|MOYEN|EXCELLENT)"|\b(Auditez|Installez|Initialisez|Corrigez|Vérifiez)\b' \
+          "$RENDERER" src/checks/*.sh 2>/dev/null || true)
+  if [[ -z "$frstr" ]]; then ok; else
+    bad "French strings reach the report, which is otherwise English:"
+    printf '%s\n' "$frstr" | sed 's/^/        /'
+  fi
+
   # ── The JSON root key was renamed cyberaar_baseline -> aartool ────────────
   # Both must load. The old name is in every report anybody already has on disk,
   # and a dashboard that silently ignores them shows an empty page rather than

@@ -28,7 +28,7 @@ if [[ "$SUSP_CRON" -eq 0 ]]; then
   add_result "Integrity" "PASS" "INT-03" "No suspicious cron entries" "Crons propres" "Crontabs look clean" ""
 else
   add_result "Integrity" "FAIL" "INT-03" "Suspicious cron entries" "Crons suspects détectés" "$SUSP_CRON entry/entries (manual review required)" \
-    "Auditez: 'crontab -l' et /etc/cron* : cherchez wget/curl/bash vers /tmp."
+    "Audit: 'crontab -l' and /etc/cron*, look for wget/curl/bash fetching into /tmp."
 fi
 
 # INT-04 Open listening ports (always informational, manual review required)
@@ -73,7 +73,7 @@ if $AIDE_DB_OK; then
   add_result "Integrity" "PASS" "INT-07" "AIDE database initialized" "Base AIDE initialisée" "aide.db found" ""
 elif cmd_exists aide || cmd_exists aide2; then
   add_result "Integrity" "FAIL" "INT-07" "AIDE installed but DB missing" "AIDE installé sans base de données" "aide.db not found" \
-    "Initialisez: 'aide --init && cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz'"
+    "Initialise: 'aide --init && cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz'"
 else
   # Do not restate INT-01 here. When AIDE is absent both checks used to emit
   # the identical title "AIDE not installed", so one missing package produced

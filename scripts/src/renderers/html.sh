@@ -16,11 +16,10 @@ _render_html() {
   local HTML_ROWS=""
   local _n="${#RESULT_ID[@]}"
   for (( _i=0; _i<_n; _i++ )); do
-    local _h_detail _h_rem _h_name_en _h_name_fr _badge _rem_html
+    local _h_detail _h_rem _h_name_en _badge _rem_html
     _h_detail=$(html_escape "${RESULT_DETAIL[$_i]}")
     _h_rem=$(html_escape "${RESULT_REMEDIATION[$_i]}")
     _h_name_en=$(html_escape "${RESULT_NAME_EN[$_i]}")
-    _h_name_fr=$(html_escape "${RESULT_NAME_FR[$_i]}")
     case "${RESULT_STATUS[$_i]}" in
       PASS) _badge="<span class='badge pass'>✅ PASS</span>" ;;
       WARN) _badge="<span class='badge warn'>⚠️ WARN</span>" ;;
@@ -59,13 +58,18 @@ _render_html() {
   esac
   RING_OFFSET=$(python3 -c "import math; s=${SCORE}; c=2*math.pi*36; print(round(c*(1-s/100),2))" 2>/dev/null || echo '113')
 
+  # English, like every other word in this document, the CLI, the JSON and the
+  # dashboard. The page declared lang="fr" and printed CRITIQUE/FAIBLE/MOYEN
+  # while rendering English check names and English remediation either side of
+  # it, which read as a bug rather than as a translation.
+  #
   # Label boundaries must nest inside the colour boundaries above, or the page
   # contradicts itself: at 78 this read "BON" in amber.
-  SCORE_LABEL="CRITIQUE"
-  [[ "$SCORE" -ge 40 ]] && SCORE_LABEL="FAIBLE"
-  [[ "$SCORE" -ge 60 ]] && SCORE_LABEL="MOYEN"
-  [[ "$SCORE" -ge 80 ]] && SCORE_LABEL="BON"
-  [[ "$SCORE" -ge 90 ]] && SCORE_LABEL="EXCELLENT"
+  SCORE_LABEL="CRITICAL"
+  [[ "$SCORE" -ge 40 ]] && SCORE_LABEL="WEAK"
+  [[ "$SCORE" -ge 60 ]] && SCORE_LABEL="FAIR"
+  [[ "$SCORE" -ge 80 ]] && SCORE_LABEL="GOOD"
+  [[ "$SCORE" -ge 90 ]] && SCORE_LABEL="STRONG"
 
 
   # Build Ansible remediation HTML
@@ -109,7 +113,7 @@ _h_os=$(html_escape "$OS_VAL")
 
 cat > "$HTML_OUT" <<HTMLEOF
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

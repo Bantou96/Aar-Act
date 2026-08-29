@@ -779,8 +779,10 @@ rule() {
 
 section() {
   local title="$1" pad
-  # Titles are "1. SYSTEM & OS / Systeme et OS": keep the English half for the
-  # terminal, where the column header is English too.
+  # Section titles used to be "1. SYSTEM & OS / Systeme et OS" and this stripped
+  # the half after the slash. No caller passes one any more: the output is
+  # English throughout. Kept because it costs nothing and a bilingual title
+  # would otherwise print raw, but it is no longer doing any work.
   title="${title%% / *}"
   pad=$(( REPORT_WIDTH - ${#title} - 6 ))
   (( pad < 3 )) && pad=3
@@ -1680,7 +1682,7 @@ PP=$(stat -c "%a" /etc/passwd 2>/dev/null || echo "")
 [[ "$PP" == "644" ]] && \
   add_result "Files" "PASS" "FS-01" "/etc/passwd perms 644" "Perms /etc/passwd correctes" "Mode: 644" "" || \
   add_result "Files" "FAIL" "FS-01" "/etc/passwd perms wrong" "Perms /etc/passwd incorrectes" "Mode: ${PP:-?}" \
-    "Corrigez: 'chmod 644 /etc/passwd'"
+    "Fix: 'chmod 644 /etc/passwd'"
 
 # FS-02 /etc/shadow
 SP=$(stat -c "%a" /etc/shadow 2>/dev/null || echo "")
@@ -1706,7 +1708,7 @@ if [[ "$WW" -eq 0 ]]; then
   add_result "Files" "PASS" "FS-04" "No world-writable files" "Aucun fichier inscriptible par tous" "0 found in /etc /usr /bin /sbin" ""
 else
   add_result "Files" "FAIL" "FS-04" "World-writable files found" "Fichiers inscriptibles par tous" "$WW file(s)" \
-    "Auditez: 'find /etc /usr -perm -0002 -type f -ls'"
+    "Audit: 'find /etc /usr -perm -0002 -type f -ls'"
 fi
 
 # FS-05 SUID count
@@ -2074,7 +2076,7 @@ if [[ "$SUSP_CRON" -eq 0 ]]; then
   add_result "Integrity" "PASS" "INT-03" "No suspicious cron entries" "Crons propres" "Crontabs look clean" ""
 else
   add_result "Integrity" "FAIL" "INT-03" "Suspicious cron entries" "Crons suspects détectés" "$SUSP_CRON entry/entries (manual review required)" \
-    "Auditez: 'crontab -l' et /etc/cron* : cherchez wget/curl/bash vers /tmp."
+    "Audit: 'crontab -l' and /etc/cron*, look for wget/curl/bash fetching into /tmp."
 fi
 
 # INT-04 Open listening ports (always informational, manual review required)
@@ -2119,7 +2121,7 @@ if $AIDE_DB_OK; then
   add_result "Integrity" "PASS" "INT-07" "AIDE database initialized" "Base AIDE initialisée" "aide.db found" ""
 elif cmd_exists aide || cmd_exists aide2; then
   add_result "Integrity" "FAIL" "INT-07" "AIDE installed but DB missing" "AIDE installé sans base de données" "aide.db not found" \
-    "Initialisez: 'aide --init && cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz'"
+    "Initialise: 'aide --init && cp /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz'"
 else
   # Do not restate INT-01 here. When AIDE is absent both checks used to emit
   # the identical title "AIDE not installed", so one missing package produced
@@ -2495,11 +2497,10 @@ _render_html() {
   local HTML_ROWS=""
   local _n="${#RESULT_ID[@]}"
   for (( _i=0; _i<_n; _i++ )); do
-    local _h_detail _h_rem _h_name_en _h_name_fr _badge _rem_html
+    local _h_detail _h_rem _h_name_en _badge _rem_html
     _h_detail=$(html_escape "${RESULT_DETAIL[$_i]}")
     _h_rem=$(html_escape "${RESULT_REMEDIATION[$_i]}")
     _h_name_en=$(html_escape "${RESULT_NAME_EN[$_i]}")
-    _h_name_fr=$(html_escape "${RESULT_NAME_FR[$_i]}")
     case "${RESULT_STATUS[$_i]}" in
       PASS) _badge="<span class='badge pass'>✅ PASS</span>" ;;
       WARN) _badge="<span class='badge warn'>⚠️ WARN</span>" ;;
@@ -2538,13 +2539,18 @@ _render_html() {
   esac
   RING_OFFSET=$(python3 -c "import math; s=${SCORE}; c=2*math.pi*36; print(round(c*(1-s/100),2))" 2>/dev/null || echo '113')
 
+  # English, like every other word in this document, the CLI, the JSON and the
+  # dashboard. The page declared lang="fr" and printed CRITIQUE/FAIBLE/MOYEN
+  # while rendering English check names and English remediation either side of
+  # it, which read as a bug rather than as a translation.
+  #
   # Label boundaries must nest inside the colour boundaries above, or the page
   # contradicts itself: at 78 this read "BON" in amber.
-  SCORE_LABEL="CRITIQUE"
-  [[ "$SCORE" -ge 40 ]] && SCORE_LABEL="FAIBLE"
-  [[ "$SCORE" -ge 60 ]] && SCORE_LABEL="MOYEN"
-  [[ "$SCORE" -ge 80 ]] && SCORE_LABEL="BON"
-  [[ "$SCORE" -ge 90 ]] && SCORE_LABEL="EXCELLENT"
+  SCORE_LABEL="CRITICAL"
+  [[ "$SCORE" -ge 40 ]] && SCORE_LABEL="WEAK"
+  [[ "$SCORE" -ge 60 ]] && SCORE_LABEL="FAIR"
+  [[ "$SCORE" -ge 80 ]] && SCORE_LABEL="GOOD"
+  [[ "$SCORE" -ge 90 ]] && SCORE_LABEL="STRONG"
 
 
   # Build Ansible remediation HTML
@@ -2588,7 +2594,7 @@ _h_os=$(html_escape "$OS_VAL")
 
 cat > "$HTML_OUT" <<HTMLEOF
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

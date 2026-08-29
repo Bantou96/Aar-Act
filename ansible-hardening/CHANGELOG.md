@@ -60,6 +60,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   audit to a file wrote 134 lines of raw ANSI escapes into it, and the
   `aartool diff ... || mail` pattern in the README mailed escape sequences.
   `NO_COLOR` and `FORCE_COLOR` are both honoured.
+- **The HTML report is in English, and says so.** It declared `lang="fr"` and
+  printed `CRITIQUE` / `FAIBLE` / `MOYEN` as the score label, either side of
+  English check names and English remediation, and computed a French check name
+  into a variable it never rendered. Score labels are now
+  CRITICAL / WEAK / FAIR / GOOD / STRONG, the four remaining French remediation
+  strings are translated, and a guard fails on French reaching the report. If a
+  French report is wanted it should be a mode, not four leftover strings.
 - Em dashes removed from check output, per house style.
 
 ## [3.4.0]: 2026-08-28

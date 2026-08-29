@@ -449,7 +449,7 @@ or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
 Written with AI assistance ([Claude](https://claude.ai), Anthropic), and tested
 harder because of it:
 
-- **1137 assertions across the suite**, plus Molecule scenarios on Rocky 9 and
+- **1139 assertions across the suite**, plus Molecule scenarios on Rocky 9 and
   Ubuntu 22.04.
 - **Every guard here was proven to fail on injected drift before it was
   trusted.** A check that cannot fail is worse than no check.

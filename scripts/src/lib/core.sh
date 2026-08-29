@@ -74,8 +74,10 @@ rule() {
 
 section() {
   local title="$1" pad
-  # Titles are "1. SYSTEM & OS / Systeme et OS": keep the English half for the
-  # terminal, where the column header is English too.
+  # Section titles used to be "1. SYSTEM & OS / Systeme et OS" and this stripped
+  # the half after the slash. No caller passes one any more: the output is
+  # English throughout. Kept because it costs nothing and a bilingual title
+  # would otherwise print raw, but it is no longer doing any work.
   title="${title%% / *}"
   pad=$(( REPORT_WIDTH - ${#title} - 6 ))
   (( pad < 3 )) && pad=3
