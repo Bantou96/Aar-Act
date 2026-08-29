@@ -821,7 +821,21 @@ html_escape() {
   printf '%s' "$s"
 }
 
-# add_result CATEGORY STATUS ID NAME_EN NAME_FR DETAIL REMEDIATION_FR
+# add_result CATEGORY STATUS ID NAME_EN NAME_FR DETAIL REMEDIATION
+#
+# NAME_FR is carried and rendered nowhere. That is deliberate, not an oversight:
+# every output surface (terminal, HTML, JSON, dashboard) is English, and the
+# report used to declare lang="fr" while printing English names either side of a
+# French score label, which read as a bug rather than as a translation.
+#
+# The French names are kept because they are complete and correct, one for every
+# branch of every check, properly accented. That is the expensive half of a
+# French mode and it already exists; deleting it to save a bash array would mean
+# rebuilding it later. scripts/tests/test_french_names.sh keeps it complete, so
+# a French mode stays a switch rather than a project.
+#
+# The last parameter was documented as REMEDIATION_FR and has not been French
+# for a long time; remediation text is English like everything else.
 add_result() {
   local category="$1" status="$2" id="$3" name_en="$4" name_fr="$5"
   local detail="${6:-}" remediation="${7:-}"

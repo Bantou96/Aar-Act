@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **A guard that every check carries a French name.** `NAME_FR` is rendered by
+  nothing: the tool is English on every surface. It is kept because it is
+  complete, one correct and accented name for every branch of every check, which
+  is the expensive half of a French mode. An asset like that does not die by
+  being deleted, it dies by rotting: a new check family gets `""` because nothing
+  displays it, and a year later the set is 80% complete and worth nothing.
+  `scripts/tests/test_french_names.sh` fails on an empty French name, on the
+  English copied into the French slot, and on its own extraction matching
+  nothing. The copy threshold is derived from the two legitimately identical
+  names in the tree (`SELinux Enforcing`, `SELinux Permissive`), not picked.
+
+### Changed
+
+- `add_result`'s signature comment said its last parameter was `REMEDIATION_FR`,
+  which has not been French for a long time, and said nothing about `NAME_FR`
+  being carried but unrendered. Both documented.
+
 ## [3.5.0]: 2026-08-29
 
 ### Changed
