@@ -20,6 +20,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   nothing. The copy threshold is derived from the two legitimately identical
   names in the tree (`SELinux Enforcing`, `SELinux Permissive`), not picked.
 
+### Fixed
+
+- **The report told you to run a command that fails.** The remediation plan read
+  *"Ajoutez `--check --diff` pour simuler"*: French, in an English document, and
+  wrong. `--check` and `--diff` are `ansible-playbook` flags, while every command
+  in that table is `aartool apply`, which rejects them outright. It now says to
+  preview with `aartool plan`. The Tags column advertised `--tags` next to a
+  command using `--only`; both say `--only` now.
+- Two more French strings in the same section: the `Commande aartool` column
+  header and a bilingual `Tout corriger en une commande / Fix everything in one
+  run` button label.
+- **The palette port missed every colour written as `rgba()`.**
+  `rgba(0,194,168,...)` is the old teal and `rgba(126,211,72,...)` the old lime,
+  so borders, glows and table hovers stayed off-palette and did not follow the
+  print theme. Sixteen literals replaced by tokens, with print variants.
+
 ### Changed
 
 - `add_result`'s signature comment said its last parameter was `REMEDIATION_FR`,

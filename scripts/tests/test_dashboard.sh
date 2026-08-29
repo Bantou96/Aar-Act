@@ -151,6 +151,39 @@ if command -v node >/dev/null 2>&1; then
     printf '%s\n%s\n' "$subres" "$cssres" | grep -v '^$' | sed 's/^/        /'
   fi
 
+  # ── No colour outside the token block ─────────────────────────────────────
+  # The palette port replaced the hex literals and missed the same colours
+  # written as rgba(): rgba(0,194,168,...) is the old teal and
+  # rgba(126,211,72,...) the old lime, so borders, glows and table hovers stayed
+  # off-palette and did not follow @media print. A colour in decimal is still a
+  # colour outside the palette.
+  #
+  # Every colour must be declared in :root or @media print and used through
+  # var(). Anything else is a literal somebody will forget to theme.
+  # Scanned line by line over the ORIGINAL file, so a reported line number is
+  # the line to open. An earlier version blanked the token blocks first and lost
+  # 111 lines doing it, then still 10 after a fix, and pointed at line 173 for a
+  # problem on line 255. A guard that sends you to the wrong line is only
+  # slightly better than no guard.
+  #
+  # Skipped: the :root blocks, where colours are declared, and comments, which
+  # name colours in prose and cannot reach a document.
+  strays=$(perl -ne '
+      if (/:root\s*\{/)      { $root = 1 }
+      if ($root && /\}/)      { $root = 0; next }
+      next if $root;
+      if (m{/\*})            { $cmt = 1 }
+      my $was = $cmt;
+      if ($cmt && m{\*/})     { $cmt = 0 }
+      next if $was;
+      next if /^\s*#/;
+      print "$.:$_" if /#[0-9a-fA-F]{3,8}\b|rgba?\([0-9]/;
+    ' "$RENDERER" || true)
+  if [[ -z "$strays" ]]; then ok; else
+    bad "colour literals outside the token block; they cannot follow the print theme:"
+    printf '%s\n' "$strays" | head -12 | sed 's/^/        /'
+  fi
+
   # ── The report is in one language, and it is English ──────────────────────
   # It declared lang="fr" and printed CRITIQUE / FAIBLE / MOYEN as the score
   # label, either side of English check names and English remediation, and
@@ -160,11 +193,45 @@ if command -v node >/dev/null 2>&1; then
   lang=$(grep -oP '<html lang="\K[a-z]+' "$RENDERER" | head -1)
   [[ "$lang" == "en" ]] && ok || bad "the HTML report declares lang=\"$lang\"; its content is English"
 
-  frstr=$(grep -nP '"(CRITIQUE|FAIBLE|MOYEN|EXCELLENT)"|\b(Auditez|Installez|Initialisez|Corrigez|Vérifiez)\b' \
-          "$RENDERER" src/checks/*.sh 2>/dev/null || true)
+  # The first version of this check was a denylist of five French verbs, and it
+  # missed "Ajoutez --check --diff pour simuler", a French column header, and a
+  # bilingual button label, all of which a reader found in the first report they
+  # opened. A denylist only ever catches the words you already knew about.
+  #
+  # Look at the prose instead: strip CSS, JS and shell interpolation, take the
+  # text a reader actually sees, and flag common French function words. Those do
+  # not appear in English text, and unlike accents they survive an author
+  # writing without them.
+  fr_words='pour|une|dans|avec|sur|tout|toute|cette|aux|les|des|est|sont|vers|selon|ainsi|chaque|leur|entre|sans|plus|corriger|simuler|commande|fichier|serveur|noyau|mot de passe'
+  # Delimiters matter here: s{...} treats } as the closing delimiter, so a
+  # [^}] class inside it ends the pattern early and perl dies. The first version
+  # did exactly that, printed a regex error, produced an empty $prose, and the
+  # check reported ok on nothing. Hence the length assertion below.
+  prose=$(perl -0777 -ne '
+      s|<style.*?</style>||gs; s|<script.*?</script>||gs;   # not prose
+      s|\$\{[^}]*\}| |g;                                    # shell interpolation
+      s|<[^>]+>| |g;                                        # tags
+      print;
+    ' "$RENDERER")
+
+  # A guard reading an empty string passes forever. Assert there is prose to
+  # search before believing the search found nothing.
+  if (( ${#prose} > 2000 )); then ok; else
+    bad "extracted only ${#prose} characters of prose from $RENDERER; the extraction is broken, so the French check below proves nothing"
+  fi
+
+  frstr=$(printf '%s' "$prose" | grep -oiP "\\b($fr_words)\\b" | sort | uniq -c | sort -rn || true)
   if [[ -z "$frstr" ]]; then ok; else
-    bad "French strings reach the report, which is otherwise English:"
+    bad "French words appear in the report's prose, which is otherwise English:"
     printf '%s\n' "$frstr" | sed 's/^/        /'
+  fi
+
+  # The check families are the other place French reached a reader.
+  frchk=$(grep -nP '"(CRITIQUE|FAIBLE|MOYEN|EXCELLENT)"|\b(Auditez|Installez|Initialisez|Corrigez|Vérifiez|Ajoutez|Configurez|Activez|Désactivez)\b' \
+          src/checks/*.sh 2>/dev/null || true)
+  if [[ -z "$frchk" ]]; then ok; else
+    bad "French strings in check output:"
+    printf '%s\n' "$frchk" | sed 's/^/        /'
   fi
 
   # ── The JSON root key was renamed cyberaar_baseline -> aartool ────────────
