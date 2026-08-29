@@ -13,18 +13,18 @@ section "1. SYSTEM & OS"
 _SYS_FAM="$(distro_family)"
 if distro_roles_available; then
   add_result "System" "PASS" "SYS-01" "Distribution supported" "Distribution supportée" \
-    "$(distro_pretty) — family: $_SYS_FAM, hardening roles available" ""
+    "$(distro_pretty), family: $_SYS_FAM, hardening roles available" ""
 elif [[ "$_SYS_FAM" == "unknown" ]]; then
   add_result "System" "WARN" "SYS-01" "Distribution not identified" "Distribution non identifiée" \
-    "$(distro_pretty) — audit still valid, hardening roles unavailable" \
+    "$(distro_pretty): audit still valid, hardening roles unavailable" \
     "The audit still holds: it reads /proc, /etc and systemd, which do not depend on the distribution. The hardening roles cover the RHEL and Debian families (tested on $(distro_roles_tested))."
 else
   add_result "System" "WARN" "SYS-01" "Audit-only distribution" "Distribution en audit seul" \
-    "$(distro_pretty) — family: $_SYS_FAM, audit valid, no hardening roles" \
+    "$(distro_pretty), family: $_SYS_FAM, audit valid, no hardening roles" \
     "The audit and 'aartool surface' work normally. The Ansible roles do not cover the $_SYS_FAM family yet: the recommendation on each check still applies by hand."
 fi
 
-# SYS-02 Kernel (informational — always WARN to prompt version review)
+# SYS-02 Kernel (informational, always WARN to prompt version review)
 add_result "System" "WARN" "SYS-02" "Kernel version" "Version noyau" "$(uname -r)" \
   "Check for kernel updates: 'dnf check-update kernel' or 'apt list --upgradable | grep linux-image'."
 

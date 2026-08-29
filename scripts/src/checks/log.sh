@@ -95,7 +95,7 @@ else
     "Add RateLimitBurst=10000 and RateLimitInterval=30s to /etc/systemd/journald.conf.d/99-cis-journald.conf"
 fi
 
-# LOG-08 Remote syslog configured (informational — no Ansible remediation)
+# LOG-08 Remote syslog configured (informational, no Ansible remediation)
 REMOTE_LOG=false
 if [[ -f /etc/rsyslog.conf ]] || [[ -d /etc/rsyslog.d ]]; then
   grep -rqE '@@?[0-9a-zA-Z]|action\(type="omfwd"' /etc/rsyslog.conf /etc/rsyslog.d/*.conf 2>/dev/null && REMOTE_LOG=true

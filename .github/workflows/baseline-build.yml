@@ -96,6 +96,9 @@ jobs:
       - name: Checks call subcommands that exist
         run: bash scripts/tests/test_check_commands.sh
 
+      - name: Reachability waves agree between the engine and advise
+        run: bash scripts/tests/test_waves.sh
+
       # `aartool plan` runs the playbook with --check, which installs nothing,
       # so a role that installs a package and then starts its service hits a
       # unit that is not there. Reported twice by users, for ufw and for ssh,

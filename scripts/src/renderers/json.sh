@@ -15,7 +15,7 @@ _render_json() {
     re="${re//\"/\\\"}"; re="${re//$'\n'/ }"
     local ne="${RESULT_NAME_EN[$i]//\\/\\\\}"
     ne="${ne//\"/\\\"}"
-    JSON_ARR+="{\"id\":\"${RESULT_ID[$i]}\",\"category\":\"${RESULT_CATEGORY[$i]}\",\"status\":\"${RESULT_STATUS[$i]}\",\"check\":\"${ne}\",\"detail\":\"${de}\",\"remediation\":\"${re}\"}"
+    JSON_ARR+="{\"id\":\"${RESULT_ID[$i]}\",\"category\":\"${RESULT_CATEGORY[$i]}\",\"status\":\"${RESULT_STATUS[$i]}\",\"wave\":$(_wave_of "${RESULT_ID[$i]}"),\"check\":\"${ne}\",\"detail\":\"${de}\",\"remediation\":\"${re}\"}"
     [[ $i -lt $((n-1)) ]] && JSON_ARR+=","
   done
   JSON_ARR+="]"
@@ -57,6 +57,7 @@ _render_json() {
     "host": "${_j_host}",
     "os": "${_j_os}",
     "date": "${DATE_VAL}",
+    "date_iso": "${DATE_ISO}",
     "score": ${SCORE},
     "summary": {
       "pass": ${PASS},

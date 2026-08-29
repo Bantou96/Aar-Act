@@ -1,7 +1,19 @@
 # ─── COLORS ──────────────────────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
-DIM='\033[2m'   # column headers and IDs: present, but not competing with the result
+# Only when stdout is a terminal. These used to be unconditional, so
+# `aartool inspect > audit.txt` wrote 134 lines of raw \033[ escapes into the
+# file, and the `aartool diff ... || mail` pattern the README suggests mailed
+# escape sequences to whoever was on call.
+#
+# NO_COLOR is honoured because it is the convention every other CLI follows
+# (no-color.org): set to anything, colour is off. FORCE_COLOR overrides in the
+# other direction, for piping into `less -R` on purpose.
+if [[ -n "${FORCE_COLOR:-}" ]] || { [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; }; then
+  RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+  CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+  DIM='\033[2m'   # column headers and IDs: present, but not competing with the result
+else
+  RED=''; GREEN=''; YELLOW=''; CYAN=''; BOLD=''; NC=''; DIM=''
+fi
 
 # ─── GLOBALS ─────────────────────────────────────────────────────────────────
 PASS=0; WARN=0; FAIL=0
@@ -24,7 +36,42 @@ WARN_IDS=()
 # A fixed-width rule with a column header, so a section reads as a table rather
 # than as a stream. The old version appended a fixed-length bar to a
 # variable-length title, so every section ended at a different column.
-REPORT_WIDTH=86
+# The table has to fit the terminal it is printed in. This was a hard-coded 86,
+# which is wider than the 80 columns a default terminal gives you, so every row
+# wrapped and the table stopped being a table. Worse, the section rules were
+# drawn at 86 while rows ran to 156 characters, because the DETAIL column had no
+# bound at all: the rules ended 70 columns short of the content they were meant
+# to be ruling off.
+#
+# tput needs a terminal; when there is none (a pipe, a file, CI) 100 is a
+# sensible fixed width for a file someone will open later.
+if [[ -t 1 ]]; then
+  REPORT_WIDTH=$(tput cols 2>/dev/null || echo 86)
+else
+  REPORT_WIDTH=100
+fi
+[[ "$REPORT_WIDTH" =~ ^[0-9]+$ ]] || REPORT_WIDTH=86
+(( REPORT_WIDTH < 60 ))  && REPORT_WIDTH=60    # below this nothing helps
+(( REPORT_WIDTH > 140 )) && REPORT_WIDTH=140   # long lines are hard to track back
+
+# Column widths derived from it once, so the header rule and the rows cannot
+# disagree. 2 indent + 6 status + 1 + 9 id + 1 + name + 1 + detail.
+COL_NAME=42
+COL_DETAIL=$(( REPORT_WIDTH - 2 - 6 - 1 - 9 - 1 - COL_NAME - 1 ))
+if (( COL_DETAIL < 18 )); then                 # narrow terminal: give up name width first
+  COL_NAME=$(( COL_NAME - (18 - COL_DETAIL) ))
+  (( COL_NAME < 20 )) && COL_NAME=20
+  COL_DETAIL=$(( REPORT_WIDTH - 2 - 6 - 1 - 9 - 1 - COL_NAME - 1 ))
+  (( COL_DETAIL < 8 )) && COL_DETAIL=8
+fi
+# A horizontal rule at the current table width. Every renderer that wants one
+# calls this; literal runs of ━ were baked at 61 characters while the table was
+# 86 and the rows were 156, so nothing lined up with anything.
+rule() {
+  local ch="${1:-━}" n="${2:-$REPORT_WIDTH}"
+  printf '%*s' "$n" '' | tr ' ' "$ch"
+}
+
 section() {
   local title="$1" pad
   # Titles are "1. SYSTEM & OS / Systeme et OS": keep the English half for the
@@ -33,7 +80,7 @@ section() {
   pad=$(( REPORT_WIDTH - ${#title} - 6 ))
   (( pad < 3 )) && pad=3
   printf "\n${BOLD}${CYAN}── %s %s${NC}\n" "$title" "$(printf '─%.0s' $(seq 1 "$pad"))"
-  printf "${DIM}  %-6s %-9s %-42s %s${NC}\n" "STATUS" "ID" "CHECK" "DETAIL"
+  printf "${DIM}  %-6s %-9s %-*s %s${NC}\n" "STATUS" "ID" "$COL_NAME" "CHECK" "DETAIL"
 }
 
 # Encode special HTML characters to prevent XSS in report output
@@ -88,8 +135,14 @@ add_result() {
   #
   # The ID is printed because `aartool explain SSH-01` needs it, and until now
   # the only place to find it was the JSON report.
-  printf "  ${color}%-6s${NC} ${DIM}%-9s${NC} %-42s %s\n" \
-    "$status" "$id" "$name_en" "$detail"
+  # Truncate to the derived widths rather than letting DETAIL run to whatever
+  # length the machine happened to produce. An ellipsis is honest: the full text
+  # is in the JSON and the HTML, and `aartool explain <ID>` prints all of it.
+  local _n="$name_en" _d="$detail"
+  (( ${#_n} > COL_NAME ))   && _n="${_n:0:$((COL_NAME-1))}…"
+  (( ${#_d} > COL_DETAIL )) && _d="${_d:0:$((COL_DETAIL-1))}…"
+  printf "  ${color}%-6s${NC} ${DIM}%-9s${NC} %-*s %s\n" \
+    "$status" "$id" "$COL_NAME" "$_n" "$_d"
 
   # Per-check hints are off by default: they doubled the length of every run,
   # and `aartool explain <ID>` gives the same thing in full, plus what closing

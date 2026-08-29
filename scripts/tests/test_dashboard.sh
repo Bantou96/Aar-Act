@@ -129,6 +129,28 @@ if command -v node >/dev/null 2>&1; then
     eval(js+probe);
   ' "$DASH" tests/fixtures/audit-fixture.json 2>&1) || out="ERROR: $out"
 
+  # ── The HTML REPORT must not reach the network either ─────────────────────
+  # The dashboard was guarded from the start; the report renderer was not, and
+  # for a long time every report it wrote carried
+  #   <link href="https://fonts.googleapis.com/css2?family=Syne...">
+  # An audit report is a list of a machine's weaknesses. Loading a stylesheet
+  # from a third party hands that party the IP and referrer of whoever opens it,
+  # including reports scrubbed with --anonymise precisely so they could leave
+  # the estate. It also made "opens offline" untrue.
+  #
+  # Anchors are fine: following a link is the reader's decision. Subresources
+  # are not: those are fetched whether the reader wants it or not.
+  RENDERER=src/renderers/html.sh
+  subres=$(grep -oPi '<(?:link|script|img|iframe|source)\b[^>]*\b(?:src|href)\s*=\s*"[^"]*"' "$RENDERER" \
+           | grep -Pi '"\s*(?:https?:)?//' || true)
+  cssres=$(grep -oPi '(?:@import|url\()\s*["\x27]?\s*(?:https?:)?//[^)"\x27]*' "$RENDERER" || true)
+  if [[ -z "$subres" && -z "$cssres" ]]; then
+    ok
+  else
+    bad "the HTML report loads something over the network, so it does not open offline:"
+    printf '%s\n%s\n' "$subres" "$cssres" | grep -v '^$' | sed 's/^/        /'
+  fi
+
   # ── The JSON root key was renamed cyberaar_baseline -> aartool ────────────
   # Both must load. The old name is in every report anybody already has on disk,
   # and a dashboard that silently ignores them shows an empty page rather than

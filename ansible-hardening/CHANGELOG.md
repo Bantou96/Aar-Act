@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **The HTML report and the dashboard are one design system now.** The report
+  carried its own palette, a teal and a lime green that appear nowhere else in
+  the product, while the dashboard uses the tokens from
+  `website/src/styles/global.css`. The report now uses those: same colours, same
+  type scale, same radii. Colours are defined once and aliased, so the print
+  theme re-colours everything through one override.
+- **The CLI table fits the terminal.** Width came from a hard-coded 86 while
+  rows ran to 156 characters, because the DETAIL column had no bound: section
+  rules ended 70 columns short of the content they were ruling off, and on a
+  standard 80-column terminal every row wrapped. Width now comes from
+  `tput cols`, clamped to 60-140, with the columns derived from it once so the
+  header and the rows cannot disagree. Long values are truncated with an
+  ellipsis; the full text is in the JSON, the HTML and `aartool explain`.
+- Findings are printed with the check name and detail truncated to the
+  available space rather than the terminal wrapping them mid-word.
+
+### Added
+
+- **`wave` on every JSON result.** Reachability ordering is what `advise` is
+  for, and a consumer of the JSON had to reimplement it to reproduce the
+  ordering. Same reason `remediation_tags` exists. `scripts/tests/test_waves.sh`
+  asserts the engine's mapping and `advise`'s agree for every check ID, so the
+  two copies cannot drift.
+- **`date_iso`**, UTC and RFC 3339, alongside the existing human-readable
+  `date`, which has no timezone and cannot be ordered across hosts in different
+  zones. `date` is unchanged, because the HTML header shows it and the dashboard
+  sorts on it in every report already written.
+
+### Fixed
+
+- **The HTML report loaded fonts from Google on every open.** An audit report is
+  a list of a machine's weaknesses, and opening one told a third party the IP
+  and referrer of whoever read it, including reports scrubbed with `--anonymise`
+  precisely so they could leave the estate. It also made "opens offline" untrue.
+  Webfonts are gone, replaced by the dashboard's system stacks, and a guard in
+  `test_dashboard.sh` now fails on any subresource fetched over the network.
+  Anchors still work: following a link is the reader's decision.
+- **Printing produced a near-blank document.** The report is a dark ground with
+  near-white text and the whole print stylesheet was four lines that reset no
+  colours; browsers do not print backgrounds by default, so the text landed on
+  white paper. There is now a real A4 print stylesheet that switches to the
+  light palette, keeps status fills with `print-color-adjust`, and avoids
+  breaking a finding across pages.
+- **The score colour was written into the document as a literal hex**, which put
+  the largest element on the page outside the palette: it could not follow the
+  print theme. It is emitted as a token. Score labels were rebanded so `BON` no
+  longer appears in amber.
+- **Colour was emitted whether or not stdout was a terminal.** Redirecting an
+  audit to a file wrote 134 lines of raw ANSI escapes into it, and the
+  `aartool diff ... || mail` pattern in the README mailed escape sequences.
+  `NO_COLOR` and `FORCE_COLOR` are both honoured.
+- Em dashes removed from check output, per house style.
+
 ## [3.4.0]: 2026-08-28
 
 ### Changed

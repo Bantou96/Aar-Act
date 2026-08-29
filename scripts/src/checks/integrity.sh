@@ -28,10 +28,10 @@ if [[ "$SUSP_CRON" -eq 0 ]]; then
   add_result "Integrity" "PASS" "INT-03" "No suspicious cron entries" "Crons propres" "Crontabs look clean" ""
 else
   add_result "Integrity" "FAIL" "INT-03" "Suspicious cron entries" "Crons suspects détectés" "$SUSP_CRON entry/entries (manual review required)" \
-    "Auditez: 'crontab -l' et /etc/cron* — cherchez wget/curl/bash vers /tmp."
+    "Auditez: 'crontab -l' et /etc/cron* : cherchez wget/curl/bash vers /tmp."
 fi
 
-# INT-04 Open listening ports (always informational — manual review required)
+# INT-04 Open listening ports (always informational, manual review required)
 LISTEN_PORTS=$(ss -tlnp 2>/dev/null | grep -c "LISTEN" || echo "?")
 add_result "Integrity" "WARN" "INT-04" "Open listening ports" "Ports en écoute (revue manuelle)" "$LISTEN_PORTS port(s) listening" \
   "Manual review required: 'ss -tlnp', then close every port that is not justified."
@@ -47,7 +47,7 @@ elif cmd_exists apt-get; then
     /etc/apt/apt.conf /etc/apt/apt.conf.d/ 2>/dev/null | wc -l)
   [[ "$UNAUTH" -eq 0 ]] && PKG_GPG_OK=true
 else
-  PKG_GPG_OK=true  # Cannot determine — assume OK
+  PKG_GPG_OK=true  # Cannot determine, assume OK
 fi
 if $PKG_GPG_OK; then
   add_result "Integrity" "PASS" "INT-05" "Package signature check enabled" "Vérif signature paquets active" "gpgcheck enforced" ""
