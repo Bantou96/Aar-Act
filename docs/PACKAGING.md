@@ -70,10 +70,15 @@ mistake with `apply` has always been the wrong target rather than the wrong
 intent. Absent, aartool prints the same copy-the-example message it prints for a
 fresh clone.
 
-## The keyring has to be world readable
+## The keyring had to be world readable, and now there is no keyring
+
+**Superseded.** The documented apt install is now a single deb822 `.sources`
+file with the signing key inline, served from `https://pkgs.cyberaar.io/aartool.sources`,
+so there is no separate keyring file and nothing to chmod. The rest of this
+section is why that file exists; it is not a step anyone still runs.
 
 apt verifies signatures as the unprivileged `_apt` user, not as root. The
-documented install therefore ends with:
+install used to end with:
 
 ```bash
 sudo chmod a+r /etc/apt/keyrings/aartool.asc
@@ -98,6 +103,17 @@ and the missing `chmod` never mattered. The install test now runs under
 `umask 027` for exactly this reason. It is the second time this machine's umask
 has produced a defect: the first packages built were 0640 throughout, readable
 only by root.
+
+The deb822 file removes the class rather than the instance: with the key inline
+there is no second file whose permissions can be wrong. Verified under
+`umask 027` on `ubuntu:24.04` against the live URL, where the `.sources` file
+itself lands 0640 and apt reads it without complaint, because the file `_apt`
+needed to read no longer exists.
+
+`apt install aartool` on its own is still not possible and never will be. With
+no repository configured apt reports `E: Unable to locate package aartool`;
+it will not install from a repository it has not been told to trust, and it
+cannot be told from inside the install command. Two commands is the floor.
 
 ## Symlinks inside a packaged directory are dropped
 
