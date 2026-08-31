@@ -74,11 +74,8 @@ From the package repository, which is what most people want:
 
 ```bash
 # Debian, Ubuntu
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://pkgs.cyberaar.io/gpg | sudo tee /etc/apt/keyrings/aartool.asc >/dev/null
-sudo chmod a+r /etc/apt/keyrings/aartool.asc
-echo "deb [signed-by=/etc/apt/keyrings/aartool.asc] https://pkgs.cyberaar.io/deb stable main" \
-  | sudo tee /etc/apt/sources.list.d/aartool.list
+sudo curl -fsSL https://pkgs.cyberaar.io/aartool.sources \
+  -o /etc/apt/sources.list.d/aartool.sources
 sudo apt update && sudo apt install aartool
 
 # RHEL, Rocky, AlmaLinux, Fedora
@@ -86,10 +83,19 @@ sudo curl -fsSL https://pkgs.cyberaar.io/aartool.repo -o /etc/yum.repos.d/aartoo
 sudo dnf install aartool
 ```
 
-The `chmod a+r` is not decoration. apt verifies signatures as the unprivileged
-`_apt` user, and `sudo tee` creates the file with your umask: on a machine set
-to `umask 027` that is mode 0640, `_apt` cannot read it, and apt fails with
-`Unknown error executing apt-key`, which names neither permissions nor the file.
+Two commands, not one. `apt install aartool` on its own reports `E: Unable to
+locate package aartool`, because apt will not install from a repository it has
+not been told to trust, and it cannot be told from inside the install command.
+That is apt's trust model, not something this packaging can shorten.
+
+The apt file is [deb822](https://manpages.debian.org/apt/sources.list.5.en.html)
+with the signing key **inline**, which is what makes it one file instead of
+three. The older form needs the key in `/etc/apt/keyrings` and then needs it
+made world readable, because apt verifies signatures as the unprivileged `_apt`
+user and `curl | sudo tee` writes the file with your umask: on a machine set to
+`umask 027` that is mode 0640, and apt fails with `Unknown error executing
+apt-key`, naming neither the permission nor the file. Inline, there is no
+second file to get wrong.
 
 Both packages are signed, and so is the repository metadata. `apt upgrade` and
 `dnf upgrade` pick up new releases from then on.
