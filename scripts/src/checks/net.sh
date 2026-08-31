@@ -99,7 +99,7 @@ if [[ "$IPV6_RA" == "0" ]]; then
   add_result "Network" "PASS" "NET-10" "IPv6 RA disabled" "Annonces routeur IPv6 désactivées" "accept_ra=0" ""
 else
   add_result "Network" "WARN" "NET-10" "IPv6 RA accepted" "Annonces routeur IPv6 acceptées" "accept_ra=$IPV6_RA" \
-    "Si IPv6 non requis: 'net.ipv6.conf.all.accept_ra=0' dans /etc/sysctl.d/"
+    "If IPv6 is not required: 'net.ipv6.conf.all.accept_ra=0' in /etc/sysctl.d/"
 fi
 
 # NET-11 ICMP broadcast ignored

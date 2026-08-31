@@ -940,7 +940,7 @@ case "$_SYS_PKG" in
       add_result "System" "PASS" "SYS-03" "No pending security updates" "Système à jour" "0 packages" ""
     else
       add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour en attente" "$PENDING package(s)" \
-        "Appliquez: '$_SYS_PKG update --security -y'"
+        "Apply: '$_SYS_PKG update --security -y'"
     fi ;;
   apt-get)
     # Scoped to SECURITY updates, like the dnf and zypper branches above it.
@@ -964,7 +964,7 @@ case "$_SYS_PKG" in
     else
       add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour de sécurité en attente" \
         "${PENDING} security (${_SYS_APT_TOTAL} total pending)" \
-        "Appliquez: 'apt-get upgrade -y' (ou laissez unattended-upgrades le faire)"
+        "Apply: 'apt-get upgrade -y', or let unattended-upgrades do it"
     fi ;;
   zypper)
     # list-patches --category security is the SUSE equivalent of --security.
@@ -974,7 +974,7 @@ case "$_SYS_PKG" in
       add_result "System" "PASS" "SYS-03" "No pending security patches" "Système à jour" "0 patches" ""
     else
       add_result "System" "FAIL" "SYS-03" "Pending security patches" "Correctifs en attente" "$PENDING patch(es)" \
-        "Appliquez: 'zypper patch --category security'"
+        "Apply: 'zypper patch --category security'"
     fi ;;
   pacman)
     # Rolling release: there is no security-only channel, so this is all updates.
@@ -992,7 +992,7 @@ case "$_SYS_PKG" in
       add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
     else
       add_result "System" "WARN" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
-        "Appliquez: 'apk upgrade'"
+        "Apply: 'apk upgrade'"
     fi ;;
   none)
     add_result "System" "WARN" "SYS-03" "No package manager found" "Aucun gestionnaire de paquets" \
@@ -1910,7 +1910,7 @@ if [[ "$IPV6_RA" == "0" ]]; then
   add_result "Network" "PASS" "NET-10" "IPv6 RA disabled" "Annonces routeur IPv6 désactivées" "accept_ra=0" ""
 else
   add_result "Network" "WARN" "NET-10" "IPv6 RA accepted" "Annonces routeur IPv6 acceptées" "accept_ra=$IPV6_RA" \
-    "Si IPv6 non requis: 'net.ipv6.conf.all.accept_ra=0' dans /etc/sysctl.d/"
+    "If IPv6 is not required: 'net.ipv6.conf.all.accept_ra=0' in /etc/sysctl.d/"
 fi
 
 # NET-11 ICMP broadcast ignored
@@ -2201,7 +2201,7 @@ if $TMP_DEDICATED; then
   add_result "Compliance" "PASS" "COMP-02" "/tmp on dedicated partition/tmpfs" "/tmp partition dédiée" "Separate /tmp mount found" ""
 else
   add_result "Compliance" "WARN" "COMP-02" "/tmp not on dedicated partition" "/tmp non isolé" "/tmp not separately mounted" \
-    "Isolez /tmp: ajoutez 'tmpfs /tmp tmpfs defaults,noexec,nosuid,nodev 0 0' dans /etc/fstab"
+    "Isolate /tmp: add 'tmpfs /tmp tmpfs defaults,noexec,nosuid,nodev 0 0' to /etc/fstab"
 fi
 
 # COMP-03 /home on separate partition (informational, cannot change post-install)
@@ -3284,7 +3284,7 @@ footer {
 <thead>
   <tr>
     <th class="col-id">ID</th>
-    <th class="col-status">Statut</th>
+    <th class="col-status">Status</th>
     <th class="col-check">Check</th>
     <th class="col-detail">Detail &amp; Remediation</th>
   </tr>

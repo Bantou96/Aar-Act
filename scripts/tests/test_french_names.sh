@@ -52,11 +52,61 @@ for f in "${FILES[@]}"; do
   )
 done
 
+# ── The other half: everything that IS rendered must be English ─────────────
+#
+# NAME_FR above is deliberate French that nothing displays. DETAIL and
+# REMEDIATION are the opposite: they are printed in the terminal, written into
+# the JSON and rendered in the HTML report, so French in them is a defect. Six
+# were found by a human opening a report in 2026-08-31: four "Appliquez:" in
+# sys.sh, an "Isolez /tmp: ajoutez ... dans /etc/fstab" and a "Si IPv6 non
+# requis: ... dans /etc/sysctl.d/".
+#
+# The existing prose guard in test_dashboard.sh could not have caught them: it
+# reads the RENDERER, and these strings live in the checks. Guard the fields
+# themselves, extracted the same way the function reads them, so the check is
+# about the category rather than about the six strings that were found.
+#
+# The word list is restricted to French words that are not also English. "plus"
+# is the trap: "plus blacklist iwlwifi" is a correct English remediation and the
+# broader list in test_dashboard.sh flags it.
+fr_rendered='appliquez|ajoutez|isolez|activez|desactivez|d\xc3\xa9sactivez|verifiez|v\xc3\xa9rifiez|installez|configurez|laissez|dans|pour|une|avec|cette|aux|les|des|sont|selon|chaque|leur|entre|sans|requis'
+fr_rendered=$(printf '%b' "$fr_rendered")
+
+rendered=0
+for f in "${FILES[@]}"; do
+  # Args 6 and 7 (DETAIL, REMEDIATION) are optional and usually sit on a
+  # backslash continuation, so the separator class has to allow the backslash
+  # itself. \s alone stops at it and silently matches nothing.
+  while IFS=$'\t' read -r id field text; do
+    [[ -z "${text// }" ]] && continue
+    rendered=$((rendered+1))
+    hit=$(printf '%s' "$text" | grep -oiP "\\b($fr_rendered)\\b" | sort -u | paste -sd, - || true)
+    if [[ -n "$hit" ]]; then
+      bad "$(basename "$f"): $id $field is French ($hit): \"$text\""
+    else
+      ok
+    fi
+  done < <(
+    perl -0777 -ne '
+      while (/add_result[\s\\]+"[^"]*"[\s\\]+"[^"]*"[\s\\]+"([^"]*)"[\s\\]+"[^"]*"[\s\\]+"[^"]*"(?:[\s\\]+"([^"]*)")?(?:[\s\\]+"([^"]*)")?/gs) {
+        my ($id, $detail, $rem) = ($1, $2, $3);
+        print "$id\tDETAIL\t$detail\n"      if defined $detail && $detail ne "";
+        print "$id\tREMEDIATION\t$rem\n"    if defined $rem    && $rem    ne "";
+      }' "$f"
+  )
+done
+
+# Same reasoning as the count assertion below: a guard that reads nothing passes
+# forever. These fields are optional, so the floor is lower than for the names.
+if (( rendered >= 150 )); then ok; else
+  bad "only $rendered detail/remediation strings parsed; expected 150+, so the extraction is broken"
+fi
+
 # The extraction itself has to be believable: if the regex stops matching, every
 # assertion above silently passes on an empty set.
 if (( total >= 200 )); then ok; else
   bad "only $total add_result calls parsed; expected 200+, so the extraction is broken"
 fi
 
-printf '\n%d passed, %d failed  (%d calls checked)\n' "$PASS" "$FAIL" "$total"
+printf '\n%d passed, %d failed  (%d calls checked, %d rendered strings)\n' "$PASS" "$FAIL" "$total" "$rendered"
 [[ "$FAIL" -eq 0 ]]
