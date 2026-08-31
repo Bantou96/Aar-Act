@@ -26,7 +26,7 @@ if $TMP_DEDICATED; then
   add_result "Compliance" "PASS" "COMP-02" "/tmp on dedicated partition/tmpfs" "/tmp partition dédiée" "Separate /tmp mount found" ""
 else
   add_result "Compliance" "WARN" "COMP-02" "/tmp not on dedicated partition" "/tmp non isolé" "/tmp not separately mounted" \
-    "Isolez /tmp: ajoutez 'tmpfs /tmp tmpfs defaults,noexec,nosuid,nodev 0 0' dans /etc/fstab"
+    "Isolate /tmp: add 'tmpfs /tmp tmpfs defaults,noexec,nosuid,nodev 0 0' to /etc/fstab"
 fi
 
 # COMP-03 /home on separate partition (informational, cannot change post-install)

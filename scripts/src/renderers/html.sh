@@ -781,7 +781,7 @@ footer {
 <thead>
   <tr>
     <th class="col-id">ID</th>
-    <th class="col-status">Statut</th>
+    <th class="col-status">Status</th>
     <th class="col-check">Check</th>
     <th class="col-detail">Detail &amp; Remediation</th>
   </tr>

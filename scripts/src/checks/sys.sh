@@ -44,7 +44,7 @@ case "$_SYS_PKG" in
       add_result "System" "PASS" "SYS-03" "No pending security updates" "Système à jour" "0 packages" ""
     else
       add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour en attente" "$PENDING package(s)" \
-        "Appliquez: '$_SYS_PKG update --security -y'"
+        "Apply: '$_SYS_PKG update --security -y'"
     fi ;;
   apt-get)
     # Scoped to SECURITY updates, like the dnf and zypper branches above it.
@@ -68,7 +68,7 @@ case "$_SYS_PKG" in
     else
       add_result "System" "FAIL" "SYS-03" "Pending security updates" "Mises à jour de sécurité en attente" \
         "${PENDING} security (${_SYS_APT_TOTAL} total pending)" \
-        "Appliquez: 'apt-get upgrade -y' (ou laissez unattended-upgrades le faire)"
+        "Apply: 'apt-get upgrade -y', or let unattended-upgrades do it"
     fi ;;
   zypper)
     # list-patches --category security is the SUSE equivalent of --security.
@@ -78,7 +78,7 @@ case "$_SYS_PKG" in
       add_result "System" "PASS" "SYS-03" "No pending security patches" "Système à jour" "0 patches" ""
     else
       add_result "System" "FAIL" "SYS-03" "Pending security patches" "Correctifs en attente" "$PENDING patch(es)" \
-        "Appliquez: 'zypper patch --category security'"
+        "Apply: 'zypper patch --category security'"
     fi ;;
   pacman)
     # Rolling release: there is no security-only channel, so this is all updates.
@@ -96,7 +96,7 @@ case "$_SYS_PKG" in
       add_result "System" "PASS" "SYS-03" "No pending updates" "Système à jour" "0 packages" ""
     else
       add_result "System" "WARN" "SYS-03" "Pending updates" "Mises à jour en attente" "$PENDING package(s)" \
-        "Appliquez: 'apk upgrade'"
+        "Apply: 'apk upgrade'"
     fi ;;
   none)
     add_result "System" "WARN" "SYS-03" "No package manager found" "Aucun gestionnaire de paquets" \
